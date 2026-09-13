@@ -1,14 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { FolderOpen, Guitar, Piano, Save, Trash2, X } from "lucide-react";
+import {
+  Download,
+  FolderOpen,
+  Guitar,
+  Upload,
+  Piano,
+  Save,
+  Trash2,
+  X,
+} from "lucide-react";
 import { ChordDiagram } from "./ChordDiagram";
 import { KeyboardChordDiagram } from "./KeyboardChordDiagram";
 import { PianoKeyboard } from "./PianoKeyboard";
-import { CHROMATIC_SHARPS, NOTE_SEMITONES } from "../data/musicTheory";
+import { ALL_ROOT_NOTES, NOTE_SEMITONES } from "../data/musicTheory";
 import {
   CHORD_TYPES_CATALOG,
   CustomChord,
   deleteCustomChord,
+  exportSavedCustomChords,
   getCustomChords,
+  importCustomChords,
   saveCustomChord,
   getChordDefinition,
 } from "../data/chordsData";
@@ -111,6 +122,40 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
   useEffect(() => {
     setCustomChords(getCustomChords());
   }, []);
+
+  const handleExportSavedChords = () => {
+    const exported = exportSavedCustomChords();
+    const payload = JSON.stringify(exported, null, 2);
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "mousi9ti-saved-chords.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportSavedChords = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    try {
+      const importedCount = importCustomChords(await file.text());
+      setCustomChords(getCustomChords());
+      window.alert(
+        `${importedCount} chord${importedCount === 1 ? "" : "s"} imported successfully.`,
+      );
+    } catch (error) {
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "Could not import the chord JSON file.",
+      );
+    }
+  };
 
   const handleStringClick = (stringIdx: number) => {
     const newFrets = [...frets];
@@ -438,45 +483,97 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
 
   return (
     <div className="custom-chord-editor flex w-full min-w-0 flex-col gap-6 pb-12 animate-fade-in">
-      <div className="flex justify-between items-center bg-surface-container border border-outline-variant/30 p-6 rounded-lg shadow-sm">
+      <div className="custom-chord-editor-header flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center bg-surface-container border border-outline-variant/30 p-4 sm:p-6 rounded-lg shadow-sm">
         <div>
-          <h1 className="text-2xl font-black text-on-surface">Chord Editor</h1>
+          <h1 className="text-2xl font-mono font-bold text-on-surface">
+            Chord Editor
+          </h1>
           <p className="text-sm text-on-surface-variant mt-1">
             Design, preview, and save custom chord voicings.
           </p>
         </div>
-        <div className="flex items-center gap-1 rounded-lg border border-outline-variant/30 bg-surface-container-low p-1">
+        <div className="custom-chord-editor-actions flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <label className="custom-chord-mobile-action flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-low px-3 py-2 text-xs font-bold font-mono text-on-surface hover:border-primary/50 hover:text-primary transition-colors">
+            <span className="custom-chord-mobile-action-icon">
+              <Upload size={18} />
+            </span>
+            <span className="custom-chord-mobile-action-content">
+              <span className="custom-chord-mobile-action-title">
+                Import Chords
+              </span>
+              <span className="custom-chord-mobile-action-description">
+                Load a saved JSON file
+              </span>
+            </span>
+            <span className="custom-chord-mobile-action-arrow">›</span>
+            <input
+              type="file"
+              accept="application/json,.json"
+              onChange={handleImportSavedChords}
+              className="hidden"
+            />
+          </label>
           <button
             type="button"
-            onClick={() => setEditorInstrument("guitar")}
-            className={`flex items-center gap-2 rounded px-3 py-2 text-xs font-bold transition-colors ${
-              editorInstrument === "guitar"
-                ? "bg-primary text-on-primary"
-                : "text-on-surface-variant hover:text-on-surface"
-            }`}
+            onClick={handleExportSavedChords}
+            className="custom-chord-mobile-action flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-low px-3 py-2 text-xs font-bold text-on-surface hover:border-primary/50 hover:text-primary transition-colors"
           >
-            <Guitar size={14} /> Guitar
+            <span className="custom-chord-mobile-action-icon">
+              <Download size={18} />
+            </span>
+            <span className="custom-chord-mobile-action-content">
+              <span className="custom-chord-mobile-action-title">
+                Export Saved Chords
+              </span>
+              <span className="custom-chord-mobile-action-description">
+                Save your voicings as JSON
+              </span>
+            </span>
+            <span className="custom-chord-mobile-action-arrow">›</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setEditorInstrument("piano")}
-            className={`flex items-center gap-2 rounded px-3 py-2 text-xs font-bold transition-colors ${
-              editorInstrument === "piano"
-                ? "bg-primary text-on-primary"
-                : "text-on-surface-variant hover:text-on-surface"
-            }`}
-          >
-            <Piano size={14} /> Piano
-          </button>
+
+          <div className="custom-chord-instrument-section">
+            <span className="custom-chord-instrument-label">Editor Mode</span>
+            <div className="custom-chord-instrument-switch flex w-fit items-center justify-center gap-1 self-center rounded-lg border border-outline-variant/30 bg-surface-container-low p-1 sm:self-auto">
+              <button
+                type="button"
+                aria-label="Use guitar chord editor"
+                title="Guitar chord editor"
+                onClick={() => setEditorInstrument("guitar")}
+                className={`flex h-9 w-10 items-center justify-center rounded transition-colors ${
+                  editorInstrument === "guitar"
+                    ? "bg-primary text-on-primary"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <Guitar size={16} />
+              </button>
+              <button
+                type="button"
+                aria-label="Use piano chord editor"
+                title="Piano chord editor"
+                onClick={() => setEditorInstrument("piano")}
+                className={`flex h-9 w-10 items-center justify-center rounded transition-colors ${
+                  editorInstrument === "piano"
+                    ? "bg-primary text-on-primary"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <Piano size={16} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         <div
-          className={`${editorInstrument === "guitar" ? "flex" : "hidden"} xl:col-span-7 bg-surface-container border border-outline-variant/30 rounded-lg p-6 lg:p-10 flex-col items-center shadow-sm`}
+          className={`${editorInstrument === "guitar" ? "flex" : "hidden"} xl:col-span-7 bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 lg:p-10 flex-col items-center shadow-sm overflow-hidden`}
         >
           <div className="w-full max-w-[400px]">
-            <h2 className="text-xl font-bold mb-1">Interactive Designer</h2>
+            <h2 className="text-xl font-bold mb-1 font-mono ">
+              Interactive Designer
+            </h2>
             <p className="text-xs text-on-surface-variant mb-8">
               Click top buttons to toggle Mute (X) / Open (O). Click the
               fretboard to place fingers.{" "}
@@ -703,20 +800,20 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
         <div
           className={`${editorInstrument === "piano" ? "xl:col-span-6 order-2" : "xl:col-span-5"} flex flex-col gap-6`}
         >
-          <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-sm">
+          <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 shadow-sm">
             <h2 className="text-lg font-bold mb-4">Chord Identity</h2>
 
-            <div className="flex gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div className="flex-1">
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold font-mono text-on-surface-variant uppercase tracking-wider mb-2">
                   Root Note
                 </label>
                 <select
                   value={root}
                   onChange={(e) => setRoot(e.target.value as NoteName)}
-                  className="w-full bg-surface-container-highest border border-outline-variant/50 rounded px-3 py-2 text-on-surface outline-none focus:border-primary font-bold"
+                  className="w-full bg-surface-container-highest border border-outline-variant/50 rounded px-3 py-2 text-on-surface outline-none focus:border-primary font-bold font-mono"
                 >
-                  {CHROMATIC_SHARPS.map((n) => (
+                  {ALL_ROOT_NOTES.map((n) => (
                     <option key={n} value={n}>
                       {n}
                     </option>
@@ -724,13 +821,13 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                 </select>
               </div>
               <div className="flex-1">
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold font-mono text-on-surface-variant uppercase tracking-wider mb-2">
                   Chord Type
                 </label>
                 <select
                   value={chordType}
                   onChange={(e) => setChordType(e.target.value)}
-                  className="w-full bg-surface-container-highest border border-outline-variant/50 rounded px-3 py-2 text-on-surface outline-none focus:border-primary font-bold"
+                  className="w-full bg-surface-container-highest border border-outline-variant/50 rounded px-3 py-2 text-on-surface outline-none focus:border-primary font-bold font-mono"
                 >
                   {CHORD_TYPES_CATALOG.map((t) => (
                     <option key={t.type} value={t.type}>
@@ -742,7 +839,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
             </div>
 
             <div className="mb-4">
-              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold font-mono text-on-surface-variant uppercase tracking-wider mb-2">
                 Display Name
               </label>
               <input
@@ -754,9 +851,9 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
               />
             </div>
 
-            <div className="flex gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div className="flex-1">
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold font-mono text-on-surface-variant uppercase tracking-wider mb-2">
                   Position Label
                 </label>
                 <input
@@ -769,13 +866,13 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
               </div>
               {editorInstrument === "guitar" && (
                 <div className="flex-1">
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-bold font-mono text-on-surface-variant uppercase tracking-wider mb-2">
                     Root String
                   </label>
                   <select
                     value={rootString}
                     onChange={(e) => setRootString(e.target.value)}
-                    className="w-full bg-surface-container-highest border border-outline-variant/50 rounded px-3 py-2 text-on-surface outline-none focus:border-primary text-sm"
+                    className="w-full bg-surface-container-highest border border-outline-variant/50 rounded px-3 py-2 text-on-surface outline-none focus:border-primary text-sm font-mono"
                   >
                     <option value="Root: 6th String">Root: 6th String</option>
                     <option value="Root: 5th String">Root: 5th String</option>
@@ -791,7 +888,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
             {editorInstrument === "guitar" && (
               <>
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-bold font-mono text-on-surface-variant uppercase tracking-wider mb-2">
                     Starting Base Fret
                   </label>
                   <input
@@ -833,7 +930,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                   />
                 </div>
                 <div className="mt-4">
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-bold font-mono text-on-surface-variant uppercase tracking-wider mb-2">
                     Available Frets
                   </label>
                   <select
@@ -853,7 +950,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
           </div>
 
           {editorInstrument === "guitar" && (
-            <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-sm flex flex-col items-center">
+            <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 shadow-sm flex flex-col items-center overflow-hidden">
               <h2 className="text-lg font-bold mb-4 w-full text-left">
                 Live Preview
               </h2>
@@ -898,7 +995,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
         </div>
 
         <div
-          className={`${editorInstrument === "piano" ? "flex" : "hidden"} order-first xl:col-span-12 bg-surface-container border border-outline-variant/30 rounded-lg p-6 lg:p-10 flex-col items-center shadow-sm`}
+          className={`${editorInstrument === "piano" ? "flex" : "hidden"} order-first xl:col-span-12 bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 lg:p-10 flex-col items-center shadow-sm overflow-hidden`}
         >
           <div className="w-full">
             <h2 className="text-xl font-bold mb-1">Piano Note Designer</h2>
@@ -924,7 +1021,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
         </div>
 
         {editorInstrument === "piano" && (
-          <div className="order-3 xl:col-span-6 bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-sm flex flex-col items-center">
+          <div className="order-3 xl:col-span-6 bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 shadow-sm flex flex-col items-center overflow-hidden">
             <div className="w-full flex items-center justify-between mb-3">
               <span className="font-mono text-sm font-bold uppercase tracking-wider text-on-surface">
                 {root}{" "}
@@ -957,10 +1054,12 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
         )}
       </div>
 
-      <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-sm mt-2">
-        <h2 className="text-lg font-bold mb-4">Saved Custom Chords</h2>
+      <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 shadow-sm mt-2 overflow-hidden">
+        <h2 className="text-lg font-bold mb-4 font-mono">
+          Saved Custom Chords
+        </h2>
         {customChords.length === 0 ? (
-          <div className="py-8 text-center text-on-surface-variant bg-surface-container-lowest rounded border border-dashed border-outline-variant/50">
+          <div className="font-mono py-8 text-center text-on-surface-variant bg-surface-container-lowest rounded border border-dashed border-outline-variant/50">
             No custom chords saved yet.
           </div>
         ) : (

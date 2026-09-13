@@ -159,9 +159,6 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
               BPM
             </span>
           </span>
-          <span className="text-[10px] font-mono text-on-surface-variant">
-            Clean continuous alternate picking
-          </span>
         </div>
       </div>
 
