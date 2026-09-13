@@ -8,6 +8,7 @@ import {
   Save,
   Trash2,
   X,
+  Info,
 } from "lucide-react";
 import { ChordDiagram } from "./ChordDiagram";
 import { KeyboardChordDiagram } from "./KeyboardChordDiagram";
@@ -118,6 +119,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
     f: number;
   } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showDesignerInfo, setShowDesignerInfo] = useState(false);
 
   useEffect(() => {
     setCustomChords(getCustomChords());
@@ -488,7 +490,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
           <h1 className="text-2xl font-mono font-bold text-on-surface">
             Chord Editor
           </h1>
-          <p className="text-sm text-on-surface-variant mt-1">
+          <p className="font-mono text-sm text-on-surface-variant mt-1">
             Design, preview, and save custom chord voicings.
           </p>
         </div>
@@ -572,17 +574,19 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
         <div
           className={`${editorInstrument === "guitar" ? "flex" : "hidden"} xl:col-span-7 bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 lg:p-10 flex-col items-center shadow-sm overflow-hidden`}
         >
-          <div className="w-full max-w-[400px]">
-            <h2 className="text-xl font-bold mb-1 font-mono ">
+          <div className="w-full max-w-[400px] mb-4">
+            <h2 className="text-xl font-bold mb-1 font-mono flex items-center gap-2">
               Interactive Designer
+              <button
+                type="button"
+                onClick={() => setShowDesignerInfo(true)}
+                className="flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-[10px] font-bold leading-none text-primary transition-colors hover:bg-primary/15"
+                aria-label="Designer instructions"
+                title="Designer instructions"
+              >
+                ?
+              </button>
             </h2>
-            <p className="text-xs text-on-surface-variant mb-8">
-              Click top buttons to toggle Mute (X) / Open (O). Click the
-              fretboard to place fingers.{" "}
-              <strong>Drag across a fret to create a barre.</strong> Click
-              placed fingers or the barre to change their number (cycles 1-T,
-              then removes).
-            </p>
           </div>
 
           <div
@@ -1109,6 +1113,55 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
           </div>
         )}
       </div>
+
+      {/* Designer Instructions Modal */}
+      {showDesignerInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface rounded-2xl w-full max-w-md border border-outline-variant/30 overflow-hidden shadow-2xl">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-xl font-bold text-on-surface">
+                  How to Use the Designer
+                </h3>
+                <button
+                  onClick={() => setShowDesignerInfo(false)}
+                  className="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4 text-sm text-on-surface-variant leading-relaxed">
+                <div className="flex gap-3 items-start">
+                  <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">1</span>
+                  <p>Click the <strong className="text-on-surface">top buttons</strong> above each string to toggle between Mute (X) and Open (O).</p>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">2</span>
+                  <p>Click anywhere on the <strong className="text-on-surface">fretboard</strong> to place a finger dot.</p>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">3</span>
+                  <p><strong className="text-on-surface">Drag across a fret</strong> (horizontally) to create a barre chord.</p>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">4</span>
+                  <p>Click a placed <strong className="text-on-surface">finger or barre</strong> to cycle its number (1–T). Click the <strong className="text-on-surface text-error">✕</strong> to remove it.</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setShowDesignerInfo(false)}
+                  className="px-4 py-2 bg-primary text-on-primary text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
