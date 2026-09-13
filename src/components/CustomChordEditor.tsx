@@ -522,7 +522,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
               <Download size={18} />
             </span>
             <span className="custom-chord-mobile-action-content">
-              <span className="custom-chord-mobile-action-title">
+              <span className="font-mono custom-chord-mobile-action-title">
                 Export Saved Chords
               </span>
               <span className="custom-chord-mobile-action-description">
@@ -534,32 +534,34 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
 
           <div className="custom-chord-instrument-section">
             <span className="custom-chord-instrument-label">Editor Mode</span>
-            <div className="custom-chord-instrument-switch flex w-fit items-center justify-center gap-1 self-center rounded-lg border border-outline-variant/30 bg-surface-container-low p-1 sm:self-auto">
+            <div className="custom-chord-instrument-switch flex w-full shrink-0 overflow-hidden rounded border border-outline-variant/30 bg-surface-container text-xs font-mono font-bold sm:w-auto">
               <button
                 type="button"
                 aria-label="Use guitar chord editor"
                 title="Guitar chord editor"
                 onClick={() => setEditorInstrument("guitar")}
-                className={`flex h-9 w-10 items-center justify-center rounded transition-colors ${
+                className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 transition-colors sm:min-h-0 sm:flex-none sm:px-4 ${
                   editorInstrument === "guitar"
                     ? "bg-primary text-on-primary"
                     : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >
-                <Guitar size={16} />
+                <Guitar size={14} />
+                <span className="hidden sm:inline">Guitar</span>
               </button>
               <button
                 type="button"
                 aria-label="Use piano chord editor"
                 title="Piano chord editor"
                 onClick={() => setEditorInstrument("piano")}
-                className={`flex h-9 w-10 items-center justify-center rounded transition-colors ${
+                className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 transition-colors sm:min-h-0 sm:flex-none sm:px-4 ${
                   editorInstrument === "piano"
                     ? "bg-primary text-on-primary"
                     : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >
-                <Piano size={16} />
+                <Piano size={14} />
+                <span className="hidden sm:inline">Piano</span>
               </button>
             </div>
           </div>
