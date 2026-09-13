@@ -28,31 +28,39 @@ export const SwipeableChordCard: React.FC<SwipeableChordCardProps> = ({
     chordType === "maj" ? "major" : chordType === "min" ? "minor" : chordType;
   const customChord = customChordId
     ? getCustomChords().find(
-        (chord) => chord.id === customChordId && chord.instrument !== "piano",
+        (chord) =>
+          chord.id === customChordId &&
+          (instrument === "piano"
+            ? chord.pianoVoicing
+            : chord.instrument !== "piano"),
       )
     : undefined;
-  const customVoicings = getCustomChords()
-    .filter(
-      (chord) =>
-        chord.instrument !== "piano" &&
-        chord.root === root &&
-        normalizeType(chord.chordType) === normalizeType(type),
+  const customChords = getCustomChords().filter(
+    (chord) =>
+      chord.root === root &&
+      normalizeType(chord.chordType) === normalizeType(type),
+  );
+  const customVoicings = customChords
+    .filter((chord) =>
+      instrument === "piano"
+        ? chord.pianoVoicing
+        : chord.instrument !== "piano",
     )
-    .map((chord) => chord.voicing);
-  const customVoicingFretCounts = getCustomChords()
-    .filter(
-      (chord) =>
-        chord.instrument !== "piano" &&
-        chord.root === root &&
-        normalizeType(chord.chordType) === normalizeType(type),
+    .map((chord) =>
+      instrument === "piano" ? chord.pianoVoicing : chord.voicing,
     )
+    .filter((voicing): voicing is NonNullable<typeof voicing> => !!voicing);
+  const customVoicingFretCounts = customChords
+    .filter((chord) => chord.instrument !== "piano")
     .map((chord) => chord.fretCount);
   const voicings =
     instrument === "guitar"
       ? customChord
         ? [customChord.voicing]
         : [...chordDef.voicings, ...customVoicings]
-      : chordDef.keyboardVoicings;
+      : customChord
+        ? [customChord.pianoVoicing!]
+        : [...(chordDef.keyboardVoicings || []), ...customVoicings];
   const [activeIndex, setActiveIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const dragStartX = useRef<number | null>(null);
@@ -203,6 +211,7 @@ export const SwipeableChordCard: React.FC<SwipeableChordCardProps> = ({
                   <KeyboardChordDiagram
                     root={root}
                     voicing={voicing as any}
+                    instrument="acoustic_grand_piano"
                     compact={true}
                     compactSize="wide"
                   />

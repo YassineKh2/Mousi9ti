@@ -8,12 +8,14 @@ import {
 } from "../data/musicTheory";
 import {
   CHORD_TYPES_CATALOG,
+  CustomChord,
   getChordDefinition,
   getCustomChords,
 } from "../data/chordsData";
 import { ChordDiagram } from "../components/ChordDiagram";
 import { PianoKeyboard } from "../components/PianoKeyboard";
 import { ChordSheetMusic } from "../components/ChordSheetMusic";
+import { KeyboardChordDiagram } from "../components/KeyboardChordDiagram";
 import {
   Search,
   Play,
@@ -43,15 +45,36 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
   const [instrumentView, setInstrumentView] = useState<
     "guitar" | "piano" | "both"
   >(settings.defaultInstrument);
+  const [customChords, setCustomChords] = useState<CustomChord[]>(() =>
+    getCustomChords(),
+  );
 
   useEffect(() => {
     setInstrumentView(settings.defaultInstrument);
   }, [settings.defaultInstrument]);
+  useEffect(() => {
+    const handleCustomChordsChanged = () => setCustomChords(getCustomChords());
+    window.addEventListener(
+      "mousi9ti-custom-chords-changed",
+      handleCustomChordsChanged,
+    );
+    return () =>
+      window.removeEventListener(
+        "mousi9ti-custom-chords-changed",
+        handleCustomChordsChanged,
+      );
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInversion, setSelectedInversion] = useState<number>(0);
-  const customVoicings = getCustomChords().filter(
+  const customVoicings = customChords.filter(
     (chord) =>
       chord.instrument !== "piano" &&
+      chord.root === selectedRoot &&
+      chord.chordType === selectedType,
+  );
+  const customPianoVoicings = customChords.filter(
+    (chord) =>
+      chord.pianoVoicing &&
       chord.root === selectedRoot &&
       chord.chordType === selectedType,
   );
@@ -621,6 +644,15 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
                     octaves={pianoOctavesCount}
                   />
                 </div>
+                {customPianoVoicings.map((chord) => (
+                  <KeyboardChordDiagram
+                    key={chord.id}
+                    chordName={chord.pianoVoicing?.name}
+                    root={selectedRoot}
+                    instrument="acoustic_grand_piano"
+                    voicing={chord.pianoVoicing!}
+                  />
+                ))}
               </div>
             )}
           </div>

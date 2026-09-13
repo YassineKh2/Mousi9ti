@@ -526,28 +526,33 @@ export function App() {
     }));
 
     const customChordResults: GlobalSearchResult[] = getCustomChords()
-      .filter((chord) => chord.instrument !== "piano")
       .filter((chord) => {
+        const chordName = chord.pianoVoicing?.name || chord.voicing.name;
         const haystack =
-          `${chord.root} ${chord.voicing.name} ${chord.chordType}`.toLowerCase();
+          `${chord.root} ${chordName} ${chord.chordType}`.toLowerCase();
         return parsed?.root
           ? chord.root === parsed.root &&
               haystack.includes(strippedChordQuery || chord.root.toLowerCase())
           : haystack.includes(q);
       })
       .slice(0, 8)
-      .map((chord) => ({
-        id: `custom-chord-${chord.id}`,
-        label: `${chord.root} ${chord.voicing.name}`,
-        subtitle: "Saved guitar chord",
-        tab: "chords",
-        kind: "chord",
-        payload: {
-          chordType: chord.chordType,
-          root: chord.root,
-          customChordId: chord.id,
-        },
-      }));
+      .map((chord) => {
+        const chordName = chord.pianoVoicing?.name || chord.voicing.name;
+        return {
+          id: `custom-chord-${chord.id}`,
+          label: `${chord.root} ${chordName}`,
+          subtitle: chord.pianoVoicing
+            ? "Saved piano chord"
+            : "Saved guitar chord",
+          tab: "chords",
+          kind: "chord",
+          payload: {
+            chordType: chord.chordType,
+            root: chord.root,
+            customChordId: chord.id,
+          },
+        };
+      });
 
     return [
       ...tabResults,

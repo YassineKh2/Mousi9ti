@@ -38,17 +38,15 @@ export const ChordSearchInput: React.FC<ChordSearchInputProps> = ({
 
   const allChords: SearchChord[] = [
     ...ALL_CHORDS,
-    ...getCustomChords()
-      .filter((chord) => chord.instrument !== "piano")
-      .map((chord) => ({
-        root: chord.root,
-        type: chord.chordType,
-        symbol: "",
-        name: chord.voicing.name,
-        displayString: `${chord.root} ${chord.voicing.name}`,
-        fullName: `${chord.root} ${chord.voicing.name}`,
-        customChordId: chord.id,
-      })),
+    ...getCustomChords().map((chord) => ({
+      root: chord.root,
+      type: chord.chordType,
+      symbol: "",
+      name: chord.pianoVoicing?.name || chord.voicing.name,
+      displayString: `${chord.root} ${chord.pianoVoicing?.name || chord.voicing.name}`,
+      fullName: `${chord.root} ${chord.pianoVoicing?.name || chord.voicing.name}`,
+      customChordId: chord.id,
+    })),
   ];
 
   useEffect(() => {

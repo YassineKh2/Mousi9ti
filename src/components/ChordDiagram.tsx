@@ -45,6 +45,12 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
   const isNut = baseFret === 1;
 
   const tuning = GUITAR_TUNINGS[0]; // E A D G B E
+  const barreEntries =
+    voicing.barres && voicing.barres.length > 0
+      ? voicing.barres
+      : voicing.barre
+        ? [voicing.barre]
+        : [];
 
   // Handle Play Sound
   const handlePlayChord = () => {
@@ -56,7 +62,17 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
     // Build pitch list from voicing
     const notesToPlay: { note: string; octave: number }[] = [];
 
-    voicing.frets.forEach((fret, stringIdx) => {
+    voicing.frets.forEach((storedFret, stringIdx) => {
+      let fret = storedFret;
+      barreEntries.forEach((barre) => {
+        if (
+          stringIdx >= barre.fromString &&
+          stringIdx <= barre.toString &&
+          (fret === null || fret === 0 || fret < barre.fret)
+        ) {
+          fret = barre.fret;
+        }
+      });
       if (fret === null) return; // muted
       const openNote = tuning.strings[stringIdx];
       const baseOct = tuning.octaves[stringIdx];
@@ -71,13 +87,6 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
 
     audioEngine.playChordArpeggio(notesToPlay, "guitar", 0.05);
   };
-
-  const barreEntries =
-    voicing.barres && voicing.barres.length > 0
-      ? voicing.barres
-      : voicing.barre
-        ? [voicing.barre]
-        : [];
 
   return (
     <div

@@ -29,18 +29,16 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
       ),
     );
 
-    getCustomChords()
-      .filter((chord) => chord.instrument !== "piano")
-      .forEach((chord) => {
-        const key = `${chord.root}-${normalizeType(chord.chordType)}`;
-        if (!selectionKeys.has(key)) {
-          selections.unshift({
-            root: chord.root,
-            type: normalizeType(chord.chordType),
-          });
-          selectionKeys.add(key);
-        }
-      });
+    getCustomChords().forEach((chord) => {
+      const key = `${chord.root}-${normalizeType(chord.chordType)}`;
+      if (!selectionKeys.has(key)) {
+        selections.unshift({
+          root: chord.root,
+          type: normalizeType(chord.chordType),
+        });
+        selectionKeys.add(key);
+      }
+    });
 
     if (selections.length === 0) {
       return [
@@ -142,10 +140,10 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
               <div className="flex flex-col gap-3 w-full max-w-[200px]">
                 <ChordSearchInput
                   autoFocus
-                  onSelect={(root, type) => {
+                  onSelect={(root, type, customChordId) => {
                     setSelectedChords((currentChords) => [
                       ...currentChords,
-                      { root, type },
+                      { root, type, customChordId },
                     ]);
                     setIsAdding(false);
                   }}

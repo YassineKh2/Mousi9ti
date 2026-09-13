@@ -211,6 +211,7 @@ export interface QueueItem {
   id: string;
   root: NoteName;
   type: string;
+  customChordId?: string;
   repeats: number;
   duration: number; // Duration in beats (1 = quarter note, 2 = half note, 3 = dotted half, 4 = whole note, 8 = 2 bars)
   style: string; // Strumming pattern key
