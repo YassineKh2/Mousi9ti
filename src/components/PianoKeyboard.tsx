@@ -9,6 +9,7 @@ import {
 } from "../data/musicTheory";
 import { audioEngine } from "../lib/audio";
 import { Volume2 } from "lucide-react";
+import { useSettingsContext } from "../contexts/SettingsContext";
 
 interface PianoKeyboardProps {
   octaves?: number; // 2 or 3 octaves (default 3: C2 to B4 or C5)
@@ -49,6 +50,42 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   bare = false,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  const settings = useSettingsContext();
+  const noteSize = settings.fretboardNoteSize || "medium";
+
+  const sizeMap = {
+    small: {
+      whiteKey: "w-8 h-32 sm:w-10 sm:h-40",
+      blackKey: "w-5 h-20 sm:w-6 sm:h-24",
+      whiteText: "text-[9px]",
+      blackText: "text-[8px]",
+      octaveText: "text-[7px]",
+    },
+    medium: {
+      whiteKey: "w-9 h-36 sm:w-11 sm:h-44",
+      blackKey: "w-6 h-24 sm:w-7 sm:h-28",
+      whiteText: "text-[10px]",
+      blackText: "text-[9px]",
+      octaveText: "text-[8px]",
+    },
+    large: {
+      whiteKey: "w-11 h-44 sm:w-14 sm:h-52",
+      blackKey: "w-7 h-28 sm:w-9 sm:h-32",
+      whiteText: "text-xs",
+      blackText: "text-[10px]",
+      octaveText: "text-[9px]",
+    },
+    xlarge: {
+      whiteKey: "w-14 h-52 sm:w-16 sm:h-60",
+      blackKey: "w-9 h-32 sm:w-11 sm:h-40",
+      whiteText: "text-sm",
+      blackText: "text-xs",
+      octaveText: "text-[10px]",
+    }
+  };
+  const currSize = sizeMap[noteSize as keyof typeof sizeMap] || sizeMap.medium;
+
   // Scale Map
   const scaleMap = useMemo(() => {
     if (!selectedScale)
@@ -207,7 +244,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
       {/* Piano Stage */}
       <div
         ref={scrollContainerRef}
-        className="w-full max-w-full overflow-x-auto overscroll-x-contain pb-1 sm:pb-4 no-scrollbar touch-pan-x scroll-smooth"
+        className="w-full max-w-full overflow-x-auto overscroll-x-contain pb-1 sm:pb-4 touch-pan-x scroll-smooth"
       >
         <div className="w-max mx-auto px-0.5 py-1.5 sm:px-2 sm:py-2 flex justify-start sm:justify-center">
           <div className="piano-keyboard flex relative bg-surface-container-highest p-1 sm:p-1.5 rounded-b-lg border-t-4 sm:border-t-8 border-outline-variant shadow-2xl">
@@ -289,7 +326,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                           onClick={() =>
                             handleKeyClick(spelledNote, currentOctave)
                           }
-                          className={`w-9 h-36 sm:w-11 sm:h-44 rounded-b-md border-r border-l border-b border-outline-variant/30 flex flex-col justify-end pb-2 sm:pb-3 items-center transition-all ${
+                          className={`rounded-b-md border-r border-l border-b border-outline-variant/30 flex flex-col justify-end pb-2 sm:pb-3 items-center transition-all ${currSize.whiteKey} ${
                             isDimmed
                               ? "opacity-25 hover:opacity-50 grayscale bg-surface-container-lowest/50 text-on-surface-variant/20 shadow-none border-outline-variant/10 cursor-pointer"
                               : isExactOctavePlaying
@@ -314,11 +351,11 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                           }`}
                         >
                           <span
-                            className={`font-mono text-[10px] font-bold ${isDimmed ? "opacity-40" : ""}`}
+                            className={`font-mono font-bold ${currSize.whiteText} ${isDimmed ? "opacity-40" : ""}`}
                           >
                             {label}
                             {wIdx === 0 && (
-                              <span className="text-[8px] opacity-60 ml-0.5">
+                              <span className={`opacity-60 ml-0.5 ${currSize.octaveText}`}>
                                 {currentOctave}
                               </span>
                             )}
@@ -327,7 +364,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
 
                         {/* Black Key */}
                         {hasBlack && (
-                          <div className="absolute top-0 -right-3 sm:-right-3.5 z-30">
+                          <div className="absolute top-0 right-0 translate-x-1/2 z-30">
                             {(() => {
                               const bInfo = hasBlack;
                               const bSemitone = bInfo.semitone;
@@ -396,7 +433,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                                   onClick={() =>
                                     handleKeyClick(bSpelledNote, currentOctave)
                                   }
-                                  className={`w-6 h-24 sm:w-7 sm:h-28 rounded-b-md flex flex-col justify-end pb-1.5 sm:pb-2 items-center transition-all ${
+                                  className={`rounded-b-md flex flex-col justify-end pb-1.5 sm:pb-2 items-center transition-all ${currSize.blackKey} ${
                                     bIsDimmed
                                       ? "opacity-20 hover:opacity-40 grayscale bg-surface-container-lowest/50 text-on-surface-variant/20 shadow-none border border-transparent"
                                       : bIsExactOctavePlaying
@@ -417,7 +454,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                                   }`}
                                 >
                                   <span
-                                    className={`font-mono text-[9px] font-bold ${bIsDimmed ? "opacity-40" : ""}`}
+                                    className={`font-mono font-bold ${currSize.blackText} ${bIsDimmed ? "opacity-40" : ""}`}
                                   >
                                     {bLabel}
                                   </span>
@@ -488,7 +525,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                         : undefined
                     }
                     onClick={() => handleKeyClick("C", finalOctave)}
-                    className={`w-9 h-36 sm:w-11 sm:h-44 rounded-b-md border-r border-l border-b border-outline-variant/30 flex flex-col justify-end pb-2 sm:pb-3 items-center transition-all ${
+                    className={`rounded-b-md border-r border-l border-b border-outline-variant/30 flex flex-col justify-end pb-2 sm:pb-3 items-center transition-all ${currSize.whiteKey} ${
                       isDimmed
                         ? "opacity-25 hover:opacity-50 grayscale bg-surface-container-lowest/50 text-on-surface-variant/20 shadow-none border-outline-variant/10 cursor-pointer"
                         : isExactOctavePlaying
@@ -513,10 +550,10 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                     }`}
                   >
                     <span
-                      className={`font-mono text-[10px] font-bold ${isDimmed ? "opacity-40" : ""}`}
+                      className={`font-mono font-bold ${currSize.whiteText} ${isDimmed ? "opacity-40" : ""}`}
                     >
                       {label}
-                      <span className="text-[8px] opacity-60 ml-0.5">
+                      <span className={`opacity-60 ml-0.5 ${currSize.octaveText}`}>
                         {finalOctave}
                       </span>
                     </span>

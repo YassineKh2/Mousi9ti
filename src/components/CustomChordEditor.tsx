@@ -807,7 +807,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
           className={`${editorInstrument === "piano" ? "xl:col-span-6 order-2" : "xl:col-span-5"} flex flex-col gap-6`}
         >
           <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 shadow-sm">
-            <h2 className="text-lg font-bold mb-4">Chord Identity</h2>
+            <h2 className="font-mono text-lg font-bold mb-4">Chord Identity</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div className="flex-1">
@@ -1133,20 +1133,47 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
 
               <div className="space-y-4 text-sm text-on-surface-variant leading-relaxed">
                 <div className="flex gap-3 items-start">
-                  <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">1</span>
-                  <p>Click the <strong className="text-on-surface">top buttons</strong> above each string to toggle between Mute (X) and Open (O).</p>
+                  <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                    1
+                  </span>
+                  <p>
+                    Click the{" "}
+                    <strong className="text-on-surface">top buttons</strong>{" "}
+                    above each string to toggle between Mute (X) and Open (O).
+                  </p>
                 </div>
                 <div className="flex gap-3 items-start">
-                  <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">2</span>
-                  <p>Click anywhere on the <strong className="text-on-surface">fretboard</strong> to place a finger dot.</p>
+                  <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                    2
+                  </span>
+                  <p>
+                    Click anywhere on the{" "}
+                    <strong className="text-on-surface">fretboard</strong> to
+                    place a finger dot.
+                  </p>
                 </div>
                 <div className="flex gap-3 items-start">
-                  <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">3</span>
-                  <p><strong className="text-on-surface">Drag across a fret</strong> (horizontally) to create a barre chord.</p>
+                  <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                    3
+                  </span>
+                  <p>
+                    <strong className="text-on-surface">
+                      Drag across a fret
+                    </strong>{" "}
+                    (horizontally) to create a barre chord.
+                  </p>
                 </div>
                 <div className="flex gap-3 items-start">
-                  <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">4</span>
-                  <p>Click a placed <strong className="text-on-surface">finger or barre</strong> to cycle its number (1–T). Click the <strong className="text-on-surface text-error">✕</strong> to remove it.</p>
+                  <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                    4
+                  </span>
+                  <p>
+                    Click a placed{" "}
+                    <strong className="text-on-surface">finger or barre</strong>{" "}
+                    to cycle its number (1–T). Click the{" "}
+                    <strong className="text-on-surface text-error">✕</strong> to
+                    remove it.
+                  </p>
                 </div>
               </div>
 

@@ -25,7 +25,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   fretCount: 15,
   soundVolume: 1,
   metronomeSound: "click",
-  fretboardWood: "ebony",
+  fretboardTheme: "original",
+  fretboardNoteSize: "medium",
+  fretboardColorMode: "default",
+  fretboardMinimalDetails: false,
   autoSaveSession: true,
   timerPresets: [3, 5, 10, 30],
   stopMetronomeOnTimerEnd: false,
@@ -223,7 +226,19 @@ export function getSavedSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+
+    // Migration for large notes to note size
+    if (parsed.fretboardLargeNotes !== undefined && parsed.fretboardNoteSize === undefined) {
+      parsed.fretboardNoteSize = parsed.fretboardLargeNotes ? "large" : "medium";
+      delete parsed.fretboardLargeNotes;
+    }
+    // Migration for color mode
+    if (parsed.fretboardColorMode === undefined) {
+      parsed.fretboardColorMode = "default";
+    }
+
+    return { ...DEFAULT_SETTINGS, ...parsed };
   } catch (e) {
     console.error("Failed to load settings from storage", e);
     return DEFAULT_SETTINGS;
