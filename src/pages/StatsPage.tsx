@@ -87,7 +87,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
   return (
     <div className="space-y-6 pb-12">
       {/* 4 Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="stats-metrics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Practice Time */}
         <div className="bg-surface-container-low border border-outline-variant/30 rounded-lg p-5 flex flex-col gap-2 shadow">
           <div className="flex items-center justify-between text-on-surface-variant">

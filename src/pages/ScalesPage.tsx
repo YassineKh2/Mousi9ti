@@ -443,7 +443,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
   return (
     <div className="space-y-4 sm:space-y-6 pb-8 sm:pb-12">
       {/* Selected Scale Detail Card (Formula, Degrees, CAGED boxes) */}
-      <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-3 sm:p-6 shadow-xl space-y-4">
+      <div data-tour="scales-panel" className="bg-surface-container border border-outline-variant/30 rounded-lg p-3 sm:p-6 shadow-xl space-y-4">
         <div className="flex flex-col items-stretch gap-3 pb-3 border-b border-outline-variant/30 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="flex min-w-0 items-center gap-2 sm:flex-1 sm:gap-3">
             {/* Interactive Root Note Badge Selector */}
@@ -982,6 +982,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
       </div>
 
       {/* Fretboard Visualization */}
+      <div data-tour="scales-fretboard">
       {(instrumentView === "guitar" || instrumentView === "both") && (
         <Fretboard
           tuning={currentTuning}
@@ -1010,6 +1011,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
           focusRange={pianoFocusRangeObj}
         />
       )}
+      </div>
     </div>
   );
 };

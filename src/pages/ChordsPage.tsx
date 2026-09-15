@@ -286,7 +286,7 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
   return (
     <div className="space-y-8 pb-12 pt-4">
       {/* Search and Instrument Toggle Bar */}
-      <div className="flex flex-col items-stretch gap-2 bg-surface-container-low rounded-lg p-2 border border-outline-variant/30 sm:flex-row sm:items-center sm:gap-4">
+      <div data-tour="chords-search" className="flex flex-col items-stretch gap-2 bg-surface-container-low rounded-lg p-2 border border-outline-variant/30 sm:flex-row sm:items-center sm:gap-4">
         <div className="relative flex min-w-0 flex-1 items-center">
           <Search
             size={16}
@@ -361,7 +361,7 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
 
       <div className="flex flex-col lg:flex-row gap-6 items-start w-full max-w-full">
         {/* Left Sidebar: Filters */}
-        <div className="w-full lg:w-72 flex flex-col gap-4 shrink-0">
+        <div data-tour="chords-filters" className="w-full lg:w-72 flex flex-col gap-4 shrink-0">
           {/* Root Note Panel */}
           <div className="rounded-xl border border-outline-variant/30 bg-surface-container-low p-4 sm:p-5">
             <span className="text-xs font-mono text-on-surface-variant tracking-[0.2em] uppercase font-bold block mb-4">
@@ -551,7 +551,7 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
           )}
 
           {/* Voicings / Keyboard area */}
-          <div className="w-full max-w-full min-w-0">
+          <div data-tour="chords-voicing" className="w-full max-w-full min-w-0">
             <div className="mb-5 flex items-center gap-2 sm:mb-6">
               <h3 className="text-2xl font-bold text-on-surface">Voicings</h3>
               <button

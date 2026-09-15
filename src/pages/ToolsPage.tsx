@@ -136,7 +136,7 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* Header & Sub-tool Navigation Tabs */}
-      <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 flex flex-col gap-4 shadow-xl">
+      <div data-tour="tools-tabs" className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 flex flex-col gap-4 shadow-xl">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant/10">
           <div>
             <h1 className="font-mono text-base font-bold tracking-[0.2em] text-on-surface uppercase flex items-center gap-2">
@@ -335,7 +335,11 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
       )}
 
       {/* Circle of Fifths Tool */}
-      {activeTool === "circle" && <CircleOfFifths />}
+      {activeTool === "circle" && (
+        <div data-tour="circle-of-fifths">
+          <CircleOfFifths />
+        </div>
+      )}
 
       {/* Custom Chord Builder */}
       {activeTool === "custom-chord" && (
