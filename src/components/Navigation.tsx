@@ -6,6 +6,7 @@ import {
   Dumbbell,
   Compass,
   BarChart3,
+  CalendarCheck2,
   Settings,
   Flame,
   Music,
@@ -21,6 +22,7 @@ export type ActiveTab =
   | "chords"
   | "builder"
   | "exercises"
+  | "routine"
   | "tools"
   | "stats";
 
@@ -71,6 +73,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: "scales", label: "SCALES", icon: <Sparkles size={18} /> },
     { id: "chords", label: "CHORDS", icon: <Grid3X3 size={18} /> },
     { id: "builder", label: "BUILDER", icon: <Settings size={18} /> },
+    { id: "routine", label: "ROUTINE", icon: <CalendarCheck2 size={18} /> },
     //  Hidden until further improvement
     // { id: "exercises", label: "EXERCISES", icon: <Dumbbell size={18} /> },
     { id: "tools", label: "TOOLS", icon: <Compass size={18} /> },

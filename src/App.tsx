@@ -20,6 +20,7 @@ import { BuilderPage } from "./pages/BuilderPage";
 import { ExercisesPage } from "./pages/ExercisesPage";
 import { ToolsPage } from "./pages/ToolsPage";
 import { StatsPage } from "./pages/StatsPage";
+import { RoutinePage } from "./pages/RoutinePage";
 import { ALL_ROOT_NOTES, SCALES_DATABASE } from "./data/musicTheory";
 import { CHORD_TYPES_CATALOG, getCustomChords } from "./data/chordsData";
 import { GlobalSearchResult } from "./components/Navigation";
@@ -643,6 +644,7 @@ export function App() {
               onMetronomePlayingChange={setMetronomeIsPlaying}
               metronomeBarCycleMode={metronomeBarCycleMode}
               onBarCycleModeChange={setMetronomeBarCycleMode}
+              onOpenRoutine={() => setActiveTab("routine")}
             />
           )}
 
@@ -669,6 +671,17 @@ export function App() {
               onStartExercisePractice={handleStartExercisePractice}
               initialExerciseId={pendingExerciseSearch}
               onInitialExerciseHandled={() => setPendingExerciseSearch(null)}
+            />
+          )}
+
+          {activeTab === "routine" && (
+            <RoutinePage
+              timer={timer}
+              streak={streak}
+              activeSessionDuration={activeSessionDuration}
+              isSessionActive={isSessionActive}
+              onToggleSession={handleToggleSession}
+              onEndSession={handleEndSession}
             />
           )}
 
@@ -703,7 +716,7 @@ export function App() {
         />
 
         {/* Global Persistent Timer Toast */}
-        {activeTab !== "dashboard" && (
+        {activeTab !== "dashboard" && activeTab !== "routine" && (
           <GlobalSessionToast
             activeSessionDuration={activeSessionDuration}
             isSessionActive={isSessionActive}

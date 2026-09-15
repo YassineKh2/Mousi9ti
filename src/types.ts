@@ -170,7 +170,12 @@ export interface StreakData {
   history: { date: string; practiced: boolean; durationMin?: number }[];
 }
 
-export type FretboardTheme = "original" | "ebony" | "maple" | "rosewood" | "high-contrast";
+export type FretboardTheme =
+  | "original"
+  | "ebony"
+  | "maple"
+  | "rosewood"
+  | "high-contrast";
 
 export interface AppSettings {
   theme: "dark" | "light";
@@ -194,6 +199,7 @@ export type DashboardWidgetId =
   | "timer"
   | "random-drill"
   | "session"
+  | "practice-tasks"
   | "instruments"
   | "chord-selector";
 

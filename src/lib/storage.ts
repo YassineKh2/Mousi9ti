@@ -47,10 +47,14 @@ const DEFAULT_DASHBOARD_LAYOUT: DashboardLayoutData = {
     },
     {
       id: "row-2",
-      widgets: [{ id: "instruments", title: "Instruments" }],
+      widgets: [{ id: "practice-tasks", title: "Daily Practice Goals" }],
     },
     {
       id: "row-3",
+      widgets: [{ id: "instruments", title: "Instruments" }],
+    },
+    {
+      id: "row-4",
       widgets: [{ id: "chord-selector", title: "Chord Selector" }],
     },
   ],
@@ -124,12 +128,24 @@ export function getSavedDashboardLayout(): DashboardLayoutData {
         });
       }
 
+      const hasPracticeTasks =
+        newRows.some((row) =>
+          row.widgets.some((widget) => widget.id === "practice-tasks"),
+        ) || newHiddenWidgets.some((widget) => widget.id === "practice-tasks");
+
+      if (!hasPracticeTasks) {
+        newRows.push({
+          id: `row-${Math.random().toString(36).substring(2, 9)}`,
+          widgets: [{ id: "practice-tasks", title: "Daily Practice Goals" }],
+        });
+      }
+
       const sanitized: DashboardLayoutData = {
         rows: newRows,
         hiddenWidgets: newHiddenWidgets,
       };
 
-      if (hasLegacyInstruments || !hasChordSelector) {
+      if (hasLegacyInstruments || !hasChordSelector || !hasPracticeTasks) {
         saveDashboardLayout(sanitized);
       }
 
@@ -190,6 +206,17 @@ export function getSavedDashboardLayout(): DashboardLayoutData {
           });
         }
 
+        const hasPracticeTasks =
+          rows.some((row) =>
+            row.widgets.some((widget) => widget.id === "practice-tasks"),
+          ) || hiddenWidgets.some((widget) => widget.id === "practice-tasks");
+        if (!hasPracticeTasks) {
+          rows.push({
+            id: `row-${Math.random().toString(36).substring(2, 9)}`,
+            widgets: [{ id: "practice-tasks", title: "Daily Practice Goals" }],
+          });
+        }
+
         const migrated: DashboardLayoutData = { rows, hiddenWidgets };
         saveDashboardLayout(migrated);
         return migrated;
@@ -229,8 +256,13 @@ export function getSavedSettings(): AppSettings {
     const parsed = JSON.parse(raw);
 
     // Migration for large notes to note size
-    if (parsed.fretboardLargeNotes !== undefined && parsed.fretboardNoteSize === undefined) {
-      parsed.fretboardNoteSize = parsed.fretboardLargeNotes ? "large" : "medium";
+    if (
+      parsed.fretboardLargeNotes !== undefined &&
+      parsed.fretboardNoteSize === undefined
+    ) {
+      parsed.fretboardNoteSize = parsed.fretboardLargeNotes
+        ? "large"
+        : "medium";
       delete parsed.fretboardLargeNotes;
     }
     // Migration for color mode
