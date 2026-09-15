@@ -7,6 +7,7 @@ import {
   GUITAR_TUNINGS,
   NOTE_SEMITONES,
 } from "../data/musicTheory";
+import { useSettingsContext } from "../contexts/SettingsContext";
 
 interface ChordDiagramProps {
   chordName?: string;
@@ -16,6 +17,7 @@ interface ChordDiagramProps {
   onPlay?: () => void;
   noBackground?: boolean;
   scale?: number;
+  fretCount?: number;
 }
 
 export const ChordDiagram: React.FC<ChordDiagramProps> = ({
@@ -26,7 +28,23 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
   onPlay,
   noBackground = false,
   scale = 1,
+  fretCount = 5,
 }) => {
+  const settings = useSettingsContext();
+  const theme = settings.fretboardTheme;
+  const isLarge = ["large", "xlarge"].includes(settings.fretboardNoteSize || "medium");
+  const isMinimal = settings.fretboardMinimalDetails;
+
+  const strokeColor = theme === "high-contrast" ? "white" : "var(--color-outline-variant)";
+  const onSurfaceColor = theme === "high-contrast" ? "white" : "var(--color-on-surface)";
+  const dotColor = theme === "high-contrast" ? "white" : "var(--color-on-surface)";
+  const textInDotColor = theme === "high-contrast" ? "black" : "var(--color-background)";
+  
+  const lineThickness = isMinimal ? 0.5 : isLarge ? 1.5 : 1;
+  const nutThickness = isLarge ? 6 : 4;
+  const dotRadius = isLarge ? 13 : 10;
+  const textSize = isLarge ? "12" : "10";
+
   // SVG Dimensions & Layout
   const svgWidth = 240;
   const svgHeight = 270;
@@ -35,7 +53,7 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
   const height = svgHeight - margin.top - margin.bottom;
 
   const numStrings = 6;
-  const numFrets = 5;
+  const numFrets = Math.min(8, Math.max(5, fretCount));
   const stringSpacing = width / (numStrings - 1);
   const fretSpacing = height / numFrets;
 
@@ -43,6 +61,12 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
   const isNut = baseFret === 1;
 
   const tuning = GUITAR_TUNINGS[0]; // E A D G B E
+  const barreEntries =
+    voicing.barres && voicing.barres.length > 0
+      ? voicing.barres
+      : voicing.barre
+        ? [voicing.barre]
+        : [];
 
   // Handle Play Sound
   const handlePlayChord = () => {
@@ -54,7 +78,17 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
     // Build pitch list from voicing
     const notesToPlay: { note: string; octave: number }[] = [];
 
-    voicing.frets.forEach((fret, stringIdx) => {
+    voicing.frets.forEach((storedFret, stringIdx) => {
+      let fret = storedFret;
+      barreEntries.forEach((barre) => {
+        if (
+          stringIdx >= barre.fromString &&
+          stringIdx <= barre.toString &&
+          (fret === null || fret === 0 || fret < barre.fret)
+        ) {
+          fret = barre.fret;
+        }
+      });
       if (fret === null) return; // muted
       const openNote = tuning.strings[stringIdx];
       const baseOct = tuning.octaves[stringIdx];
@@ -69,13 +103,6 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
 
     audioEngine.playChordArpeggio(notesToPlay, "guitar", 0.05);
   };
-
-  const barreEntries =
-    voicing.barres && voicing.barres.length > 0
-      ? voicing.barres
-      : voicing.barre
-        ? [voicing.barre]
-        : [];
 
   return (
     <div
@@ -119,7 +146,7 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
           <text
             x={margin.left - 16}
             y={margin.top + fretSpacing / 2 + 4}
-            fill="var(--color-on-surface)"
+            fill={onSurfaceColor}
             fontSize="11"
             fontFamily="monospace"
             textAnchor="end"
@@ -136,8 +163,8 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
             y1={margin.top}
             x2={margin.left + width}
             y2={margin.top}
-            stroke="var(--color-on-surface)"
-            strokeWidth="4"
+            stroke={onSurfaceColor}
+            strokeWidth={nutThickness}
             strokeLinecap="round"
           />
         ) : (
@@ -146,8 +173,8 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
             y1={margin.top}
             x2={margin.left + width}
             y2={margin.top}
-            stroke="var(--color-outline-variant)"
-            strokeWidth="1.5"
+            stroke={strokeColor}
+            strokeWidth={lineThickness}
           />
         )}
 
@@ -162,8 +189,8 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
               y1={y}
               x2={margin.left + width}
               y2={y}
-              stroke="var(--color-outline-variant)"
-              strokeWidth="1"
+              stroke={strokeColor}
+              strokeWidth={lineThickness}
             />
           );
         })}
@@ -178,8 +205,8 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
               y1={margin.top}
               x2={x}
               y2={margin.top + height}
-              stroke="var(--color-outline-variant)"
-              strokeWidth="1"
+              stroke={strokeColor}
+              strokeWidth={lineThickness}
             />
           );
         })}
@@ -207,8 +234,8 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
               <text
                 x={Math.min(fromX, toX) - 16}
                 y={y + 3.5}
-                fill="var(--color-on-surface)"
-                fontSize="10"
+                fill={onSurfaceColor}
+                fontSize={textSize}
                 fontFamily="sans-serif"
                 textAnchor="middle"
                 fontWeight="bold"
@@ -303,14 +330,14 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
 
             const dotFill = isRoot
               ? "var(--color-secondary)"
-              : "var(--color-on-surface)";
+              : dotColor;
             const textFill = isRoot
               ? "var(--color-on-secondary)"
-              : "var(--color-background)";
+              : textInDotColor;
 
             return (
               <g key={`dot-${stringIdx}`}>
-                <circle cx={x} cy={y} r={10} fill={dotFill} />
+                <circle cx={x} cy={y} r={dotRadius} fill={dotFill} />
                 {fingerNum && (
                   <text
                     x={x}
@@ -340,14 +367,14 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
               y={margin.top + height + 20}
               fill={
                 voicing.frets[i] === null
-                  ? "var(--color-outline-variant)"
+                  ? strokeColor
                   : voicing.frets[i] !== null &&
                       NOTE_SEMITONES[noteName] === NOTE_SEMITONES[root] &&
                       voicing.frets[i] === 0
                     ? "var(--color-secondary)"
-                    : "var(--color-on-surface)"
+                    : onSurfaceColor
               }
-              fontSize="10"
+              fontSize={textSize}
               fontFamily="monospace"
               textAnchor="middle"
               fontWeight="bold"

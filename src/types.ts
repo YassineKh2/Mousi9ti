@@ -20,6 +20,7 @@ export type NoteName =
 export interface ChordSelection {
   root: NoteName;
   type: string;
+  customChordId?: string;
 }
 
 export type NoteDisplayMode = "name" | "degree" | "interval";
@@ -169,6 +170,13 @@ export interface StreakData {
   history: { date: string; practiced: boolean; durationMin?: number }[];
 }
 
+export type FretboardTheme =
+  | "original"
+  | "ebony"
+  | "maple"
+  | "rosewood"
+  | "high-contrast";
+
 export interface AppSettings {
   theme: "dark" | "light";
   accentColor: string; // hex
@@ -177,7 +185,10 @@ export interface AppSettings {
   fretCount: number; // 12, 15, 21, 22, 24
   soundVolume: number; // 0-1
   metronomeSound: MetronomeSound;
-  fretboardWood: "ebony" | "rosewood" | "maple";
+  fretboardTheme: FretboardTheme;
+  fretboardNoteSize: "small" | "medium" | "large" | "xlarge";
+  fretboardColorMode: "default" | "colorblind" | "monochrome";
+  fretboardMinimalDetails: boolean;
   autoSaveSession: boolean;
   timerPresets: number[]; // in minutes
   stopMetronomeOnTimerEnd: boolean;
@@ -188,6 +199,7 @@ export type DashboardWidgetId =
   | "timer"
   | "random-drill"
   | "session"
+  | "practice-tasks"
   | "instruments"
   | "chord-selector";
 
@@ -210,6 +222,7 @@ export interface QueueItem {
   id: string;
   root: NoteName;
   type: string;
+  customChordId?: string;
   repeats: number;
   duration: number; // Duration in beats (1 = quarter note, 2 = half note, 3 = dotted half, 4 = whole note, 8 = 2 bars)
   style: string; // Strumming pattern key

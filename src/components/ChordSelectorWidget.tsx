@@ -4,6 +4,7 @@ import { SwipeableChordCard } from "./SwipeableChordCard";
 import { ChordSearchInput } from "./ChordSearchInput";
 import { ChordSelection } from "../types";
 import { getSavedChordSelections, saveChordSelections } from "../lib/storage";
+import { getCustomChords } from "../data/chordsData";
 
 interface ChordSelectorWidgetProps {
   defaultInstrument: "guitar" | "piano";
@@ -14,15 +15,44 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
   defaultInstrument,
   instrumentView,
 }) => {
+  const loadChordSelections = (): ChordSelection[] => {
+    const savedSelections = getSavedChordSelections();
+    const normalizeType = (type: string) =>
+      type === "maj" ? "major" : type === "min" ? "minor" : type;
+    const selections: ChordSelection[] = savedSelections.map((selection) => ({
+      root: selection.root,
+      type: normalizeType(selection.type),
+    }));
+    const selectionKeys = new Set(
+      selections.map(
+        (selection) => `${selection.root}-${normalizeType(selection.type)}`,
+      ),
+    );
+
+    getCustomChords().forEach((chord) => {
+      const key = `${chord.root}-${normalizeType(chord.chordType)}`;
+      if (!selectionKeys.has(key)) {
+        selections.unshift({
+          root: chord.root,
+          type: normalizeType(chord.chordType),
+        });
+        selectionKeys.add(key);
+      }
+    });
+
+    if (selections.length === 0) {
+      return [
+        { root: "C", type: "maj" },
+        { root: "G", type: "maj" },
+        { root: "A", type: "min" },
+      ];
+    }
+
+    return selections;
+  };
+
   const [selectedChords, setSelectedChords] = useState<ChordSelection[]>(() => {
-    const savedChords = getSavedChordSelections();
-    return savedChords.length > 0
-      ? savedChords
-      : [
-          { root: "C", type: "maj" },
-          { root: "G", type: "maj" },
-          { root: "A", type: "min" },
-        ];
+    return loadChordSelections();
   });
   const [isFullWidth, setIsFullWidth] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -31,6 +61,22 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
   useEffect(() => {
     saveChordSelections(selectedChords);
   }, [selectedChords]);
+
+  useEffect(() => {
+    const handleCustomChordsChanged = () => {
+      setSelectedChords(loadChordSelections());
+    };
+
+    window.addEventListener(
+      "mousi9ti-custom-chords-changed",
+      handleCustomChordsChanged,
+    );
+    return () =>
+      window.removeEventListener(
+        "mousi9ti-custom-chords-changed",
+        handleCustomChordsChanged,
+      );
+  }, []);
 
   useEffect(() => {
     const widget = widgetRef.current;
@@ -75,6 +121,7 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
             key={`${chord.root}-${chord.type}-${i}-${chordInstrument}`}
             root={chord.root}
             type={chord.type}
+            customChordId={chord.customChordId}
             instrument={chordInstrument}
             onRemove={() => handleRemoveChord(i)}
             onChange={(newRoot, newType) => {
@@ -93,10 +140,10 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
               <div className="flex flex-col gap-3 w-full max-w-[200px]">
                 <ChordSearchInput
                   autoFocus
-                  onSelect={(root, type) => {
+                  onSelect={(root, type, customChordId) => {
                     setSelectedChords((currentChords) => [
                       ...currentChords,
-                      { root, type },
+                      { root, type, customChordId },
                     ]);
                     setIsAdding(false);
                   }}

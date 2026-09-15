@@ -20,15 +20,20 @@ import { BuilderPage } from "./pages/BuilderPage";
 import { ExercisesPage } from "./pages/ExercisesPage";
 import { ToolsPage } from "./pages/ToolsPage";
 import { StatsPage } from "./pages/StatsPage";
+import { RoutinePage } from "./pages/RoutinePage";
 import { ALL_ROOT_NOTES, SCALES_DATABASE } from "./data/musicTheory";
-import { CHORD_TYPES_CATALOG } from "./data/chordsData";
-import { EXERCISES_DATABASE } from "./data/exercisesData";
+import { CHORD_TYPES_CATALOG, getCustomChords } from "./data/chordsData";
 import { GlobalSessionToast } from "./components/GlobalSessionToast";
+import { SettingsContext } from "./contexts/SettingsContext";
 import { TourOverlay } from "./components/TourOverlay";
 
 export function App() {
   type PendingScaleTarget = { scaleId: string; root: NoteName };
-  type PendingChordTarget = { chordType: string; root: NoteName };
+  type PendingChordTarget = {
+    chordType: string;
+    root: NoteName;
+    customChordId?: string;
+  };
 
   // Onboarding tour
   const [isTourOpen, setIsTourOpen] = useState<boolean>(
@@ -279,9 +284,7 @@ export function App() {
 
   // Log BPM to session tracker
   const handleLogBpm = (bpm: number) => {
-    setCurrentSessionBpms((prev) =>
-      prev.includes(bpm) ? prev : [...prev, bpm],
-    );
+    setCurrentSessionBpms((prev) => [...prev, bpm]);
   };
 
   // Switch to exercise practice directly with suggested tempo
@@ -551,27 +554,40 @@ export function App() {
       payload: { chordType: c.type, root: parsed?.root ?? "C" },
     }));
 
-    const exerciseResults: GlobalSearchResult[] = EXERCISES_DATABASE.filter(
-      (e) =>
-        `${e.title} ${e.category} ${e.description} ${e.difficulty}`
-          .toLowerCase()
-          .includes(q),
-    )
+    const customChordResults: GlobalSearchResult[] = getCustomChords()
+      .filter((chord) => {
+        const chordName = chord.pianoVoicing?.name || chord.voicing.name;
+        const haystack =
+          `${chord.root} ${chordName} ${chord.chordType}`.toLowerCase();
+        return parsed?.root
+          ? chord.root === parsed.root &&
+              haystack.includes(strippedChordQuery || chord.root.toLowerCase())
+          : haystack.includes(q);
+      })
       .slice(0, 8)
-      .map((e) => ({
-        id: `exercise-${e.id}`,
-        label: e.title,
-        subtitle: `${e.category} • ${e.difficulty} • ${e.suggestedBpm} BPM`,
-        tab: "exercises",
-        kind: "exercise",
-        payload: { exerciseId: e.id },
-      }));
+      .map((chord) => {
+        const chordName = chord.pianoVoicing?.name || chord.voicing.name;
+        return {
+          id: `custom-chord-${chord.id}`,
+          label: `${chord.root} ${chordName}`,
+          subtitle: chord.pianoVoicing
+            ? "Saved piano chord"
+            : "Saved guitar chord",
+          tab: "chords",
+          kind: "chord",
+          payload: {
+            chordType: chord.chordType,
+            root: chord.root,
+            customChordId: chord.id,
+          },
+        };
+      });
 
     return [
       ...tabResults,
       ...scaleResults,
+      ...customChordResults,
       ...chordResults,
-      ...exerciseResults,
     ].slice(0, 12);
   }, [searchQuery]);
 
@@ -596,6 +612,7 @@ export function App() {
       setPendingChordSearch({
         chordType: result.payload.chordType,
         root: result.payload.root as NoteName,
+        customChordId: result.payload.customChordId,
       });
     }
     if (result.kind === "exercise" && result.payload?.exerciseId) {
@@ -606,133 +623,147 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-on-background flex flex-col antialiased selection:bg-primary/30 selection:text-on-surface">
-      {/* Navigation Layout */}
-      <Navigation
-        theme={settings.theme}
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        isSidebarCollapsed={isSidebarCollapsed}
-        onToggleSidebar={() => {
-          setIsSidebarCollapsed((collapsed) => {
-            const nextCollapsed = !collapsed;
-            localStorage.setItem(
-              "Mousi9ti_sidebar_collapsed",
-              String(nextCollapsed),
-            );
-            return nextCollapsed;
-          });
-        }}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        streakDays={streak.currentStreak}
-        graceActive={streak.graceDaysUsed > 0}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        searchResults={searchResults}
-        onSelectSearchResult={handleSelectSearchResult}
-      />
+    <SettingsContext.Provider value={settings}>
+      <div className="min-h-screen bg-background text-on-background flex flex-col antialiased selection:bg-primary/30 selection:text-on-surface">
+        {/* Navigation Layout */}
+        <Navigation
+          theme={settings.theme}
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={() => {
+            setIsSidebarCollapsed((collapsed) => {
+              const nextCollapsed = !collapsed;
+              localStorage.setItem(
+                "Mousi9ti_sidebar_collapsed",
+                String(nextCollapsed),
+              );
+              return nextCollapsed;
+            });
+          }}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          streakDays={streak.currentStreak}
+          graceActive={streak.graceDaysUsed > 0}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchResults={searchResults}
+          onSelectSearchResult={handleSelectSearchResult}
+        />
 
-      {/* Main Content Area */}
-      <main
-        className={`flex-1 ${isSidebarCollapsed ? "lg:pl-20" : "lg:pl-72"} pt-4 pb-20 lg:pb-0 px-4 lg:px-8 max-w-[1600px] w-full mx-auto transition-[padding] duration-200`}
-      >
-        {activeTab === "dashboard" && (
-          <DashboardPage
-            metronomeBpm={metronomeBpm}
-            onBpmChange={setMetronomeBpm}
-            streak={streak}
+        {/* Main Content Area */}
+        <main
+          className={`flex-1 ${isSidebarCollapsed ? "lg:pl-20" : "lg:pl-72"} pt-4 pb-20 lg:pb-0 px-4 lg:px-8 max-w-[1600px] w-full mx-auto transition-[padding] duration-200`}
+        >
+          {activeTab === "dashboard" && (
+            <DashboardPage
+              metronomeBpm={metronomeBpm}
+              onBpmChange={setMetronomeBpm}
+              streak={streak}
+              activeSessionDuration={activeSessionDuration}
+              isSessionActive={isSessionActive}
+              onToggleSession={handleToggleSession}
+              onEndSession={handleEndSession}
+              onLogBpm={handleLogBpm}
+              settings={settings}
+              onUpdateSettings={handleUpdateSettings}
+              timer={timer}
+              metronomeIsPlaying={metronomeIsPlaying}
+              onMetronomePlayingChange={setMetronomeIsPlaying}
+              metronomeBarCycleMode={metronomeBarCycleMode}
+              onBarCycleModeChange={setMetronomeBarCycleMode}
+              onOpenRoutine={() => setActiveTab("routine")}
+            />
+          )}
+
+          {activeTab === "scales" && (
+            <ScalesPage
+              initialScaleTarget={pendingScaleSearch}
+              onInitialScaleHandled={() => setPendingScaleSearch(null)}
+              settings={settings}
+            />
+          )}
+
+          {activeTab === "chords" && (
+            <ChordsPage
+              initialChordTarget={pendingChordSearch}
+              onInitialChordHandled={() => setPendingChordSearch(null)}
+              settings={settings}
+            />
+          )}
+
+          {activeTab === "builder" && <BuilderPage settings={settings} />}
+
+          {activeTab === "exercises" && (
+            <ExercisesPage
+              onStartExercisePractice={handleStartExercisePractice}
+              initialExerciseId={pendingExerciseSearch}
+              onInitialExerciseHandled={() => setPendingExerciseSearch(null)}
+            />
+          )}
+
+          {activeTab === "routine" && (
+            <RoutinePage
+              timer={timer}
+              streak={streak}
+              activeSessionDuration={activeSessionDuration}
+              isSessionActive={isSessionActive}
+              onToggleSession={handleToggleSession}
+              onEndSession={handleEndSession}
+            />
+          )}
+
+          {activeTab === "tools" && (
+            <ToolsPage
+              metronomeBpm={metronomeBpm}
+              onBpmChange={setMetronomeBpm}
+              onLogBpm={handleLogBpm}
+              settings={settings}
+              onUpdateSettings={handleUpdateSettings}
+              timer={timer}
+              metronomeIsPlaying={metronomeIsPlaying}
+              onMetronomePlayingChange={setMetronomeIsPlaying}
+              metronomeBarCycleMode={metronomeBarCycleMode}
+              onBarCycleModeChange={setMetronomeBarCycleMode}
+            />
+          )}
+
+          {activeTab === "stats" && (
+            <StatsPage sessions={sessions} streak={streak} />
+          )}
+        </main>
+
+        {/* Settings Modal */}
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          settings={settings}
+          onUpdateSettings={handleUpdateSettings}
+          onExportData={handleExportData}
+          onClearData={handleClearData}
+          onRestartTour={handleRestartTour}
+        />
+
+        {/* Onboarding Tour */}
+        {isTourOpen && (
+          <TourOverlay
+            onClose={handleCloseTour}
+            onTabChange={setActiveTab}
+            initialStep={tourStep}
+            onStepChange={handleTourStepChange}
+          />
+        )}
+
+        {/* Global Persistent Timer Toast */}
+        {activeTab !== "dashboard" && activeTab !== "routine" && (
+          <GlobalSessionToast
             activeSessionDuration={activeSessionDuration}
             isSessionActive={isSessionActive}
             onToggleSession={handleToggleSession}
             onEndSession={handleEndSession}
-            onLogBpm={handleLogBpm}
-            settings={settings}
-            onUpdateSettings={handleUpdateSettings}
-            timer={timer}
-            metronomeIsPlaying={metronomeIsPlaying}
-            onMetronomePlayingChange={setMetronomeIsPlaying}
-            metronomeBarCycleMode={metronomeBarCycleMode}
-            onBarCycleModeChange={setMetronomeBarCycleMode}
           />
         )}
-
-        {activeTab === "scales" && (
-          <ScalesPage
-            initialScaleTarget={pendingScaleSearch}
-            onInitialScaleHandled={() => setPendingScaleSearch(null)}
-            settings={settings}
-          />
-        )}
-
-        {activeTab === "chords" && (
-          <ChordsPage
-            initialChordTarget={pendingChordSearch}
-            onInitialChordHandled={() => setPendingChordSearch(null)}
-            settings={settings}
-          />
-        )}
-
-        {activeTab === "builder" && <BuilderPage settings={settings} />}
-
-        {activeTab === "exercises" && (
-          <ExercisesPage
-            onStartExercisePractice={handleStartExercisePractice}
-            initialExerciseId={pendingExerciseSearch}
-            onInitialExerciseHandled={() => setPendingExerciseSearch(null)}
-          />
-        )}
-
-        {activeTab === "tools" && (
-          <ToolsPage
-            metronomeBpm={metronomeBpm}
-            onBpmChange={setMetronomeBpm}
-            onLogBpm={handleLogBpm}
-            settings={settings}
-            onUpdateSettings={handleUpdateSettings}
-            timer={timer}
-            metronomeIsPlaying={metronomeIsPlaying}
-            onMetronomePlayingChange={setMetronomeIsPlaying}
-            metronomeBarCycleMode={metronomeBarCycleMode}
-            onBarCycleModeChange={setMetronomeBarCycleMode}
-          />
-        )}
-
-        {activeTab === "stats" && (
-          <StatsPage sessions={sessions} streak={streak} />
-        )}
-      </main>
-
-      {/* Settings Modal */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        settings={settings}
-        onUpdateSettings={handleUpdateSettings}
-        onExportData={handleExportData}
-        onClearData={handleClearData}
-        onRestartTour={handleRestartTour}
-      />
-
-      {/* Onboarding Tour */}
-      {isTourOpen && (
-        <TourOverlay
-          onClose={handleCloseTour}
-          onTabChange={setActiveTab}
-          initialStep={tourStep}
-          onStepChange={handleTourStepChange}
-        />
-      )}
-
-      {/* Global Persistent Timer Toast */}
-      {activeTab !== "dashboard" && (
-        <GlobalSessionToast
-          activeSessionDuration={activeSessionDuration}
-          isSessionActive={isSessionActive}
-          onToggleSession={handleToggleSession}
-          onEndSession={handleEndSession}
-        />
-      )}
-    </div>
+      </div>
+    </SettingsContext.Provider>
   );
 }
 

@@ -2,7 +2,7 @@ import React from "react";
 import { Volume2, Music } from "lucide-react";
 import { KeyboardVoicing, NoteName } from "../types";
 import { audioEngine } from "../lib/audio";
-import { NOTE_SEMITONES } from "../data/musicTheory";
+import { CHROMATIC_SHARPS, NOTE_SEMITONES } from "../data/musicTheory";
 
 interface KeyboardChordDiagramProps {
   chordName?: string;
@@ -14,6 +14,7 @@ interface KeyboardChordDiagramProps {
   compactSize?: "default" | "wide";
   onPlay?: () => void;
   onSelect?: () => void;
+  onNoteToggle?: (note: NoteName, octave: number) => void;
   className?: string;
 }
 
@@ -26,6 +27,7 @@ export const KeyboardChordDiagram: React.FC<KeyboardChordDiagramProps> = ({
   compact = false,
   onPlay,
   onSelect,
+  onNoteToggle,
   className = "",
 }) => {
   // Map notes by pitch value: (octave * 12 + semitone) -> note info
@@ -73,14 +75,7 @@ export const KeyboardChordDiagram: React.FC<KeyboardChordDiagramProps> = ({
     const targetInst = instrument || audioEngine.getSelectedInstrument();
     const isSynth = targetInst.includes("synth");
     const stagger = isSynth ? 0.012 : 0.016;
-    audioEngine.playChordArpeggio(
-      notesToPlay,
-      targetInst,
-      stagger,
-      0,
-      2.2,
-      true,
-    );
+    audioEngine.playChordArpeggio(notesToPlay, targetInst, stagger, 0, 2.2);
   };
 
   // White key relative semitone offsets from C
@@ -136,16 +131,15 @@ export const KeyboardChordDiagram: React.FC<KeyboardChordDiagramProps> = ({
               offset: "-right-3.5",
             };
 
-  // Black keys positions (after which white key index)
-  // 0: C# (after C), 1: D# (after D), 3: F# (after F), 4: G# (after G), 5: A# (after A)
+  // Black keys keyed by the semitone offset of the white key they follow.
   const blackKeyDefs: {
     [offsetIdx: number]: { note: NoteName; semi: number };
   } = {
     0: { note: "C#", semi: 1 },
-    1: { note: "D#", semi: 3 },
-    3: { note: "F#", semi: 6 },
-    4: { note: "G#", semi: 8 },
-    5: { note: "A#", semi: 10 },
+    2: { note: "D#", semi: 3 },
+    5: { note: "F#", semi: 6 },
+    7: { note: "G#", semi: 8 },
+    9: { note: "A#", semi: 10 },
   };
 
   return (
@@ -199,7 +193,7 @@ export const KeyboardChordDiagram: React.FC<KeyboardChordDiagramProps> = ({
 
           if (isScrollbarInteraction) e.stopPropagation();
         }}
-        className={`w-full max-w-full overflow-x-auto overscroll-x-contain touch-pan-x ${compact ? "h-full" : "py-2"}`}
+        className={`w-full max-w-full overflow-x-auto overscroll-x-contain touch-pan-x no-scrollbar ${compact ? "h-full" : "py-2"}`}
       >
         <div className="w-max mx-auto py-2 px-2 flex justify-start sm:justify-center">
           <div className="piano-keyboard flex relative bg-surface-container-highest p-1.5 rounded-b-lg border-t-8 border-outline-variant shadow-2xl">
@@ -218,6 +212,14 @@ export const KeyboardChordDiagram: React.FC<KeyboardChordDiagramProps> = ({
                   className="relative"
                 >
                   <div
+                    onClick={(event) => {
+                      if (!onNoteToggle) return;
+                      event.stopPropagation();
+                      onNoteToggle(
+                        CHROMATIC_SHARPS[key.offset] as NoteName,
+                        key.octave,
+                      );
+                    }}
                     className={`${keySize.white} rounded-b-md border-r border-l border-b border-outline-variant/30 flex flex-col justify-end items-center transition-all ${
                       isRootKey
                         ? "bg-primary text-on-primary font-black border-t-4 border-primary shadow-md z-10"
@@ -252,6 +254,11 @@ export const KeyboardChordDiagram: React.FC<KeyboardChordDiagramProps> = ({
                         const blackIsRoot = !!blackChordInfo?.isRoot;
                         return (
                           <div
+                            onClick={(event) => {
+                              if (!onNoteToggle) return;
+                              event.stopPropagation();
+                              onNoteToggle(hasBlack.note, key.octave);
+                            }}
                             className={`${keySize.black} rounded-b-md flex flex-col justify-end items-center transition-all ${
                               blackIsRoot
                                 ? "bg-primary text-on-primary font-bold shadow-lg ring-1 ring-primary"

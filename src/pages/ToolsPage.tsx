@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { CircleOfFifths } from "../components/CircleOfFifths";
 import { CustomChordEditor } from "../components/CustomChordEditor";
 import { Metronome } from "../components/Metronome";
@@ -16,6 +16,9 @@ import {
   XCircle,
   Clock,
   TimerReset,
+  ChevronDown,
+  Check,
+  Wrench,
 } from "lucide-react";
 
 interface ToolsPageProps {
@@ -47,6 +50,23 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
     "timer" | "metronome" | "circle" | "tuner" | "ear" | "custom-chord"
   >("circle");
   const [selectedTuning, setSelectedTuning] = useState(GUITAR_TUNINGS[0]);
+  const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
+  const toolMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        toolMenuRef.current &&
+        !toolMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsToolMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Ear training game state
   const [earInterval, setEarInterval] = useState<{
@@ -125,71 +145,138 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
             </h1>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-surface-container-low p-1 rounded-lg border border-outline-variant/30 flex-wrap">
-            <button
-              onClick={() => setActiveTool("circle")}
-              className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
-                activeTool === "circle"
-                  ? "bg-primary text-on-primary font-bold shadow"
-                  : "text-on-surface-variant hover:text-on-surface"
-              }`}
-            >
-              Circle of Fifths
-            </button>
-            <button
-              onClick={() => setActiveTool("timer")}
-              className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all flex items-center gap-1.5 ${
-                activeTool === "timer"
-                  ? "bg-primary text-on-primary font-bold shadow"
-                  : "text-on-surface-variant hover:text-on-surface"
-              }`}
-            >
-              Practice Timer
-            </button>
+          <div className="relative w-full sm:w-auto" ref={toolMenuRef}>
+            {/* Mobile Dropdown Button */}
+            <div className="sm:hidden w-full">
+              <button
+                type="button"
+                onClick={() => setIsToolMenuOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 text-sm font-mono text-on-surface focus:outline-none focus:border-primary transition-colors"
+              >
+                <span className="font-bold">
+                  {activeTool === "circle" && "Circle of Fifths"}
+                  {activeTool === "timer" && "Practice Timer"}
+                  {activeTool === "metronome" && "Metronome"}
+                  {activeTool === "tuner" && "Pitch Reference Tuner"}
+                  {activeTool === "ear" && "Interval Ear Trainer"}
+                  {activeTool === "custom-chord" && "Custom Chord Builder"}
+                </span>
+                <ChevronDown size={18} className={`text-on-surface-variant transition-transform duration-200 ${isToolMenuOpen ? "rotate-180" : ""}`} />
+              </button>
 
-            <button
-              onClick={() => setActiveTool("metronome")}
-              className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
-                activeTool === "metronome"
-                  ? "bg-primary text-on-primary font-bold shadow"
-                  : "text-on-surface-variant hover:text-on-surface"
-              }`}
-            >
-              Metronome
-            </button>
-            <button
-              onClick={() => setActiveTool("tuner")}
-              className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
-                activeTool === "tuner"
-                  ? "bg-primary text-on-primary font-bold shadow"
-                  : "text-on-surface-variant hover:text-on-surface"
-              }`}
-            >
-              Pitch Reference Tuner
-            </button>
-            <button
-              onClick={() => {
-                setActiveTool("ear");
-                if (!earInterval) startNewEarChallenge();
-              }}
-              className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
-                activeTool === "ear"
-                  ? "bg-primary text-on-primary font-bold shadow"
-                  : "text-on-surface-variant hover:text-on-surface"
-              }`}
-            >
-              Interval Ear Trainer
-            </button>
-            <button
-              onClick={() => setActiveTool("custom-chord")}
-              className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
-                activeTool === "custom-chord"
-                  ? "bg-primary text-on-primary font-bold shadow"
-                  : "text-on-surface-variant hover:text-on-surface"
-              }`}
-            >
-              Custom Chord Builder
-            </button>
+              {/* Mobile Dropdown Menu */}
+              {isToolMenuOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-surface border border-outline-variant/40 rounded-xl p-2 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex flex-col gap-1">
+                    {[
+                      { id: "circle", label: "Circle of Fifths", desc: "Explore key signatures & harmony", icon: Compass },
+                      { id: "timer", label: "Practice Timer", desc: "Track your daily practice sessions", icon: Clock },
+                      { id: "metronome", label: "Metronome", desc: "Precision tempo and timing practice", icon: TimerReset },
+                      { id: "tuner", label: "Pitch Reference Tuner", desc: "Acoustic guitar pitch references", icon: Radio },
+                      { id: "ear", label: "Interval Ear Trainer", desc: "Recognize musical intervals by ear", icon: Sparkles },
+                      { id: "custom-chord", label: "Custom Chord Builder", desc: "Create & visualize chord shapes", icon: Wrench },
+                    ].map((tool) => {
+                      const isSelected = activeTool === tool.id;
+                      const Icon = tool.icon;
+                      return (
+                        <button
+                          key={tool.id}
+                          onClick={() => {
+                            setActiveTool(tool.id as any);
+                            setIsToolMenuOpen(false);
+                            if (tool.id === "ear" && !earInterval) startNewEarChallenge();
+                          }}
+                          className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-all ${
+                            isSelected
+                              ? "bg-primary/15 text-primary font-bold border border-primary/40"
+                              : "hover:bg-surface-container-high text-on-surface"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-md ${isSelected ? "bg-primary/20 text-primary" : "bg-surface-container text-on-surface-variant"}`}>
+                              <Icon size={16} />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-mono text-sm">{tool.label}</span>
+                              <span className="text-[10px] font-mono opacity-70">{tool.desc}</span>
+                            </div>
+                          </div>
+                          {isSelected && <Check size={16} className="text-primary shrink-0 ml-2" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Navigation Tabs */}
+            <div className="hidden sm:flex items-center gap-1.5 bg-surface-container-low p-1 rounded-lg border border-outline-variant/30 flex-wrap">
+              <button
+                onClick={() => setActiveTool("circle")}
+                className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
+                  activeTool === "circle"
+                    ? "bg-primary text-on-primary font-bold shadow"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                Circle of Fifths
+              </button>
+              <button
+                onClick={() => setActiveTool("timer")}
+                className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all flex items-center gap-1.5 ${
+                  activeTool === "timer"
+                    ? "bg-primary text-on-primary font-bold shadow"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                Practice Timer
+              </button>
+
+              <button
+                onClick={() => setActiveTool("metronome")}
+                className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
+                  activeTool === "metronome"
+                    ? "bg-primary text-on-primary font-bold shadow"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                Metronome
+              </button>
+              <button
+                onClick={() => setActiveTool("tuner")}
+                className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
+                  activeTool === "tuner"
+                    ? "bg-primary text-on-primary font-bold shadow"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                Pitch Reference Tuner
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTool("ear");
+                  if (!earInterval) startNewEarChallenge();
+                }}
+                className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
+                  activeTool === "ear"
+                    ? "bg-primary text-on-primary font-bold shadow"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                Interval Ear Trainer
+              </button>
+              <button
+                onClick={() => setActiveTool("custom-chord")}
+                className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
+                  activeTool === "custom-chord"
+                    ? "bg-primary text-on-primary font-bold shadow"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                Custom Chord Builder
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -255,7 +342,9 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
       )}
 
       {/* Custom Chord Builder */}
-      {activeTool === "custom-chord" && <CustomChordEditor />}
+      {activeTool === "custom-chord" && (
+        <CustomChordEditor defaultInstrument={settings.defaultInstrument} />
+      )}
 
       {/* Pitch Reference Tuner */}
       {activeTool === "tuner" && (

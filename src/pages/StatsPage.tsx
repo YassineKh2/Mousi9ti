@@ -19,6 +19,22 @@ interface StatsPageProps {
 }
 
 export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
+  // Helper functions for BPM calculations
+  const getSessionPeakBpm = (session: Session): number => {
+    if (session.bpmsUsed && session.bpmsUsed.length > 0) {
+      return Math.max(...session.bpmsUsed);
+    }
+    return session.highestBpm || 120;
+  };
+
+  const getSessionAverageBpm = (session: Session): number => {
+    if (session.bpmsUsed && session.bpmsUsed.length > 0) {
+      const sum = session.bpmsUsed.reduce((acc, val) => acc + val, 0);
+      return Math.round(sum / session.bpmsUsed.length);
+    }
+    return session.highestBpm || 120;
+  };
+
   // Aggregate Metrics
   const totalSeconds = sessions.reduce(
     (acc, s) => acc + (s.durationSeconds || 0),
@@ -26,7 +42,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
   );
   const totalHours = (totalSeconds / 3600).toFixed(1);
   const highestOverallBpm = sessions.reduce(
-    (max, s) => Math.max(max, s.highestBpm || 0),
+    (max, s) => Math.max(max, getSessionPeakBpm(s)),
     120,
   );
 
@@ -37,7 +53,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
         acc[s.date] = { seconds: 0, bpm: 0 };
       }
       acc[s.date].seconds += s.durationSeconds || 0;
-      acc[s.date].bpm = Math.max(acc[s.date].bpm, s.highestBpm || 120);
+      acc[s.date].bpm = Math.max(acc[s.date].bpm, getSessionPeakBpm(s));
       return acc;
     },
     {} as Record<string, { seconds: number; bpm: number }>,
@@ -142,9 +158,6 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
             <span className="text-sm font-normal text-on-surface-variant">
               BPM
             </span>
-          </span>
-          <span className="text-[10px] font-mono text-on-surface-variant">
-            Clean continuous alternate picking
           </span>
         </div>
       </div>
@@ -261,7 +274,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                 <th className="py-3 px-4">Date</th>
                 <th className="py-3 px-4">Duration</th>
                 <th className="py-3 px-4">Peak BPM</th>
-                <th className="py-3 px-4">Focus & Theory</th>
+                <th className="py-3 px-4">Avg BPM</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/30">
@@ -277,12 +290,10 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                     {Math.round((session.durationSeconds || 0) / 60)} min
                   </td>
                   <td className="py-3.5 px-4 text-on-surface">
-                    {session.highestBpm || 120} BPM
+                    {getSessionPeakBpm(session)} BPM
                   </td>
                   <td className="py-3.5 px-4 text-on-surface-variant">
-                    {session.focus ||
-                      session.scalesPracticed?.join(", ") ||
-                      "Metronome Drill"}
+                    {getSessionAverageBpm(session)} BPM
                   </td>
                 </tr>
               ))}

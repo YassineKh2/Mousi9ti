@@ -15,6 +15,7 @@ import { Metronome } from "../components/Metronome";
 import { RandomDrill } from "../components/RandomDrill";
 import { SessionWidget } from "../components/SessionWidget";
 import { TimerWidget } from "../components/TimerWidget";
+import { PracticeTasksWidget } from "../components/PracticeTasksWidget";
 import { ChordSelectorWidget } from "../components/ChordSelectorWidget";
 import { Fretboard } from "../components/Fretboard";
 import { PianoKeyboard } from "../components/PianoKeyboard";
@@ -45,6 +46,7 @@ const DEFAULT_WIDGET_LAYOUT: DashboardWidgetLayout[] = [
   { id: "timer", title: "Practice Timer" },
   { id: "random-drill", title: "Random Note Drill" },
   { id: "session", title: "Practice Streak" },
+  { id: "practice-tasks", title: "Daily Practice Goals" },
   { id: "instruments", title: "Instruments" },
   { id: "chord-selector", title: "Chord Selector" },
 ];
@@ -167,6 +169,7 @@ interface DashboardPageProps {
   onMetronomePlayingChange?: (playing: boolean) => void;
   metronomeBarCycleMode?: boolean;
   onBarCycleModeChange?: (enabled: boolean) => void;
+  onOpenRoutine: () => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -185,6 +188,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onMetronomePlayingChange,
   metronomeBarCycleMode,
   onBarCycleModeChange,
+  onOpenRoutine,
 }) => {
   // Get tuning from settings
   const defaultTuning = useMemo(() => {
@@ -469,6 +473,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         { id: "row-1", widgets: DEFAULT_WIDGET_LAYOUT.slice(0, 4) },
         { id: "row-2", widgets: [DEFAULT_WIDGET_LAYOUT[4]] },
         { id: "row-3", widgets: [DEFAULT_WIDGET_LAYOUT[5]] },
+        { id: "row-4", widgets: [DEFAULT_WIDGET_LAYOUT[6]] },
       ],
       hiddenWidgets: [],
     });
@@ -531,6 +536,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             highestBpmSession={metronomeBpm}
           />
         );
+      case "practice-tasks":
+        return <PracticeTasksWidget onOpenRoutine={onOpenRoutine} />;
       case "instruments":
         return (
           <div className="flex flex-col gap-4">

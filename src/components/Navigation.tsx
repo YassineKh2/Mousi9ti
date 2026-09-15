@@ -5,6 +5,7 @@ import {
   Grid3X3,
   Compass,
   BarChart3,
+  CalendarCheck2,
   Settings,
   Flame,
   Search,
@@ -12,7 +13,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
-import { APP_VERSION } from "../lib/version";
 
 export type ActiveTab =
   | "dashboard"
@@ -20,6 +20,7 @@ export type ActiveTab =
   | "chords"
   | "builder"
   | "exercises"
+  | "routine"
   | "tools"
   | "stats";
 
@@ -70,6 +71,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: "scales", label: "SCALES", icon: <Sparkles size={18} /> },
     { id: "chords", label: "CHORDS", icon: <Grid3X3 size={18} /> },
     { id: "builder", label: "BUILDER", icon: <Settings size={18} /> },
+    { id: "routine", label: "ROUTINE", icon: <CalendarCheck2 size={18} /> },
     //  Hidden until further improvement
     // { id: "exercises", label: "EXERCISES", icon: <Dumbbell size={18} /> },
     { id: "tools", label: "TOOLS", icon: <Compass size={18} /> },
@@ -105,7 +107,6 @@ export const Navigation: React.FC<NavigationProps> = ({
 
         {/* Navigation Links */}
         <nav
-          data-tour="sidebar-nav"
           className={`flex-1 ${isSidebarCollapsed ? "px-2" : "px-4"} py-6 space-y-1.5 overflow-y-auto`}
         >
           {navItems.map((item) => {
@@ -113,7 +114,6 @@ export const Navigation: React.FC<NavigationProps> = ({
             return (
               <button
                 key={item.id}
-                data-tour={`nav-item-${item.id}`}
                 onClick={() => onSelectTab(item.id)}
                 title={isSidebarCollapsed ? item.label : undefined}
                 className={`w-full flex items-center ${isSidebarCollapsed ? "justify-center px-0" : "px-4"} py-3 rounded text-left transition-all duration-200 group border-l-2 ${
@@ -142,7 +142,6 @@ export const Navigation: React.FC<NavigationProps> = ({
           className={`${isSidebarCollapsed ? "p-2" : "p-4"} border-t border-outline-variant/30 space-y-3`}
         >
           <div
-            data-tour="sidebar-streak"
             className={`bg-surface-container-low border border-outline-variant/30 rounded-lg ${isSidebarCollapsed ? "p-1 flex justify-center" : "p-3.5 flex flex-col gap-1.5"}`}
           >
             {isSidebarCollapsed ? (
@@ -175,14 +174,6 @@ export const Navigation: React.FC<NavigationProps> = ({
               </>
             )}
           </div>
-
-          {!isSidebarCollapsed && (
-            <div className="px-2 pb-1">
-              <span className="font-mono text-[10px] tracking-widest text-on-surface-variant/50 select-none">
-                v{APP_VERSION}
-              </span>
-            </div>
-          )}
 
           <div className="w-full flex items-center gap-2 px-2 py-2.5 text-on-surface-variant">
             <button
@@ -228,7 +219,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             />
             <input
               type="text"
-              placeholder="Search theory, scales, chords, exercises..."
+              placeholder="Search theory, scales, chords..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full bg-surface-container border border-outline-variant/30 rounded py-1.5 pl-9 pr-4 text-xs font-mono text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"

@@ -6,10 +6,16 @@ import {
   ALL_ROOT_NOTES,
   getSpelledNote,
 } from "../data/musicTheory";
-import { CHORD_TYPES_CATALOG, getChordDefinition } from "../data/chordsData";
+import {
+  CHORD_TYPES_CATALOG,
+  CustomChord,
+  getChordDefinition,
+  getCustomChords,
+} from "../data/chordsData";
 import { ChordDiagram } from "../components/ChordDiagram";
 import { PianoKeyboard } from "../components/PianoKeyboard";
 import { ChordSheetMusic } from "../components/ChordSheetMusic";
+import { KeyboardChordDiagram } from "../components/KeyboardChordDiagram";
 import {
   Search,
   Play,
@@ -39,12 +45,39 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
   const [instrumentView, setInstrumentView] = useState<
     "guitar" | "piano" | "both"
   >(settings.defaultInstrument);
+  const [customChords, setCustomChords] = useState<CustomChord[]>(() =>
+    getCustomChords(),
+  );
 
   useEffect(() => {
     setInstrumentView(settings.defaultInstrument);
   }, [settings.defaultInstrument]);
+  useEffect(() => {
+    const handleCustomChordsChanged = () => setCustomChords(getCustomChords());
+    window.addEventListener(
+      "mousi9ti-custom-chords-changed",
+      handleCustomChordsChanged,
+    );
+    return () =>
+      window.removeEventListener(
+        "mousi9ti-custom-chords-changed",
+        handleCustomChordsChanged,
+      );
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInversion, setSelectedInversion] = useState<number>(0);
+  const customVoicings = customChords.filter(
+    (chord) =>
+      chord.instrument !== "piano" &&
+      chord.root === selectedRoot &&
+      chord.chordType === selectedType,
+  );
+  const customPianoVoicings = customChords.filter(
+    (chord) =>
+      chord.pianoVoicing &&
+      chord.root === selectedRoot &&
+      chord.chordType === selectedType,
+  );
 
   const [redirectNotice, setRedirectNotice] = useState<{
     from: string;
@@ -544,15 +577,28 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
                   </span>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 sm:gap-6">
-                  {chordDef.voicings
+                  {[
+                    ...chordDef.voicings.map((voicing) => ({
+                      voicing,
+                      fretCount: 5,
+                    })),
+                    ...customVoicings.map((chord) => ({
+                      voicing: chord.voicing,
+                      fretCount: chord.fretCount ?? 5,
+                    })),
+                  ]
                     .slice()
-                    .sort((a, b) => (a.baseFret || 1) - (b.baseFret || 1))
-                    .map((voicing, idx) => (
+                    .sort(
+                      (a, b) =>
+                        (a.voicing.baseFret || 1) - (b.voicing.baseFret || 1),
+                    )
+                    .map(({ voicing, fretCount }, idx) => (
                       <ChordDiagram
                         key={idx}
                         chordName={chordDef.name}
                         voicing={voicing}
                         root={selectedRoot}
+                        fretCount={fretCount}
                       />
                     ))}
                 </div>
@@ -598,6 +644,15 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
                     octaves={pianoOctavesCount}
                   />
                 </div>
+                {customPianoVoicings.map((chord) => (
+                  <KeyboardChordDiagram
+                    key={chord.id}
+                    chordName={chord.pianoVoicing?.name}
+                    root={selectedRoot}
+                    instrument="acoustic_grand_piano"
+                    voicing={chord.pianoVoicing!}
+                  />
+                ))}
               </div>
             )}
           </div>

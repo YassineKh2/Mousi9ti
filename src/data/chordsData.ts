@@ -5,6 +5,7 @@ import {
   NoteName,
 } from "../types";
 import {
+  ALL_ROOT_NOTES,
   CHROMATIC_SHARPS,
   CHROMATIC_FLATS,
   NOTE_SEMITONES,
@@ -173,6 +174,202 @@ export const CHORD_TYPES_CATALOG: ChordTypeInfo[] = [
     degrees: ["1", "3", "5", "b7", "#9"],
   },
 ];
+
+const getChordLibraryKey = (root: NoteName, typeKey: string): string =>
+  `${root}_${typeKey}`;
+
+const buildKeyboardVoicings = (
+  root: NoteName,
+  chordType: ChordTypeInfo,
+): KeyboardVoicing[] => {
+  const rootIndex = NOTE_SEMITONES[root];
+  const useFlats = ["F", "Bb", "Eb", "Ab", "Db", "Gb"].includes(root);
+  const chromatic = useFlats ? CHROMATIC_FLATS : CHROMATIC_SHARPS;
+
+  return chordType.intervals.map((_, inversionIndex) => {
+    const invertedIntervals = chordType.intervals.map((interval, index) => ({
+      interval: interval + (index < inversionIndex ? 12 : 0),
+      degree: chordType.degrees[index],
+      isRoot: index === 0,
+    }));
+
+    invertedIntervals.sort((a, b) => a.interval - b.interval);
+
+    const keyboardNotes = invertedIntervals.map(
+      ({ interval, degree, isRoot }) => {
+        const totalSemitones = rootIndex + interval;
+        return {
+          note: chromatic[totalSemitones % 12],
+          octave: 4 + Math.floor(totalSemitones / 12),
+          degree,
+          isRoot,
+        };
+      },
+    );
+
+    const inversionLabel =
+      inversionIndex === 0
+        ? "Root Position"
+        : `${inversionIndex}${inversionIndex === 1 ? "st" : inversionIndex === 2 ? "nd" : inversionIndex === 3 ? "rd" : "th"} Inversion`;
+
+    return {
+      id: `${root}_${chordType.type}_${inversionIndex}`,
+      name: `${root}${chordType.symbol} ${inversionLabel}`,
+      shortLabel: inversionIndex === 0 ? "Root" : `Inv. ${inversionIndex}`,
+      category: inversionIndex === 0 ? "root" : "inversion",
+      positionLabel: inversionLabel,
+      bassNote: keyboardNotes[0].note,
+      bassOctave: keyboardNotes[0].octave,
+      notes: keyboardNotes,
+      startOctave: 4,
+      octavesCount: Math.max(
+        2,
+        Math.max(...keyboardNotes.map((note) => note.octave)) - 4 + 1,
+      ),
+      description: `${inversionLabel} voicing`,
+    };
+  });
+};
+
+let CHORD_LIBRARY = new Map<string, ChordDefinition>();
+
+function rebuildDefaultChordLibrary(): Map<string, ChordDefinition> {
+  const library = new Map<string, ChordDefinition>();
+
+  for (const root of ALL_ROOT_NOTES) {
+    for (const chordType of CHORD_TYPES_CATALOG) {
+      library.set(getChordLibraryKey(root, chordType.type), {
+        id: `${root}_${chordType.type}`,
+        name: `${root}${chordType.symbol}`,
+        root,
+        type: chordType.type,
+        symbol: chordType.symbol,
+        fullName: `${root} ${chordType.name}`,
+        intervals: chordType.intervals,
+        formula: chordType.formula,
+        notes: chordType.intervals.map((semitone) => {
+          const chromatic = ["F", "Bb", "Eb", "Ab", "Db", "Gb"].includes(root)
+            ? CHROMATIC_FLATS
+            : CHROMATIC_SHARPS;
+          return chromatic[(NOTE_SEMITONES[root] + semitone) % 12];
+        }),
+        voicings: getChordVoicings(root, chordType.type),
+        keyboardVoicings: buildKeyboardVoicings(root, chordType),
+      });
+    }
+  }
+
+  return library;
+}
+
+export function resetChordLibrary(): void {
+  CHORD_LIBRARY = rebuildDefaultChordLibrary();
+}
+
+export function registerChordDefinitions(
+  definitions: Array<Partial<ChordDefinition> | ChordDefinition>,
+): void {
+  for (const definition of definitions) {
+    if (!definition || !definition.root || !definition.type) continue;
+
+    const chordType =
+      CHORD_TYPES_CATALOG.find((entry) => entry.type === definition.type) ||
+      CHORD_TYPES_CATALOG[0];
+    const root = definition.root;
+    const normalisedDefinition: ChordDefinition = {
+      id: definition.id || `${root}_${chordType.type}`,
+      name: definition.name || `${root}${chordType.symbol}`,
+      root,
+      type: chordType.type,
+      symbol: definition.symbol || chordType.symbol,
+      fullName: definition.fullName || `${root} ${chordType.name}`,
+      intervals:
+        definition.intervals && definition.intervals.length > 0
+          ? definition.intervals
+          : chordType.intervals,
+      formula: definition.formula || chordType.formula,
+      notes:
+        definition.notes && definition.notes.length > 0
+          ? definition.notes
+          : chordType.intervals.map((semitone) => {
+              const chromatic = ["F", "Bb", "Eb", "Ab", "Db", "Gb"].includes(
+                root,
+              )
+                ? CHROMATIC_FLATS
+                : CHROMATIC_SHARPS;
+              return chromatic[(NOTE_SEMITONES[root] + semitone) % 12];
+            }),
+      voicings:
+        definition.voicings && definition.voicings.length > 0
+          ? definition.voicings
+          : getChordVoicings(root, chordType.type),
+      keyboardVoicings:
+        definition.keyboardVoicings && definition.keyboardVoicings.length > 0
+          ? definition.keyboardVoicings
+          : buildKeyboardVoicings(root, chordType),
+    };
+
+    CHORD_LIBRARY.set(
+      getChordLibraryKey(root, chordType.type),
+      normalisedDefinition,
+    );
+  }
+}
+
+export function exportChordLibrary(): ChordDefinition[] {
+  return [...CHORD_LIBRARY.values()].sort((a, b) => {
+    if (a.root === b.root) {
+      return a.type.localeCompare(b.type);
+    }
+    return ALL_ROOT_NOTES.indexOf(a.root) - ALL_ROOT_NOTES.indexOf(b.root);
+  });
+}
+
+export function importChordLibrary(
+  value: string | Array<Partial<ChordDefinition> | ChordDefinition>,
+): void {
+  const parsed = typeof value === "string" ? JSON.parse(value) : value;
+  if (!Array.isArray(parsed)) {
+    throw new Error(
+      "Chord library import requires an array of chord definitions.",
+    );
+  }
+  registerChordDefinitions(parsed);
+}
+
+export function exportSavedCustomChords(): ChordDefinition[] {
+  const customChords = getCustomChords();
+
+  return customChords.map((chord) => {
+    const baseDefinition = getChordDefinition(chord.root, chord.chordType);
+    const chordTypeInfo =
+      CHORD_TYPES_CATALOG.find((entry) => entry.type === chord.chordType) ||
+      CHORD_TYPES_CATALOG[0];
+
+    const exportedVoicings: GuitarVoicing[] = chord.voicing
+      ? [chord.voicing]
+      : [];
+    const exportedKeyboardVoicings: KeyboardVoicing[] = chord.pianoVoicing
+      ? [chord.pianoVoicing]
+      : [];
+
+    return {
+      id: `${chord.root}_${chord.chordType}_${chord.id}`,
+      name: chord.pianoVoicing?.name || chord.voicing.name,
+      root: chord.root,
+      type: chord.chordType,
+      symbol: chordTypeInfo.symbol,
+      fullName: `${chord.root} ${chordTypeInfo.name}`,
+      intervals: baseDefinition.intervals,
+      formula: baseDefinition.formula,
+      notes: baseDefinition.notes,
+      voicings: exportedVoicings,
+      keyboardVoicings: exportedKeyboardVoicings,
+    };
+  });
+}
+
+resetChordLibrary();
 
 // Helper to generate voicings for standard tunings across all roots
 export function getChordVoicings(
@@ -647,6 +844,9 @@ export interface CustomChord {
   root: NoteName;
   chordType: string;
   voicing: GuitarVoicing;
+  fretCount?: number;
+  pianoVoicing?: KeyboardVoicing;
+  instrument?: "guitar" | "piano";
 }
 
 const CUSTOM_CHORDS_KEY = "Mousi9ti_custom_chords_v1";
@@ -674,9 +874,96 @@ export function saveCustomChord(chord: CustomChord): void {
     const existing = getCustomChords();
     const updated = [...existing, chord];
     localStorage.setItem(CUSTOM_CHORDS_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent("mousi9ti-custom-chords-changed"));
   } catch (error) {
     console.error("Failed to save custom chord", error);
   }
+}
+
+export function importCustomChords(
+  value: string | Array<Partial<ChordDefinition> | ChordDefinition>,
+): number {
+  const parsed = typeof value === "string" ? JSON.parse(value) : value;
+  if (!Array.isArray(parsed)) {
+    throw new Error(
+      "Custom chord import requires an array of chord definitions.",
+    );
+  }
+
+  const imported: CustomChord[] = [];
+  parsed.forEach((definition, definitionIndex) => {
+    if (
+      !definition ||
+      typeof definition.root !== "string" ||
+      typeof definition.type !== "string"
+    ) {
+      throw new Error(
+        `Invalid chord definition at index ${definitionIndex}: root and type are required.`,
+      );
+    }
+
+    const chordType = CHORD_TYPES_CATALOG.some(
+      (entry) => entry.type === definition.type,
+    )
+      ? definition.type
+      : "major";
+    const guitarVoicings: GuitarVoicing[] = Array.isArray(definition.voicings)
+      ? (definition.voicings as GuitarVoicing[])
+      : [];
+    const pianoVoicings: KeyboardVoicing[] = Array.isArray(
+      definition.keyboardVoicings,
+    )
+      ? (definition.keyboardVoicings as KeyboardVoicing[])
+      : [];
+    const fallbackVoicing: GuitarVoicing = {
+      name: definition.name || `${definition.root} chord`,
+      positionLabel: "Imported Chord",
+      rootString: "Root: 6th String",
+      baseFret: 1,
+      frets: [null, null, null, null, null, null],
+      fingers: [null, null, null, null, null, null],
+      barres: [],
+    };
+
+    guitarVoicings.forEach((voicing, voicingIndex) => {
+      imported.push({
+        id: `custom-import-${Date.now()}-${definitionIndex}-guitar-${voicingIndex}`,
+        root: definition.root as NoteName,
+        chordType,
+        voicing,
+        instrument: "guitar",
+      });
+    });
+
+    pianoVoicings.forEach((pianoVoicing, voicingIndex) => {
+      imported.push({
+        id: `custom-import-${Date.now()}-${definitionIndex}-piano-${voicingIndex}`,
+        root: definition.root as NoteName,
+        chordType,
+        voicing: guitarVoicings[0] || fallbackVoicing,
+        pianoVoicing,
+        instrument: "piano",
+      });
+    });
+
+    if (guitarVoicings.length === 0 && pianoVoicings.length === 0) {
+      imported.push({
+        id: `custom-import-${Date.now()}-${definitionIndex}-guitar`,
+        root: definition.root as NoteName,
+        chordType,
+        voicing: fallbackVoicing,
+        instrument: "guitar",
+      });
+    }
+  });
+
+  if (typeof localStorage !== "undefined" && imported.length > 0) {
+    const updated = [...getCustomChords(), ...imported];
+    localStorage.setItem(CUSTOM_CHORDS_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent("mousi9ti-custom-chords-changed"));
+  }
+
+  return imported.length;
 }
 
 export function deleteCustomChord(id: string): void {
@@ -688,6 +975,7 @@ export function deleteCustomChord(id: string): void {
       CUSTOM_CHORDS_KEY,
       JSON.stringify(existing.filter((chord) => chord.id !== id)),
     );
+    window.dispatchEvent(new CustomEvent("mousi9ti-custom-chords-changed"));
   } catch (error) {
     console.error("Failed to delete custom chord", error);
   }
@@ -700,8 +988,15 @@ export function getChordDefinition(
   const chordType =
     CHORD_TYPES_CATALOG.find((c) => c.type === typeKey) ||
     CHORD_TYPES_CATALOG[0];
-  const rootIndex = NOTE_SEMITONES[root];
 
+  const key = getChordLibraryKey(root, chordType.type);
+  const existing = CHORD_LIBRARY.get(key);
+
+  if (existing) {
+    return existing;
+  }
+
+  const rootIndex = NOTE_SEMITONES[root];
   const useFlats = ["F", "Bb", "Eb", "Ab", "Db", "Gb"].includes(root);
   const chromatic = useFlats ? CHROMATIC_FLATS : CHROMATIC_SHARPS;
 
@@ -753,7 +1048,7 @@ export function getChordDefinition(
     },
   );
 
-  return {
+  const generated = {
     id: `${root}_${chordType.type}`,
     name: `${root}${chordType.symbol}`,
     root: root,
@@ -766,4 +1061,7 @@ export function getChordDefinition(
     voicings: getChordVoicings(root, chordType.type),
     keyboardVoicings,
   };
+
+  CHORD_LIBRARY.set(key, generated);
+  return generated;
 }

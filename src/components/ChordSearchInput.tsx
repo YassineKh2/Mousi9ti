@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
 import { NoteName } from "../types";
-import { CHORD_TYPES_CATALOG } from "../data/chordsData";
+import { CHORD_TYPES_CATALOG, getCustomChords } from "../data/chordsData";
 import { ALL_ROOT_NOTES } from "../data/musicTheory";
 
 // Pre-generate all chords for fast searching
@@ -16,8 +16,10 @@ const ALL_CHORDS = ALL_ROOT_NOTES.flatMap((root) =>
   })),
 );
 
+type SearchChord = (typeof ALL_CHORDS)[number] & { customChordId?: string };
+
 interface ChordSearchInputProps {
-  onSelect: (root: NoteName, type: string) => void;
+  onSelect: (root: NoteName, type: string, customChordId?: string) => void;
   onCancel: () => void;
   autoFocus?: boolean;
   initialValue?: string;
@@ -34,19 +36,34 @@ export const ChordSearchInput: React.FC<ChordSearchInputProps> = ({
   const [query, setQuery] = useState(initialValue);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const allChords: SearchChord[] = [
+    ...ALL_CHORDS,
+    ...getCustomChords().map((chord) => ({
+      root: chord.root,
+      type: chord.chordType,
+      symbol: "",
+      name: chord.pianoVoicing?.name || chord.voicing.name,
+      displayString: `${chord.root} ${chord.pianoVoicing?.name || chord.voicing.name}`,
+      fullName: `${chord.root} ${chord.pianoVoicing?.name || chord.voicing.name}`,
+      customChordId: chord.id,
+    })),
+  ];
+
   useEffect(() => {
     if (autoFocus && inputRef.current) {
       inputRef.current.focus();
     }
   }, [autoFocus]);
 
-  const filteredChords = ALL_CHORDS.filter((c) => {
-    if (!query) return true; // Show all if no query (but capped by slice)
-    const q = query.toLowerCase().replace(/\s+/g, "");
-    const displayStr = c.displayString.toLowerCase();
-    const fullStr = c.fullName.toLowerCase().replace(/\s+/g, "");
-    return displayStr.includes(q) || fullStr.includes(q);
-  }).slice(0, 30); // limit to 30 results for perf
+  const filteredChords = allChords
+    .filter((c) => {
+      if (!query) return true; // Show all if no query (but capped by slice)
+      const q = query.toLowerCase().replace(/\s+/g, "");
+      const displayStr = c.displayString.toLowerCase();
+      const fullStr = c.fullName.toLowerCase().replace(/\s+/g, "");
+      return displayStr.includes(q) || fullStr.includes(q);
+    })
+    .slice(0, 30); // limit to 30 results for perf
 
   return (
     <div className="relative w-full z-50">
@@ -65,7 +82,11 @@ export const ChordSearchInput: React.FC<ChordSearchInputProps> = ({
             if (e.key === "Escape") {
               onCancel();
             } else if (e.key === "Enter" && filteredChords.length > 0) {
-              onSelect(filteredChords[0].root, filteredChords[0].type);
+              onSelect(
+                filteredChords[0].root,
+                filteredChords[0].type,
+                filteredChords[0].customChordId,
+              );
             }
           }}
           className="w-full bg-surface-container-high border border-outline-variant/40 rounded-lg pl-8 pr-7 py-1.5 text-xs font-mono text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary"
@@ -82,8 +103,10 @@ export const ChordSearchInput: React.FC<ChordSearchInputProps> = ({
         {filteredChords.length > 0 ? (
           filteredChords.map((chord) => (
             <button
-              key={`${chord.root}-${chord.type}`}
-              onClick={() => onSelect(chord.root, chord.type)}
+              key={`${chord.root}-${chord.type}-${chord.customChordId || "standard"}`}
+              onClick={() =>
+                onSelect(chord.root, chord.type, chord.customChordId)
+              }
               className="text-left px-2 py-1.5 hover:bg-surface-container-highest rounded text-xs font-mono flex justify-between items-center"
             >
               <span className="font-bold text-on-surface">
