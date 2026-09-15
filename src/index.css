@@ -526,3 +526,32 @@
     overflow: visible;
   }
 }
+@media (min-width: 640px) {
+  .custom-chord-editor .custom-chord-maker {
+    zoom: 1.15;
+  }
+}
+
+@media (min-width: 768px) {
+  .custom-chord-editor .custom-chord-maker {
+    zoom: 1.25;
+  }
+}
+
+@media (min-width: 1024px) {
+  .custom-chord-editor .custom-chord-maker {
+    zoom: 1.4;
+  }
+}
+
+@media (min-width: 1280px) {
+  .custom-chord-editor .custom-chord-maker {
+    zoom: 1.15;
+  }
+}
+
+@media (min-width: 1536px) {
+  .custom-chord-editor .custom-chord-maker {
+    zoom: 1.35;
+  }
+}
