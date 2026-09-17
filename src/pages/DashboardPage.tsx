@@ -607,7 +607,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div data-tour="dashboard-customize" className="flex flex-wrap items-center justify-between gap-3">
         <div>
           {isDashboardEditMode && (
             <p className="mt-1 text-xs text-on-surface-variant">

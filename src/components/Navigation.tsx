@@ -3,13 +3,11 @@ import {
   LayoutDashboard,
   Sparkles,
   Grid3X3,
-  Dumbbell,
   Compass,
   BarChart3,
   CalendarCheck2,
   Settings,
   Flame,
-  Music,
   Search,
   Sliders,
   PanelLeftClose,
@@ -214,7 +212,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       >
         {/* Search Theory Input */}
         <div className="flex items-center gap-3 w-full max-w-md mr-2">
-          <div className="relative w-full">
+          <div data-tour="search-bar" className="relative w-full">
             <Search
               size={16}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
@@ -277,12 +275,13 @@ export const Navigation: React.FC<NavigationProps> = ({
       </header>
 
       {/* Mobile Bottom Tab Bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-container-lowest border-t border-outline-variant/30 z-50 flex items-center justify-start gap-1 overflow-x-auto px-2 no-scrollbar">
+      <nav data-tour="sidebar-nav" className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-container-lowest border-t border-outline-variant/30 z-50 flex items-center justify-start gap-1 overflow-x-auto px-2 no-scrollbar">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
+              data-tour={`nav-item-${item.id}`}
               onClick={() => onSelectTab(item.id)}
               className={`flex min-w-[3.5rem] shrink-0 flex-col items-center gap-1 py-1 px-2 transition-colors ${
                 isActive
