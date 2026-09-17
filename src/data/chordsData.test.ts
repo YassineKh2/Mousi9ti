@@ -92,8 +92,7 @@ describe("canonical chord library", () => {
 
     const aShape = voicings.find(
       (voicing) =>
-        JSON.stringify(voicing.frets) ===
-        JSON.stringify([null, 3, 5, 5, 5, 3]),
+        JSON.stringify(voicing.frets) === JSON.stringify([null, 3, 5, 5, 5, 3]),
     );
     const eShape = voicings.find(
       (voicing) =>

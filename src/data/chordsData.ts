@@ -832,8 +832,7 @@ export function getChordVoicings(
 
   if (root === "C" && typeKey === "major") {
     const aShape = voicings.find(
-      (voicing) =>
-        voicing.frets.join(",") === [null, 3, 5, 5, 5, 3].join(","),
+      (voicing) => voicing.frets.join(",") === [null, 3, 5, 5, 5, 3].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 1, 2, 3, 4, 1];
@@ -905,8 +904,7 @@ export function getChordVoicings(
   if (root === "C" && typeKey === "minor") {
     const aShape = voicings.find(
       (voicing) =>
-        JSON.stringify(voicing.frets) ===
-        JSON.stringify([null, 3, 5, 5, 4, 3]),
+        JSON.stringify(voicing.frets) === JSON.stringify([null, 3, 5, 5, 4, 3]),
     );
     if (aShape) {
       aShape.fingers = [null, 1, 3, 4, 2, 1];
@@ -995,8 +993,7 @@ export function getChordVoicings(
   if (root === "C" && typeKey === "7") {
     const aShape = voicings.find(
       (voicing) =>
-        JSON.stringify(voicing.frets) ===
-        JSON.stringify([null, 3, 5, 3, 5, 3]),
+        JSON.stringify(voicing.frets) === JSON.stringify([null, 3, 5, 3, 5, 3]),
     );
     if (aShape) {
       aShape.fingers = [null, 1, 3, 1, 4, 1];
@@ -1080,8 +1077,7 @@ export function getChordVoicings(
   if (root === "C" && typeKey === "maj7") {
     const openShape = voicings.find(
       (voicing) =>
-        JSON.stringify(voicing.frets) ===
-        JSON.stringify([null, 3, 2, 0, 0, 0]),
+        JSON.stringify(voicing.frets) === JSON.stringify([null, 3, 2, 0, 0, 0]),
     );
     if (openShape) {
       openShape.fingers = [null, 2, 1, null, null, null];
@@ -1089,8 +1085,7 @@ export function getChordVoicings(
 
     const aShape = voicings.find(
       (voicing) =>
-        JSON.stringify(voicing.frets) ===
-        JSON.stringify([null, 3, 5, 4, 5, 3]),
+        JSON.stringify(voicing.frets) === JSON.stringify([null, 3, 5, 4, 5, 3]),
     );
     if (aShape) {
       aShape.fingers = [null, 1, 3, 2, 4, 1];
@@ -1164,8 +1159,7 @@ export function getChordVoicings(
   if (root === "C" && typeKey === "min7") {
     const aShape = voicings.find(
       (voicing) =>
-        JSON.stringify(voicing.frets) ===
-        JSON.stringify([null, 3, 5, 3, 4, 3]),
+        JSON.stringify(voicing.frets) === JSON.stringify([null, 3, 5, 3, 4, 3]),
     );
     if (aShape) {
       aShape.fingers = [null, 1, 3, 1, 2, 1];
@@ -1504,6 +1498,907 @@ export function getChordVoicings(
         fingers: [null, 1, 4, 3, 3, 2],
         baseFret: 3,
         barre: { fret: 5, fromString: 3, toString: 4, finger: 3 },
+        category: "variation",
+        isFundamental: false,
+      },
+    );
+  }
+
+  if (root === "C" && typeKey === "sus2") {
+    const aShape = voicings.find(
+      (voicing) =>
+        JSON.stringify(voicing.frets) ===
+        JSON.stringify([null, 3, 5, 5, 3, 3]),
+    );
+    if (aShape) {
+      aShape.fingers = [null, 1, 3, 4, 1, 1];
+      aShape.barre = { fret: 3, fromString: 1, toString: 5, finger: 1 };
+    }
+
+    voicings.push(
+      {
+        name: "Csus2 Open Voicing",
+        positionLabel: "Open Position",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 0, 0, 1, 3],
+        fingers: [null, 3, null, null, 1, 4],
+        baseFret: 1,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Csus2 Open High Barre",
+        positionLabel: "Open Position / High Barre",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 0, 0, 3, 3],
+        fingers: [null, 1, null, null, 2, 2],
+        baseFret: 1,
+        barre: { fret: 3, fromString: 4, toString: 5, finger: 2 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Csus2 3rd Position Open G",
+        positionLabel: "3rd Position / Open G",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 5, 0, 3, 3],
+        fingers: [null, 1, 3, null, 2, 2],
+        baseFret: 3,
+        barre: { fret: 3, fromString: 4, toString: 5, finger: 2 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Csus2 3rd Position Open D",
+        positionLabel: "3rd Position / Open D",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 0, 5, 3, 3],
+        fingers: [null, 1, null, 3, 2, 2],
+        baseFret: 3,
+        barre: { fret: 3, fromString: 4, toString: 5, finger: 2 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Csus2 8th Position Open D and G",
+        positionLabel: "8th Position / Open D and G",
+        rootString: "Root: 6th String",
+        frets: [8, null, 0, 0, 8, 8],
+        fingers: [1, null, null, null, 2, 2],
+        baseFret: 8,
+        barre: { fret: 8, fromString: 4, toString: 5, finger: 2 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Csus2 7th Position Open D",
+        positionLabel: "7th Position / Open D",
+        rootString: "Root: 6th String",
+        frets: [8, null, 0, 7, 8, 8],
+        fingers: [2, null, null, 1, 3, 4],
+        baseFret: 7,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Csus2 8th Position Open D and G Full",
+        positionLabel: "8th Position / Open D and G Full",
+        rootString: "Root: 6th String",
+        frets: [8, 10, 0, 0, 8, 8],
+        fingers: [1, 3, null, null, 2, 2],
+        baseFret: 8,
+        barre: { fret: 8, fromString: 4, toString: 5, finger: 2 },
+        category: "variation",
+        isFundamental: false,
+      },
+    );
+  }
+
+  if (root === "C" && typeKey === "sus4") {
+    const eShape = voicings.find(
+      (voicing) =>
+        JSON.stringify(voicing.frets) ===
+        JSON.stringify([8, 10, 10, 10, 8, 8]),
+    );
+    if (eShape) {
+      eShape.fingers = [1, 2, 3, 4, 1, 1];
+      eShape.barre = { fret: 8, fromString: 0, toString: 5, finger: 1 };
+    }
+
+    voicings.push(
+      {
+        name: "Csus4 Open Voicing",
+        positionLabel: "Open Position",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 3, 0, 1, 1],
+        fingers: [null, 3, 4, null, 1, 2],
+        baseFret: 1,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Csus4 Open A-D Barre",
+        positionLabel: "Open Position / A-D Barre",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 3, 0, 1, 3],
+        fingers: [null, 3, 3, null, 1, 4],
+        baseFret: 1,
+        barre: { fret: 3, fromString: 1, toString: 2, finger: 3 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Csus4 8th Position Top Strings",
+        positionLabel: "8th Position / Top Four Strings",
+        rootString: "Root: 4th String",
+        frets: [null, null, 10, 10, 8, 8],
+        fingers: [null, null, 3, 4, 1, 2],
+        baseFret: 8,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Csus4 3rd Position Open G",
+        positionLabel: "3rd Position / Open G",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 3, 0, 6, 3],
+        fingers: [null, 1, 1, null, 4, 2],
+        baseFret: 3,
+        barre: { fret: 3, fromString: 1, toString: 2, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Csus4 3rd Position Open G Extended",
+        positionLabel: "3rd Position / Open G Extended",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 5, 0, 6, 3],
+        fingers: [null, 1, 3, null, 4, 2],
+        baseFret: 3,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Csus4 3rd Position Full Barre",
+        positionLabel: "3rd Position / Full Barre",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 3, 5, 6, 3],
+        fingers: [null, 1, 1, 3, 4, 1],
+        baseFret: 3,
+        barre: { fret: 3, fromString: 1, toString: 5, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Csus4 8th Position Compact Barre",
+        positionLabel: "8th Position / Compact Barre",
+        rootString: "Root: 6th String",
+        frets: [8, 8, 10, 10, 8, 8],
+        fingers: [1, 1, 3, 4, 1, 1],
+        baseFret: 8,
+        barre: { fret: 8, fromString: 0, toString: 5, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+    );
+  }
+
+  if (root === "C" && typeKey === "add9") {
+    voicings.push(
+      {
+        name: "Cadd9 Open Voicing",
+        positionLabel: "Open Position",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 0, 0, 1, 0],
+        fingers: [null, 3, null, null, 1, null],
+        baseFret: 1,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cadd9 Open D Voicing",
+        positionLabel: "Open Position / Open D, G and E",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 0, 0, 3, 0],
+        fingers: [null, 1, null, null, 2, null],
+        baseFret: 1,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cadd9 Open Full Voicing",
+        positionLabel: "Open Position / Full Voicing",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 2, 0, 3, 0],
+        fingers: [null, 2, 1, null, 3, null],
+        baseFret: 1,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cadd9 Open High G",
+        positionLabel: "Open Position / High G",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 2, 0, 3, 3],
+        fingers: [null, 2, 1, null, 3, 4],
+        baseFret: 1,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cadd9 3rd Position Open D and G",
+        positionLabel: "3rd Position / Open D and G",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 0, 0, 5, 3],
+        fingers: [null, 1, null, null, 3, 2],
+        baseFret: 3,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cadd9 3rd Position Open D",
+        positionLabel: "3rd Position / Open D",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 0, 5, 5, 3],
+        fingers: [null, 1, null, 3, 4, 2],
+        baseFret: 3,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cadd9 3rd Position Open G and E",
+        positionLabel: "3rd Position / Open G and E",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 5, 0, 3, 0],
+        fingers: [null, 1, 3, null, 2, null],
+        baseFret: 3,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cadd9 3rd Position Open E",
+        positionLabel: "3rd Position / Open E",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 5, 5, 3, 0],
+        fingers: [null, 1, 3, 4, 2, null],
+        baseFret: 3,
+        category: "variation",
+        isFundamental: false,
+      },
+    );
+  }
+
+  if (root === "C" && typeKey === "11") {
+    voicings.push(
+      {
+        name: "C11 6th Position Open D and G",
+        positionLabel: "6th Position / Open D and G",
+        rootString: "Root: 6th String",
+        frets: [8, 7, 0, 0, 6, 6],
+        fingers: [4, 3, null, null, 1, 2],
+        baseFret: 6,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C11 8th Position Barre",
+        positionLabel: "8th Position / Barre",
+        rootString: "Root: 6th String",
+        frets: [8, 8, 8, 9, 8, 10],
+        fingers: [1, 1, 1, 2, 1, 3],
+        baseFret: 8,
+        barre: { fret: 8, fromString: 0, toString: 4, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C11 5th Position Open G and E",
+        positionLabel: "5th Position / Open G and E",
+        rootString: "Root: 6th String",
+        frets: [8, 5, 8, 0, 6, 0],
+        fingers: [3, 1, 4, null, 2, null],
+        baseFret: 5,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C11 5th Position Open D and G",
+        positionLabel: "5th Position / Open D and G",
+        rootString: "Root: 6th String",
+        frets: [8, 8, 0, 0, 5, 6],
+        fingers: [4, 4, null, null, 1, 2],
+        baseFret: 5,
+        barre: { fret: 8, fromString: 0, toString: 1, finger: 4 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C11 5th Position Full Voicing",
+        positionLabel: "5th Position / Full Voicing",
+        rootString: "Root: 6th String",
+        frets: [8, 8, 5, 7, 5, 6],
+        fingers: [4, 4, 1, 3, 1, 2],
+        baseFret: 5,
+        barres: [
+          { fret: 5, fromString: 2, toString: 4, finger: 1 },
+          { fret: 8, fromString: 0, toString: 1, finger: 4 },
+        ],
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C11 6th Position Open D",
+        positionLabel: "6th Position / Open D",
+        rootString: "Root: 6th String",
+        frets: [8, 8, 0, 9, 8, 6],
+        fingers: [2, 2, null, 4, 3, 1],
+        baseFret: 6,
+        barre: { fret: 8, fromString: 0, toString: 1, finger: 2 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C11 8th Position Open D, G and E",
+        positionLabel: "8th Position / Open D, G and E",
+        rootString: "Root: 6th String",
+        frets: [8, 8, 0, 0, 11, 0],
+        fingers: [1, 2, null, null, 4, null],
+        baseFret: 8,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C11 8th Position Open D and E",
+        positionLabel: "8th Position / Open D and E",
+        rootString: "Root: 6th String",
+        frets: [8, 10, 0, 10, 11, 0],
+        fingers: [1, 2, null, 3, 4, null],
+        baseFret: 8,
+        category: "variation",
+        isFundamental: false,
+      },
+    );
+  }
+
+  if (root === "C" && typeKey === "6") {
+    voicings.push(
+      {
+        name: "C6 Open Voicing",
+        positionLabel: "Open Position",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 2, 2, 1, 3],
+        fingers: [null, 3, 2, 2, 1, 4],
+        baseFret: 1,
+        barre: { fret: 2, fromString: 2, toString: 3, finger: 2 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C6 3rd Position Open G",
+        positionLabel: "3rd Position / Open G",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 5, 0, 5, 5],
+        fingers: [null, 1, 3, null, 4, 4],
+        baseFret: 3,
+        barre: { fret: 5, fromString: 4, toString: 5, finger: 4 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C6 7th Position Open Strings",
+        positionLabel: "7th Position / Open A, G and E",
+        rootString: "Root: 6th String",
+        frets: [8, 0, 7, 0, 8, 0],
+        fingers: [2, null, 1, null, 3, null],
+        baseFret: 7,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C6 7th Position Open G",
+        positionLabel: "7th Position / Open G",
+        rootString: "Root: 6th String",
+        frets: [8, 7, 7, 0, 8, 8],
+        fingers: [2, 1, 1, null, 3, 4],
+        baseFret: 7,
+        barre: { fret: 7, fromString: 1, toString: 2, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C6 8th Position Open A",
+        positionLabel: "8th Position / Open A",
+        rootString: "Root: 6th String",
+        frets: [8, 0, 10, 9, 8, 8],
+        fingers: [1, null, 4, 3, 2, 2],
+        baseFret: 8,
+        barre: { fret: 8, fromString: 4, toString: 5, finger: 2 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C6 8th Position Closed",
+        positionLabel: "8th Position / Closed Voicing",
+        rootString: "Root: 6th String",
+        frets: [8, 10, 10, 9, 10, 8],
+        fingers: [1, 3, 3, 2, 4, 1],
+        baseFret: 8,
+        barres: [
+          { fret: 8, fromString: 0, toString: 5, finger: 1 },
+          { fret: 10, fromString: 1, toString: 2, finger: 3 },
+        ],
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C6 8th Position Open A, G and E",
+        positionLabel: "8th Position / Open A, G and E",
+        rootString: "Root: 6th String",
+        frets: [8, 0, 10, 0, 8, 0],
+        fingers: [1, null, 3, null, 2, null],
+        baseFret: 8,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C6 8th Position Open A and E",
+        positionLabel: "8th Position / Open A and E",
+        rootString: "Root: 6th String",
+        frets: [8, 0, 10, 9, 8, 0],
+        fingers: [1, null, 4, 3, 2, null],
+        baseFret: 8,
+        category: "variation",
+        isFundamental: false,
+      },
+    );
+  }
+
+  if (root === "C" && typeKey === "min6") {
+    const eShape = voicings.find(
+      (voicing) =>
+        JSON.stringify(voicing.frets) ===
+        JSON.stringify([8, null, 7, 8, 8, null]),
+    );
+    if (eShape) {
+      eShape.fingers = [2, null, 1, 3, 4, null];
+    }
+
+    voicings.push(
+      {
+        name: "Cm6 8th Position Full Barre",
+        positionLabel: "8th Position / Full Barre",
+        rootString: "Root: 6th String",
+        frets: [8, 10, 8, 8, 10, 8],
+        fingers: [1, 3, 1, 1, 4, 1],
+        baseFret: 8,
+        barre: { fret: 8, fromString: 0, toString: 5, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm6 3rd Position",
+        positionLabel: "3rd Position",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 5, 3, 4, 5],
+        fingers: [null, 1, 3, 1, 2, 4],
+        baseFret: 3,
+        barre: { fret: 3, fromString: 1, toString: 3, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm6 Open Compact Voicing",
+        positionLabel: "Open Position / Compact Voicing",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 1, 2, 1, null],
+        fingers: [null, 3, 1, 2, 1, null],
+        baseFret: 1,
+        barre: { fret: 1, fromString: 2, toString: 4, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm6 7th Position Top Strings",
+        positionLabel: "7th Position / Top Four Strings",
+        rootString: "Root: 4th String",
+        frets: [null, null, 7, 8, 8, 8],
+        fingers: [null, null, 1, 2, 2, 2],
+        baseFret: 7,
+        barre: { fret: 8, fromString: 3, toString: 5, finger: 2 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm6 Open Low Strings",
+        positionLabel: "Open Position / Low Four Strings",
+        rootString: "Root: 5th String",
+        frets: [3, 3, 1, 2, null, null],
+        fingers: [3, 4, 1, 2, null, null],
+        baseFret: 1,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm6 5th Position Split Voicing",
+        positionLabel: "5th Position / Split Voicing",
+        rootString: "Root: 6th String",
+        frets: [8, null, null, 8, 8, 5],
+        fingers: [2, null, null, 3, 4, 1],
+        baseFret: 5,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm6 4th Position Top Strings",
+        positionLabel: "4th Position / Top Four Strings",
+        rootString: "Root: 4th String",
+        frets: [null, null, 5, 5, 4, 5],
+        fingers: [null, null, 2, 3, 1, 4],
+        baseFret: 4,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm6 10th Position Top Strings",
+        positionLabel: "10th Position / Top Four Strings",
+        rootString: "Root: 4th String",
+        frets: [null, null, 10, 12, 10, 11],
+        fingers: [null, null, 1, 3, 1, 2],
+        baseFret: 10,
+        barre: { fret: 10, fromString: 2, toString: 4, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm6 10th Position Compact",
+        positionLabel: "10th Position / Compact Voicing",
+        rootString: "Root: 4th String",
+        frets: [11, null, 10, 12, 10, null],
+        fingers: [2, null, 1, 3, 1, null],
+        baseFret: 10,
+        barre: { fret: 10, fromString: 2, toString: 4, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+    );
+  }
+
+  if (root === "C" && typeKey === "7#9") {
+    voicings.push(
+      {
+        name: "C7#9 3rd Position Open E",
+        positionLabel: "3rd Position / Open E",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 5, 3, 4, 0],
+        fingers: [null, 1, 4, 2, 3, null],
+        baseFret: 3,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C7#9 6th Position Open G and E",
+        positionLabel: "6th Position / Open G and E",
+        rootString: "Root: 6th String",
+        frets: [8, 6, 8, 0, 8, 0],
+        fingers: [2, 1, 3, null, 4, null],
+        baseFret: 6,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C7#9 8th Position Open E Barre",
+        positionLabel: "8th Position / Open E Barre",
+        rootString: "Root: 6th String",
+        frets: [8, 10, 8, 8, 8, 0],
+        fingers: [1, 3, 1, 1, 1, null],
+        baseFret: 8,
+        barre: { fret: 8, fromString: 0, toString: 4, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C7#9 5th Position Open G and E",
+        positionLabel: "5th Position / Open G and E",
+        rootString: "Root: 6th String",
+        frets: [8, 6, 8, 0, 5, 0],
+        fingers: [3, 2, 4, null, 1, null],
+        baseFret: 5,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C7#9 5th Position Closed",
+        positionLabel: "5th Position / Closed Voicing",
+        rootString: "Root: 6th String",
+        frets: [8, 6, 5, 5, 5, 6],
+        fingers: [4, 2, 1, 1, 1, 3],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 2, toString: 4, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C7#9 8th Position Open E High",
+        positionLabel: "8th Position / Open E High Voicing",
+        rootString: "Root: 6th String",
+        frets: [8, 10, 8, 8, 11, 0],
+        fingers: [1, 3, 1, 1, 4, null],
+        baseFret: 8,
+        barre: { fret: 8, fromString: 0, toString: 3, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C7#9 8th Position Open E Full",
+        positionLabel: "8th Position / Open E Full",
+        rootString: "Root: 6th String",
+        frets: [8, 10, 10, 8, 11, 0],
+        fingers: [1, 3, 3, 1, 4, null],
+        baseFret: 8,
+        barres: [
+          { fret: 8, fromString: 0, toString: 3, finger: 1 },
+          { fret: 10, fromString: 1, toString: 2, finger: 3 },
+        ],
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C7#9 8th Position Closed",
+        positionLabel: "8th Position / Closed Voicing",
+        rootString: "Root: 6th String",
+        frets: [8, 10, 8, 9, 8, 11],
+        fingers: [1, 3, 1, 2, 1, 4],
+        baseFret: 8,
+        barre: { fret: 8, fromString: 0, toString: 4, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+    );
+  }
+
+  if (root === "C" && typeKey === "7b9") {
+    voicings.push(
+      {
+        name: "C7b9 Open Voicing",
+        positionLabel: "Open Position",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 2, 3, 2, 3],
+        fingers: [null, 2, 1, 3, 1, 4],
+        baseFret: 1,
+        barre: { fret: 2, fromString: 2, toString: 4, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C7b9 2nd Position Open E",
+        positionLabel: "2nd Position / Open E",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 5, 3, 2, 0],
+        fingers: [null, 2, 4, 3, 1, null],
+        baseFret: 2,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C7b9 8th Position Open G and E",
+        positionLabel: "8th Position / Open G and E",
+        rootString: "Root: 6th String",
+        frets: [8, 10, 11, 0, 11, 0],
+        fingers: [1, 2, 3, null, 4, null],
+        baseFret: 8,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C7b9 14th Position",
+        positionLabel: "14th Position",
+        rootString: "Root: 5th String",
+        frets: [null, 15, 14, 15, 14, 15],
+        fingers: [null, 2, 1, 3, 1, 4],
+        baseFret: 14,
+        barre: { fret: 14, fromString: 2, toString: 4, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C7b9 6th Position Split Voicing",
+        positionLabel: "6th Position / Split Voicing",
+        rootString: "Root: 6th String",
+        frets: [8, 7, null, 6, 8, 6],
+        fingers: [3, 2, null, 1, 4, 1],
+        baseFret: 6,
+        barre: { fret: 6, fromString: 3, toString: 5, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+    );
+  }
+
+  if (root === "C" && typeKey === "9") {
+    voicings.push(
+      {
+        name: "C9 3rd Position Open D",
+        positionLabel: "3rd Position / Open D",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 0, 3, 5, 3],
+        fingers: [null, 1, null, 2, 4, 3],
+        baseFret: 3,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C9 3rd Position Open E Barre",
+        positionLabel: "3rd Position / Open E Barre",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 5, 3, 3, 0],
+        fingers: [null, 1, 3, 1, 1, null],
+        baseFret: 3,
+        barre: { fret: 3, fromString: 1, toString: 4, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C9 6th Position Open D and G",
+        positionLabel: "6th Position / Open D and G",
+        rootString: "Root: 6th String",
+        frets: [8, 7, 0, 0, 8, 6],
+        fingers: [3, 2, null, null, 4, 1],
+        baseFret: 6,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C9 7th Position Open E",
+        positionLabel: "7th Position / Open E",
+        rootString: "Root: 6th String",
+        frets: [8, 7, 8, 7, 8, 0],
+        fingers: [2, 1, 3, 1, 4, null],
+        baseFret: 7,
+        barre: { fret: 7, fromString: 1, toString: 3, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C9 8th Position Closed",
+        positionLabel: "8th Position / Closed Voicing",
+        rootString: "Root: 6th String",
+        frets: [8, 10, 8, 9, 8, 10],
+        fingers: [1, 3, 1, 2, 1, 4],
+        baseFret: 8,
+        barre: { fret: 8, fromString: 0, toString: 4, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C9 3rd Position Open D and G",
+        positionLabel: "3rd Position / Open D and G",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 0, 0, 5, 6],
+        fingers: [null, 1, null, null, 3, 4],
+        baseFret: 3,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C9 5th Position Open G and E",
+        positionLabel: "5th Position / Open G and E",
+        rootString: "Root: 6th String",
+        frets: [8, 5, 8, 0, 5, 0],
+        fingers: [3, 1, 4, null, 2, null],
+        baseFret: 5,
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "C9 5th Position Open E",
+        positionLabel: "5th Position / Open E",
+        rootString: "Root: 6th String",
+        frets: [8, 5, 8, 5, 8, 0],
+        fingers: [2, 1, 3, 1, 4, null],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 1, toString: 3, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+    );
+  }
+
+  if (root === "C" && typeKey === "m7b5") {
+    voicings.push(
+      {
+        name: "Cm7b5 Open Voicing",
+        positionLabel: "Open Position",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 1, 3, 1, 2],
+        fingers: [null, 3, 1, 4, 1, 2],
+        baseFret: 1,
+        barre: { fret: 1, fromString: 2, toString: 4, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm7b5 6th Position",
+        positionLabel: "6th Position / Full Voicing",
+        rootString: "Root: 6th String",
+        frets: [8, 6, 8, 8, 7, 6],
+        fingers: [3, 1, 4, 4, 2, 1],
+        baseFret: 6,
+        barres: [
+          { fret: 6, fromString: 1, toString: 5, finger: 1 },
+          { fret: 8, fromString: 2, toString: 3, finger: 4 },
+        ],
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm7b5 10th Position Top Strings",
+        positionLabel: "10th Position / Top Four Strings",
+        rootString: "Root: 4th String",
+        frets: [null, null, 10, 11, 11, 11],
+        fingers: [null, null, 1, 2, 2, 2],
+        baseFret: 10,
+        barre: { fret: 11, fromString: 3, toString: 5, finger: 2 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm7b5 3rd Position",
+        positionLabel: "3rd Position",
+        rootString: "Root: 5th String",
+        frets: [null, 3, 4, 3, 4, 6],
+        fingers: [null, 1, 2, 1, 3, 4],
+        baseFret: 3,
+        barre: { fret: 3, fromString: 1, toString: 3, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm7b5 8th Position Low Barre",
+        positionLabel: "8th Position / Low Barre",
+        rootString: "Root: 6th String",
+        frets: [8, 9, 8, 8, 11, 8],
+        fingers: [1, 2, 1, 1, 4, 1],
+        baseFret: 8,
+        barre: { fret: 8, fromString: 0, toString: 5, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm7b5 8th Position Extended",
+        positionLabel: "8th Position / Extended Voicing",
+        rootString: "Root: 6th String",
+        frets: [8, 9, 10, 8, 11, 8],
+        fingers: [1, 2, 3, 1, 4, 1],
+        baseFret: 8,
+        barre: { fret: 8, fromString: 0, toString: 5, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm7b5 8th Position High Barre",
+        positionLabel: "8th Position / High Barre",
+        rootString: "Root: 6th String",
+        frets: [8, 9, 8, 8, 11, 11],
+        fingers: [1, 2, 1, 1, 4, 4],
+        baseFret: 8,
+        barres: [
+          { fret: 8, fromString: 0, toString: 3, finger: 1 },
+          { fret: 11, fromString: 4, toString: 5, finger: 4 },
+        ],
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "Cm7b5 8th Position Full",
+        positionLabel: "8th Position / Full Voicing",
+        rootString: "Root: 6th String",
+        frets: [8, 9, 10, 8, 11, 11],
+        fingers: [1, 2, 3, 1, 4, 4],
+        baseFret: 8,
+        barres: [
+          { fret: 8, fromString: 0, toString: 3, finger: 1 },
+          { fret: 11, fromString: 4, toString: 5, finger: 4 },
+        ],
         category: "variation",
         isFundamental: false,
       },
