@@ -43,4 +43,74 @@ describe("canonical chord library", () => {
       true,
     );
   });
+
+  it("includes the complete C major voicings and fingerings", () => {
+    const voicings = getChordDefinition("C", "major").voicings;
+    const expectedVoicings = [
+      {
+        frets: [null, 3, 2, 0, 1, 0],
+        fingers: [null, 3, 2, null, 1, null],
+      },
+      {
+        frets: [null, 3, 2, 0, 1, 3],
+        fingers: [null, 3, 2, null, 1, 4],
+      },
+      {
+        frets: [null, 3, 5, 5, 5, 3],
+        fingers: [null, 1, 2, 3, 4, 1],
+      },
+      {
+        frets: [8, 10, 10, 9, 8, 8],
+        fingers: [1, 3, 4, 2, 1, 1],
+      },
+      {
+        frets: [null, 3, 5, 0, 5, 3],
+        fingers: [null, 1, 3, null, 4, 2],
+      },
+      {
+        frets: [null, 3, 5, 0, 5, 0],
+        fingers: [null, 1, 3, null, 4, null],
+      },
+      {
+        frets: [null, 3, 5, 5, 5, 0],
+        fingers: [null, 1, 2, 3, 4, null],
+      },
+      {
+        frets: [null, null, 10, 9, 8, 8],
+        fingers: [null, null, 4, 3, 1, 2],
+      },
+    ];
+
+    expectedVoicings.forEach((expected) => {
+      const voicing = voicings.find(
+        (candidate) =>
+          JSON.stringify(candidate.frets) === JSON.stringify(expected.frets),
+      );
+      assert.ok(voicing, `Missing C major voicing ${expected.frets.join("-")}`);
+      assert.deepEqual(voicing.fingers, expected.fingers);
+    });
+
+    const aShape = voicings.find(
+      (voicing) =>
+        JSON.stringify(voicing.frets) ===
+        JSON.stringify([null, 3, 5, 5, 5, 3]),
+    );
+    const eShape = voicings.find(
+      (voicing) =>
+        JSON.stringify(voicing.frets) === JSON.stringify([8, 10, 10, 9, 8, 8]),
+    );
+
+    assert.deepEqual(aShape?.barre, {
+      fret: 3,
+      fromString: 1,
+      toString: 5,
+      finger: 1,
+    });
+    assert.deepEqual(eShape?.barre, {
+      fret: 8,
+      fromString: 0,
+      toString: 5,
+      finger: 1,
+    });
+  });
 });
