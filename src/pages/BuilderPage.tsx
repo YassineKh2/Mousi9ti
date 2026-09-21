@@ -1665,7 +1665,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
       {/* Header - Global Controls */}
       <div className="builder-global-header flex flex-wrap items-center justify-between gap-4">
         {/* Global Controls */}
-        <div className="builder-global-controls flex flex-wrap items-center gap-3 bg-surface-container p-2.5 rounded-xl border border-outline-variant/30">
+        <div data-tour="builder-controls" className="builder-global-controls flex flex-wrap items-center gap-3 bg-surface-container p-2.5 rounded-xl border border-outline-variant/30">
           {/* Instrument Selector */}
           <div className="flex flex-col px-2 border-b sm:border-b-0 sm:border-r border-outline-variant/30 pb-2 sm:pb-0">
             <span className="text-[10px] font-mono text-on-surface-variant uppercase tracking-wider mb-1">
@@ -1880,7 +1880,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left: Queue Management */}
-        <div className="builder-queue lg:col-span-8 flex flex-col gap-4">
+        <div data-tour="builder-queue" className="builder-queue lg:col-span-8 flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold text-on-surface flex items-center gap-2">
@@ -2296,7 +2296,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
         </div>
 
         {/* Right: Builder Panel */}
-        <div className="builder-panel lg:col-span-4 flex flex-col gap-4">
+        <div data-tour="builder-add" className="builder-panel lg:col-span-4 flex flex-col gap-4">
           <h2 className="text-xl font-bold text-on-surface flex items-center gap-2 mt-2">
             <Settings2 size={20} className="text-primary" />
             Add to Queue
