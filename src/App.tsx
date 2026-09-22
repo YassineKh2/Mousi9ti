@@ -6,12 +6,17 @@ import {
   getSavedSessions,
   getSavedStreak,
   getTodayDateString,
+  recordPracticeActivity,
   saveSession,
   saveSettings,
 } from "./lib/storage";
 import { audioEngine } from "./lib/audio";
 import { useTimer } from "./lib/useTimer";
-import { Navigation, ActiveTab, GlobalSearchResult } from "./components/Navigation";
+import {
+  Navigation,
+  ActiveTab,
+  GlobalSearchResult,
+} from "./components/Navigation";
 import { SettingsModal } from "./components/SettingsModal";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ScalesPage } from "./pages/ScalesPage";
@@ -41,7 +46,10 @@ export function App() {
   );
   // Kept in App so it survives TourOverlay unmount/remount — no reload needed to resume
   const [tourStep, setTourStep] = useState<number>(() => {
-    const n = Number.parseInt(localStorage.getItem("Mousi9ti_tour_step") ?? "0", 10);
+    const n = Number.parseInt(
+      localStorage.getItem("Mousi9ti_tour_step") ?? "0",
+      10,
+    );
     return Number.isFinite(n) && n >= 0 ? n : 0;
   });
 
@@ -53,13 +61,6 @@ export function App() {
   const handleTourStepChange = (step: number) => {
     setTourStep(step);
     localStorage.setItem("Mousi9ti_tour_step", String(step));
-  };
-
-  const handleRestartTour = () => {
-    localStorage.removeItem("Mousi9ti_tour_done");
-    localStorage.removeItem("Mousi9ti_tour_step");
-    setTourStep(0);
-    setIsTourOpen(true);
   };
 
   // Navigation
@@ -123,9 +124,23 @@ export function App() {
 
   // Practice Timer
   const timer = useTimer();
+  const metronomeStartedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     timer.setOnComplete(() => {
+      const durationSeconds = timer.duration;
+      if (durationSeconds > 0) {
+        recordPracticeActivity({
+          source: "timer",
+          sourceId: "global-timer",
+          startTime: Date.now() - durationSeconds * 1000,
+          endTime: Date.now(),
+          durationSeconds,
+          area: "Timer",
+          tags: ["timer"],
+          status: "completed",
+        });
+      }
       if ("vibrate" in navigator) {
         navigator.vibrate([200, 450, 200, 450, 200]);
       }
@@ -153,12 +168,32 @@ export function App() {
     const unsubscribe = audioEngine.onMetronomeStateChange(
       (playing: boolean) => {
         setMetronomeIsPlaying(playing);
+        if (playing) {
+          metronomeStartedAtRef.current ||= Date.now();
+        } else if (metronomeStartedAtRef.current) {
+          const startTime = metronomeStartedAtRef.current;
+          const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
+          if (durationSeconds >= 30 && !isSessionActive) {
+            recordPracticeActivity({
+              source: "metronome",
+              sourceId: "global-metronome",
+              startTime,
+              endTime: Date.now(),
+              durationSeconds,
+              area: "Rhythm",
+              tags: ["metronome", "bpm"],
+              bpm: audioEngine.getMetronomeState().bpm,
+              status: "completed",
+            });
+          }
+          metronomeStartedAtRef.current = null;
+        }
       },
     );
 
     setMetronomeIsPlaying(audioEngine.isRunning());
     return () => unsubscribe();
-  }, []);
+  }, [isSessionActive]);
 
   // Sync Master Volume & Theme to engine and HTML element
   useEffect(() => {
@@ -740,7 +775,6 @@ export function App() {
           onUpdateSettings={handleUpdateSettings}
           onExportData={handleExportData}
           onClearData={handleClearData}
-          onRestartTour={handleRestartTour}
         />
 
         {/* Onboarding Tour */}

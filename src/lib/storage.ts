@@ -6,6 +6,9 @@ import {
   Session,
   StreakData,
   ChordSelection,
+  PracticeTask,
+  PracticeActivity,
+  TaskActivity,
 } from "../types";
 
 const STORAGE_KEYS = {
@@ -15,6 +18,8 @@ const STORAGE_KEYS = {
   CHORD_SELECTIONS: "Mousi9ti_chord_selections_v1",
   DASHBOARD_LAYOUT: "Mousi9ti_dashboard_layout_v1",
   DASHBOARD_LAYOUT_V2: "Mousi9ti_dashboard_layout_v2",
+  TASK_ACTIVITIES: "Mousi9ti_task_activities_v1",
+  PRACTICE_ACTIVITIES: "Mousi9ti_practice_activities_v1",
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -333,6 +338,153 @@ export function saveSession(session: Session): void {
   } catch (e) {
     console.error("Failed to save session", e);
   }
+}
+
+const TASK_AREA_BY_MENTION: Record<string, string> = {
+  technique: "Technique",
+  scale: "Scales",
+  chord: "Chords",
+  exercise: "Exercises",
+  metronome: "Rhythm",
+  bpm: "Rhythm",
+  timer: "Practice",
+  key: "Theory",
+  tuning: "Technique",
+};
+
+interface TaskMetadata {
+  area: string;
+  subject?: string;
+  tags: string[];
+  bpm?: number;
+  durationSeconds: number;
+}
+
+function getTaskMetadata(text: string): TaskMetadata {
+  const matches = [...text.matchAll(/@([a-z][a-z0-9]*)(?:\(([^)]*)\))?/gi)];
+  const tags = matches.map((match) => match[1].toLowerCase());
+  const firstCategorizedMention = matches.find(
+    (match) => TASK_AREA_BY_MENTION[match[1].toLowerCase()],
+  );
+  const category = firstCategorizedMention?.[1].toLowerCase();
+  const structuredSubject = matches
+    .find((match) =>
+      [
+        "custom",
+        "scale",
+        "chord",
+        "technique",
+        "exercise",
+        "key",
+        "tuning",
+      ].includes(match[1].toLowerCase()),
+    )?.[2]
+    ?.trim();
+  const bareCustomSubject = text.match(/@custom\s+([^@]+)/i)?.[1]?.trim();
+  const subject = structuredSubject || bareCustomSubject;
+  const bpmMatch = text.match(/@(bpm|metronome)\s*(?:\((\d+)|([0-9]+))/i);
+  const timerMatch = text.match(
+    /@timer\s*(?:\(\s*(\d+)\s*(?:m|min|mins|minutes)?\s*\)|([0-9]+)\s*m?)/i,
+  );
+  const durationSeconds = timerMatch
+    ? Number(timerMatch[1] || timerMatch[2]) * 60
+    : 0;
+  return {
+    area:
+      category === "custom"
+        ? "Custom"
+        : category
+          ? TASK_AREA_BY_MENTION[category]
+          : "General practice",
+    subject,
+    tags,
+    bpm: bpmMatch ? Number(bpmMatch[2] || bpmMatch[3]) : undefined,
+    durationSeconds,
+  };
+}
+
+export function getTaskArea(text: string): string {
+  return getTaskMetadata(text).area;
+}
+
+export function getTaskDurationSeconds(text: string): number {
+  return getTaskMetadata(text).durationSeconds;
+}
+
+export function getSavedTaskActivities(): TaskActivity[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.TASK_ACTIVITIES);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error("Failed to get task activities", e);
+    return [];
+  }
+}
+
+export function recordTaskActivity(
+  task: Pick<PracticeTask, "id" | "text">,
+  kind: TaskActivity["kind"],
+): void {
+  try {
+    const now = Date.now();
+    const metadata = getTaskMetadata(task.text);
+    const activity: TaskActivity = {
+      id: `task-activity-${now}-${Math.random().toString(36).slice(2, 7)}`,
+      taskId: task.id,
+      taskText: task.text,
+      date: getTodayDateString(),
+      timestamp: now,
+      kind,
+      durationSeconds: kind === "completed" ? metadata.durationSeconds : 0,
+      area: metadata.area,
+      source: metadata.area === "Custom" ? "custom" : "task",
+      subject: metadata.subject,
+      tags: metadata.tags,
+      bpm: metadata.bpm,
+      plannedDurationSeconds: metadata.durationSeconds,
+    };
+    const activities = [activity, ...getSavedTaskActivities()].slice(0, 2000);
+    localStorage.setItem(
+      STORAGE_KEYS.TASK_ACTIVITIES,
+      JSON.stringify(activities),
+    );
+    if (kind === "completed") recordPracticeDay(activity.date, 0);
+  } catch (e) {
+    console.error("Failed to record task activity", e);
+  }
+}
+
+export function getSavedPracticeActivities(): PracticeActivity[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.PRACTICE_ACTIVITIES);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error("Failed to get practice activities", e);
+    return [];
+  }
+}
+
+export function recordPracticeActivity(
+  activity: Omit<PracticeActivity, "id" | "date"> & { date?: string },
+): PracticeActivity {
+  const timestamp = activity.startTime || Date.now();
+  const saved: PracticeActivity = {
+    ...activity,
+    id: `practice-${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
+    date: activity.date || getTodayDateString(),
+  };
+  const activities = [saved, ...getSavedPracticeActivities()].slice(0, 3000);
+  localStorage.setItem(
+    STORAGE_KEYS.PRACTICE_ACTIVITIES,
+    JSON.stringify(activities),
+  );
+  if (saved.status === "completed")
+    recordPracticeDay(saved.date, Math.round(saved.durationSeconds / 60));
+  return saved;
 }
 
 // Streak System Logic (chess.com-style with 2-day grace period)

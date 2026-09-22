@@ -162,6 +162,54 @@ export interface Session {
   completed: boolean;
 }
 
+export type PracticeActivitySource =
+  | "task"
+  | "timer"
+  | "metronome"
+  | "session"
+  | "custom";
+
+export interface PracticeActivity {
+  id: string;
+  source: PracticeActivitySource;
+  sourceId?: string;
+  parentActivityId?: string;
+  date: string;
+  startTime: number;
+  endTime: number;
+  durationSeconds: number;
+  area: string;
+  subject?: string;
+  taskId?: string;
+  taskText?: string;
+  tags: string[];
+  bpm?: number;
+  plannedDurationSeconds?: number;
+  status?: "started" | "completed" | "skipped";
+}
+
+export interface TaskActivity {
+  id: string;
+  taskId: string;
+  taskText: string;
+  date: string;
+  timestamp: number;
+  kind: "started" | "completed";
+  durationSeconds: number;
+  area: string;
+  source?: "task" | "custom";
+  subject?: string;
+  tags?: string[];
+  bpm?: number;
+  plannedDurationSeconds?: number;
+}
+
+export interface PracticeTask {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 export interface StreakData {
   currentStreak: number;
   longestStreak: number;

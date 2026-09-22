@@ -58,7 +58,7 @@ import {
   InlineTaskRowEditor,
 } from "../components/PracticeTasksWidget";
 import { useTimer } from "../lib/useTimer";
-import { getSavedSessions } from "../lib/storage";
+import { getSavedSessions, recordTaskActivity } from "../lib/storage";
 import { SessionWidget } from "../components/SessionWidget";
 import { StreakData } from "../types";
 
@@ -576,6 +576,11 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   };
 
   const toggleTaskCompleted = (taskId: string) => {
+    const task = activeDay.tasks.find((item) => item.id === taskId);
+    if (task && !task.completed) {
+      recordTaskActivity(task, "started");
+      recordTaskActivity(task, "completed");
+    }
     setWeeklySchedule((prev) =>
       prev.map((d) => {
         if (d.day === activeDayCode) {

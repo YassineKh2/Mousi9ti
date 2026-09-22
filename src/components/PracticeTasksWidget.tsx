@@ -36,12 +36,10 @@ import {
   COMMON_TECHNIQUES,
   COMMON_EXERCISES,
 } from "../utils/taskMentions";
+import { PracticeTask } from "../types";
+import { recordTaskActivity } from "../lib/storage";
 
-export interface PracticeTask {
-  id: string;
-  text: string;
-  completed: boolean;
-}
+export type { PracticeTask } from "../types";
 
 const MENTION_REGEX =
   /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer)(?:\(([^)]*)\))?)/gi;
@@ -757,10 +755,18 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
     setCursor(0);
   };
 
-  const toggleTask = (id: string) =>
+  const toggleTask = (id: string) => {
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    const nextCompleted = !task.completed;
+    if (nextCompleted) {
+      recordTaskActivity(task, "started");
+      recordTaskActivity(task, "completed");
+    }
     setTasks(
-      tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
+      tasks.map((t) => (t.id === id ? { ...t, completed: nextCompleted } : t)),
     );
+  };
   const deleteTask = (id: string) => {
     if (editingTaskId === id) setEditingTaskId(null);
     setTasks(tasks.filter((t) => t.id !== id));
