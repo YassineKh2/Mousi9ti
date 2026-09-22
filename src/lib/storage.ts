@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   fretboardTheme: "original",
   fretboardNoteSize: "medium",
   fretboardColorMode: "default",
+  fretboardMarkerShape: "round",
   fretboardMinimalDetails: false,
   autoSaveSession: true,
   timerPresets: [3, 5, 10, 30],
