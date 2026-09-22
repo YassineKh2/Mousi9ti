@@ -236,6 +236,7 @@ export interface AppSettings {
   fretboardTheme: FretboardTheme;
   fretboardNoteSize: "small" | "medium" | "large" | "xlarge";
   fretboardColorMode: "default" | "colorblind" | "monochrome";
+  fretboardMarkerShape: "round" | "square";
   fretboardMinimalDetails: boolean;
   autoSaveSession: boolean;
   timerPresets: number[]; // in minutes

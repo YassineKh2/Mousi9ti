@@ -1,6 +1,10 @@
 import React from "react";
 import { Volume2 } from "lucide-react";
-import { GUITAR_TUNINGS, getSpelledNote, NOTE_SEMITONES } from "../../data/musicTheory";
+import {
+  GUITAR_TUNINGS,
+  getSpelledNote,
+  NOTE_SEMITONES,
+} from "../../data/musicTheory";
 import { useSettingsContext } from "../../contexts/SettingsContext";
 import { useFretboardLogic } from "./useFretboardLogic";
 import { FretboardProps } from "./OriginalFretboard";
@@ -9,10 +13,22 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
   const settings = useSettingsContext();
   const logic = useFretboardLogic(props);
   const {
-    tuning, fretCount, displayMode, handleTuningSelect, handleFretCountSelect,
-    scaleMap, normalizedRandomNoteSemitone, normalizedPlayingNoteSemitone,
-    isInCagedBox, handleNoteClick, selectedRoot, selectedScale,
-    activeRandomNote, activePlayingNote, activePlayingString, activePlayingFret,
+    tuning,
+    fretCount,
+    displayMode,
+    handleTuningSelect,
+    handleFretCountSelect,
+    scaleMap,
+    normalizedRandomNoteSemitone,
+    normalizedPlayingNoteSemitone,
+    isInCagedBox,
+    handleNoteClick,
+    selectedRoot,
+    selectedScale,
+    activeRandomNote,
+    activePlayingNote,
+    activePlayingString,
+    activePlayingFret,
     highlightedFrets,
   } = logic;
 
@@ -23,26 +39,34 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
 
   let boardBgClass = "bg-surface-container-highest/60";
   let wrapperBgClass = "bg-surface-container-low";
-  let fretBorderClass = isMinimal ? "border-outline-variant/20" : "border-outline-variant/40";
+  let fretBorderClass = isMinimal
+    ? "border-outline-variant/20"
+    : "border-outline-variant/40";
   let stringClass = "bg-outline-variant";
   let markerDotClass = "bg-outline-variant/60 shadow-inner";
   let fretNumClass = "text-on-surface-variant";
+  // Matches OriginalFretboard's nut background so it stays identical across all note sizes
+  let nutBgClass =
+    theme === "original" ? "bg-surface-container-highest" : "bg-black/20";
 
   if (theme === "ebony") {
-    boardBgClass = "bg-[#252525] bg-gradient-to-b from-[#2a2a2a] to-[#202020] shadow-inner";
+    boardBgClass =
+      "bg-[#252525] bg-gradient-to-b from-[#2a2a2a] to-[#202020] shadow-inner";
     wrapperBgClass = "bg-[#e8e8e8] dark:bg-[#1a1a1a]";
     fretBorderClass = isMinimal ? "border-[#404040]/50" : "border-[#404040]";
     markerDotClass = "bg-[#111111]/80 shadow-inner";
     fretNumClass = "text-[#333] dark:text-[#999]";
   } else if (theme === "maple") {
-    boardBgClass = "bg-[#e8d5b5] bg-gradient-to-b from-[#ebd9bb] to-[#dfcbad] shadow-inner";
+    boardBgClass =
+      "bg-[#e8d5b5] bg-gradient-to-b from-[#ebd9bb] to-[#dfcbad] shadow-inner";
     wrapperBgClass = "bg-[#fdf6e3] dark:bg-[#3d3222]";
     fretBorderClass = isMinimal ? "border-black/10" : "border-black/20";
     stringClass = "bg-black/60";
     markerDotClass = "bg-black/20 shadow-inner";
     fretNumClass = "text-[#5a4a30] dark:text-[#c4b48a]";
   } else if (theme === "rosewood") {
-    boardBgClass = "bg-[#4a2618] bg-gradient-to-b from-[#4f291a] to-[#402114] shadow-inner";
+    boardBgClass =
+      "bg-[#4a2618] bg-gradient-to-b from-[#4f291a] to-[#402114] shadow-inner";
     wrapperBgClass = "bg-[#f0e0d0] dark:bg-[#331c13]";
     fretBorderClass = isMinimal ? "border-[#d1b09b]/15" : "border-[#d1b09b]/30";
     stringClass = "bg-[#d1b09b]/60";
@@ -59,74 +83,99 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
 
   const sizeMap = {
     small: {
-      fretWidth: "32px", fretWidthHigh: "26px", stringHeight: "h-7", nutWidth: "w-8",
-      noteBtn: "w-5 h-5 text-[8px]", openBtn: "w-5 h-5 text-[8px]",
-      shapeBase: "rounded-[4px]", shapeRoot: "rounded-[4px]"
+      fretWidth: "32px",
+      fretWidthHigh: "26px",
+      stringHeight: "h-7",
+      nutWidth: "w-8",
+      noteBtn: "w-5 h-5 text-[8px]",
+      openBtn: "w-5 h-5 text-[8px]",
     },
     medium: {
-      fretWidth: "38px", fretWidthHigh: "30px", stringHeight: "h-9", nutWidth: "w-10",
-      noteBtn: "w-6 h-6 text-[9px]", openBtn: "w-6 h-6 text-[10px]",
-      shapeBase: "rounded-md", shapeRoot: "rounded-md"
+      fretWidth: "38px",
+      fretWidthHigh: "30px",
+      stringHeight: "h-9",
+      nutWidth: "w-10",
+      noteBtn: "w-6 h-6 text-[9px]",
+      openBtn: "w-6 h-6 text-[10px]",
     },
     large: {
-      fretWidth: "48px", fretWidthHigh: "38px", stringHeight: "h-11", nutWidth: "w-12",
-      noteBtn: "w-8 h-8 text-[11px]", openBtn: "w-8 h-8 text-[11px]",
-      shapeBase: "rounded-[8px]", shapeRoot: "rounded-lg"
+      fretWidth: "48px",
+      fretWidthHigh: "38px",
+      stringHeight: "h-11",
+      nutWidth: "w-12",
+      noteBtn: "w-8 h-8 text-[11px]",
+      openBtn: "w-8 h-8 text-[11px]",
     },
     xlarge: {
-      fretWidth: "56px", fretWidthHigh: "46px", stringHeight: "h-14", nutWidth: "w-14",
-      noteBtn: "w-10 h-10 text-xs", openBtn: "w-10 h-10 text-xs",
-      shapeBase: "rounded-[10px]", shapeRoot: "rounded-xl"
-    }
+      fretWidth: "56px",
+      fretWidthHigh: "46px",
+      stringHeight: "h-14",
+      nutWidth: "w-14",
+      noteBtn: "w-10 h-10 text-xs",
+      openBtn: "w-10 h-10 text-xs",
+    },
   };
 
   const currSize = sizeMap[noteSize as keyof typeof sizeMap] || sizeMap.medium;
 
-  const minFretWidth = currSize.fretWidth;
-  const minFretWidthHigh = currSize.fretWidthHigh;
+  const isExtendedXlBoard = noteSize === "xlarge" && fretCount === 24;
+  const minFretWidth = isExtendedXlBoard ? "50px" : currSize.fretWidth;
+  const minFretWidthHigh = isExtendedXlBoard ? "42px" : currSize.fretWidthHigh;
   const stringHeight = currSize.stringHeight;
   const nutWidth = currSize.nutWidth;
-  const nutClass = ["large", "xlarge"].includes(noteSize) ? "border-r-8" : "border-r-4";
-  
+  const nutClass = ["large", "xlarge"].includes(noteSize)
+    ? "border-r-8"
+    : "border-r-4";
+
   // Note rendering helper
-  const getNoteClasses = (isRoot: boolean, isRandomActive: boolean, isPlayingActive: boolean, isLegend: boolean = false) => {
+  const markerShape = settings.fretboardMarkerShape || "round";
+  const getNoteClasses = (
+    isRoot: boolean,
+    isRandomActive: boolean,
+    isPlayingActive: boolean,
+    isLegend: boolean = false,
+  ) => {
     let classes = `${isLegend ? currSize.openBtn : currSize.noteBtn} flex items-center justify-center font-mono font-bold transition-transform shadow-md `;
-    
-    // Base shapes
-    let shapeClass = "rounded-full"; // Default fully rounded for scale notes
-    if (colorMode === "colorblind" || colorMode === "monochrome") {
-      shapeClass = isRoot ? currSize.shapeRoot : "rounded-full"; // Root gets square-ish shape, scale gets circle
-    } else {
-      shapeClass = "rounded-full"; // Default all circles
-    }
-    
-    classes += shapeClass + " ";
-    
+
+    // Shape is uniform across sizes, driven solely by the user's marker shape preference
+    classes += (markerShape === "square" ? "rounded-md" : "rounded-full") + " ";
+
     if (isPlayingActive && !isLegend) {
-      return classes + "bg-secondary text-on-secondary font-black scale-125 z-40 shadow-2xl animate-pulse ";
+      return (
+        classes +
+        "bg-secondary text-on-secondary font-black scale-125 z-40 shadow-2xl animate-pulse "
+      );
     }
     if (isRandomActive && !isLegend) {
-      return classes + "bg-secondary text-on-secondary scale-110 shadow-lg border-2 border-on-secondary ";
+      return (
+        classes +
+        "bg-secondary text-on-secondary scale-110 shadow-lg border-2 border-on-secondary "
+      );
     }
 
     if (colorMode === "monochrome") {
       if (isRoot) {
-        classes += "bg-inverse-surface text-inverse-on-surface font-black shadow-sm border-2 border-surface ";
+        classes +=
+          "bg-inverse-surface text-inverse-on-surface font-black shadow-sm border-2 border-surface ";
       } else {
-        classes += "bg-surface text-on-surface border-2 border-outline hover:bg-surface-variant hover:opacity-100 ";
+        classes +=
+          "bg-surface text-on-surface border-2 border-outline hover:bg-surface-variant hover:opacity-100 ";
       }
     } else if (colorMode === "colorblind") {
       if (isRoot) {
-        classes += "bg-primary text-on-primary font-black shadow-sm border-2 border-on-primary ";
+        classes +=
+          "bg-primary text-on-primary font-black shadow-sm border-2 border-on-primary ";
       } else {
-        classes += "bg-inverse-surface text-inverse-on-surface border-2 border-outline-variant hover:opacity-90 ";
+        classes +=
+          "bg-inverse-surface text-inverse-on-surface border-2 border-outline-variant hover:opacity-90 ";
       }
     } else {
       // Default
       if (isRoot) {
         classes += "bg-primary text-on-primary font-black shadow-sm ";
       } else {
-        classes += "bg-inverse-surface text-inverse-on-surface border border-outline-variant/40 hover:opacity-90 ";
+        classes +=
+          "bg-inverse-surface text-inverse-on-surface border border-outline-variant/40 hover:opacity-90 ";
       }
     }
     return classes;
@@ -147,7 +196,9 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
             <select
               value={tuning.name}
               onChange={(e) => {
-                const found = GUITAR_TUNINGS.find((t) => t.name === e.target.value);
+                const found = GUITAR_TUNINGS.find(
+                  (t) => t.name === e.target.value,
+                );
                 if (found) handleTuningSelect(found);
               }}
               className="min-w-0 w-0 max-w-full flex-1 truncate bg-surface-container-low border border-outline-variant/30 rounded px-2.5 py-1 text-xs font-mono text-on-surface focus:outline-none focus:border-primary/50 cursor-pointer sm:w-auto sm:flex-1"
@@ -181,10 +232,16 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
 
       {/* Interactive Fretboard Stage */}
       <div className="w-full overflow-x-auto pb-4 pt-2 select-none">
-        <div className={`min-w-[900px] relative ${wrapperBgClass} border border-outline-variant/30 rounded p-2.5`}>
+        <div
+          className={`min-w-[900px] relative ${wrapperBgClass} border border-outline-variant/30 rounded p-2.5`}
+        >
           {/* Fret Numbers Header */}
-          <div className={`flex items-center mb-2 text-[10px] font-mono ${fretNumClass}`}>
-            <div className={`${nutWidth} shrink-0 text-center font-bold ${fretNumClass}`}>
+          <div
+            className={`flex items-center mb-2 text-[10px] font-mono ${fretNumClass}`}
+          >
+            <div
+              className={`${nutWidth} shrink-0 text-center font-bold ${fretNumClass}`}
+            >
               OPEN
             </div>
             <div className="flex-1 flex items-center">
@@ -201,7 +258,9 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
           </div>
 
           {/* Fretboard Grid Area */}
-          <div className={`relative border-y-2 ${theme === 'high-contrast' ? 'border-white' : 'border-outline-variant'} ${boardBgClass} rounded-sm py-1 shadow-inner`}>
+          <div
+            className={`relative border-y-2 ${theme === "high-contrast" ? "border-white" : "border-outline-variant"} ${boardBgClass} rounded-sm py-1 shadow-inner`}
+          >
             {/* Position Inlay Dots */}
             {!isMinimal && (
               <div className="absolute inset-0 pointer-events-none flex">
@@ -216,15 +275,24 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
                       <div
                         key={fretNum}
                         className="flex-1 h-full relative flex items-center justify-center"
-                        style={{ minWidth: fretNum > 12 ? minFretWidthHigh : minFretWidth }}
+                        style={{
+                          minWidth:
+                            fretNum > 12 ? minFretWidthHigh : minFretWidth,
+                        }}
                       >
                         {isSingle && (
-                          <div className={`w-2.5 h-2.5 rounded-full ${markerDotClass}`}></div>
+                          <div
+                            className={`w-2.5 h-2.5 rounded-full ${markerDotClass}`}
+                          ></div>
                         )}
                         {isDouble && (
                           <div className="flex flex-col gap-8">
-                            <div className={`w-2 h-2 rounded-full ${markerDotClass}`}></div>
-                            <div className={`w-2 h-2 rounded-full ${markerDotClass}`}></div>
+                            <div
+                              className={`w-2 h-2 rounded-full ${markerDotClass}`}
+                            ></div>
+                            <div
+                              className={`w-2 h-2 rounded-full ${markerDotClass}`}
+                            ></div>
                           </div>
                         )}
                       </div>
@@ -244,15 +312,25 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
               const stringThickness = `${Math.max(1, (reversedIdx * 0.5 + 1) * thicknessMod)}px`;
 
               return (
-                <div key={stringIdx} className={`relative ${stringHeight} flex items-center group`}>
+                <div
+                  key={stringIdx}
+                  className={`relative ${stringHeight} flex items-center group`}
+                >
                   {/* String Physical Line */}
                   <div
                     className={`absolute right-0 ${stringClass} pointer-events-none z-10`}
-                    style={{ height: stringThickness, left: ["large", "xlarge"].includes(noteSize) ? '56px' : '40px' }}
+                    style={{
+                      height: stringThickness,
+                      left: ["large", "xlarge"].includes(noteSize)
+                        ? "56px"
+                        : "40px",
+                    }}
                   ></div>
 
                   {/* Nut (0th Fret) */}
-                  <div className={`${nutWidth} h-full ${nutClass} ${fretBorderClass} bg-black/20 flex items-center justify-center z-20 relative`}>
+                  <div
+                    className={`${nutWidth} h-full ${nutClass} ${fretBorderClass} ${nutBgClass} flex items-center justify-center z-20 relative`}
+                  >
                     {(() => {
                       const noteSemitone = openSemitone;
                       const noteName = getSpelledNote(noteSemitone, {
@@ -261,16 +339,22 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
                         scaleMap,
                         activeRandomNote,
                       });
-                      const inScale = (selectedScale ? scaleMap.has(noteSemitone) : true) && isInCagedBox(0);
-                      const isRandomActive = normalizedRandomNoteSemitone === noteSemitone;
+                      const inScale =
+                        (selectedScale ? scaleMap.has(noteSemitone) : true) &&
+                        isInCagedBox(0);
+                      const isRandomActive =
+                        normalizedRandomNoteSemitone === noteSemitone;
                       const isPlayingActive =
                         activePlayingString !== null &&
                         activePlayingString !== undefined &&
                         activePlayingFret !== null &&
                         activePlayingFret !== undefined
-                          ? activePlayingString === reversedIdx && activePlayingFret === 0
+                          ? activePlayingString === reversedIdx &&
+                            activePlayingFret === 0
                           : normalizedPlayingNoteSemitone === noteSemitone;
-                      const isRoot = !!selectedScale && noteSemitone === NOTE_SEMITONES[selectedRoot];
+                      const isRoot =
+                        !!selectedScale &&
+                        noteSemitone === NOTE_SEMITONES[selectedRoot];
 
                       let displayText: string = noteName;
                       if (selectedScale && scaleMap.has(noteSemitone)) {
@@ -287,7 +371,7 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
                         return (
                           <span
                             onClick={() => handleNoteClick(reversedIdx, 0)}
-                            className={`font-mono ${currSize.noteBtn.split(' ')[2]} ${theme === 'high-contrast' ? 'text-white' : 'text-outline hover:text-on-surface-variant'} cursor-pointer opacity-50`}
+                            className={`font-mono ${currSize.noteBtn.split(" ")[2]} ${theme === "high-contrast" ? "text-white" : "text-outline hover:text-on-surface-variant"} cursor-pointer opacity-50`}
                           >
                             {noteName}
                           </span>
@@ -297,7 +381,11 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
                       return (
                         <button
                           onClick={() => handleNoteClick(reversedIdx, 0)}
-                          className={getNoteClasses(isRoot, isRandomActive, isPlayingActive)}
+                          className={getNoteClasses(
+                            isRoot,
+                            isRandomActive,
+                            isPlayingActive,
+                          )}
                         >
                           {displayText}
                         </button>
@@ -316,19 +404,26 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
                         scaleMap,
                         activeRandomNote,
                       });
-                      const inScale = (selectedScale ? scaleMap.has(noteSemitone) : true) && isInCagedBox(fretNum);
-                      const isRandomActive = normalizedRandomNoteSemitone === noteSemitone;
+                      const inScale =
+                        (selectedScale ? scaleMap.has(noteSemitone) : true) &&
+                        isInCagedBox(fretNum);
+                      const isRandomActive =
+                        normalizedRandomNoteSemitone === noteSemitone;
                       const isPlayingActive =
                         activePlayingString !== null &&
                         activePlayingString !== undefined &&
                         activePlayingFret !== null &&
                         activePlayingFret !== undefined
-                          ? activePlayingString === reversedIdx && activePlayingFret === fretNum
+                          ? activePlayingString === reversedIdx &&
+                            activePlayingFret === fretNum
                           : normalizedPlayingNoteSemitone === noteSemitone;
-                      const isRoot = !!selectedScale && noteSemitone === NOTE_SEMITONES[selectedRoot];
+                      const isRoot =
+                        !!selectedScale &&
+                        noteSemitone === NOTE_SEMITONES[selectedRoot];
 
                       const isHighlightedFret = highlightedFrets.some(
-                        (hf) => hf.stringIdx === reversedIdx && hf.fret === fretNum
+                        (hf) =>
+                          hf.stringIdx === reversedIdx && hf.fret === fretNum,
                       );
 
                       let displayText: string = noteName;
@@ -346,21 +441,39 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
                         <div
                           key={fretNum}
                           className={`flex-1 h-full border-r ${fretBorderClass} relative flex items-center justify-center z-20`}
-                          style={{ minWidth: fretNum > 12 ? minFretWidthHigh : minFretWidth }}
+                          style={{
+                            minWidth:
+                              fretNum > 12 ? minFretWidthHigh : minFretWidth,
+                          }}
                         >
-                          {inScale || isRandomActive || isPlayingActive || isHighlightedFret ? (
+                          {inScale ||
+                          isRandomActive ||
+                          isPlayingActive ||
+                          isHighlightedFret ? (
                             <button
-                              onClick={() => handleNoteClick(reversedIdx, fretNum)}
-                              className={getNoteClasses(isRoot, isRandomActive, isPlayingActive) + " hover:scale-125 z-30"}
+                              onClick={() =>
+                                handleNoteClick(reversedIdx, fretNum)
+                              }
+                              className={
+                                getNoteClasses(
+                                  isRoot,
+                                  isRandomActive,
+                                  isPlayingActive,
+                                ) + " hover:scale-125 z-30"
+                              }
                             >
                               {displayText}
                             </button>
                           ) : (
                             <div
-                              onClick={() => handleNoteClick(reversedIdx, fretNum)}
+                              onClick={() =>
+                                handleNoteClick(reversedIdx, fretNum)
+                              }
                               className="w-full h-full cursor-pointer hover:bg-black/10 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
                             >
-                              <span className={`font-mono ${currSize.noteBtn.split(' ')[2]} ${theme === 'high-contrast' ? 'text-white' : 'text-on-surface-variant/50'}`}>
+                              <span
+                                className={`font-mono ${currSize.noteBtn.split(" ")[2]} ${theme === "high-contrast" ? "text-white" : "text-on-surface-variant/50"}`}
+                              >
                                 {noteName}
                               </span>
                             </div>
