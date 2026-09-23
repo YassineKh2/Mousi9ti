@@ -71,11 +71,20 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
       "mousi9ti-custom-chords-changed",
       handleCustomChordsChanged,
     );
-    return () =>
+    window.addEventListener(
+      "mousi9ti-chord-selections-changed",
+      handleCustomChordsChanged,
+    );
+    return () => {
       window.removeEventListener(
         "mousi9ti-custom-chords-changed",
         handleCustomChordsChanged,
       );
+      window.removeEventListener(
+        "mousi9ti-chord-selections-changed",
+        handleCustomChordsChanged,
+      );
+    };
   }, []);
 
   useEffect(() => {

@@ -11,7 +11,7 @@ import {
   Piano,
   RotateCcw,
 } from "lucide-react";
-import { AppSettings } from "../types";
+import { AppSettings, TaskCompletionBehavior } from "../types";
 import { GUITAR_TUNINGS } from "../data/musicTheory";
 import { APP_VERSION } from "../lib/version";
 
@@ -23,6 +23,10 @@ interface SettingsModalProps {
   onExportData: () => void;
   onClearData: () => void;
   onRestartTour: () => void;
+  completionBehavior: TaskCompletionBehavior;
+  onUpdateCompletionBehavior: (behavior: TaskCompletionBehavior) => void;
+  autoConfigureDashboardFromTask: boolean;
+  onToggleAutoConfigureDashboardFromTask: (enabled: boolean) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -33,6 +37,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onExportData,
   onClearData,
   onRestartTour,
+  completionBehavior,
+  onUpdateCompletionBehavior,
+  autoConfigureDashboardFromTask,
+  onToggleAutoConfigureDashboardFromTask,
 }) => {
   if (!isOpen) return null;
 
@@ -79,6 +87,67 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               }
               className="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary"
             />
+          </div>
+
+          {/* Daily Task Completion */}
+          <div className="flex flex-col gap-3 border-t border-outline-variant/20 pt-4">
+            <div>
+              <span className="font-mono text-xs font-semibold text-on-surface block">
+                Daily Task Completion
+              </span>
+              <span className="text-[11px] text-on-surface-variant">
+                Choose what happens to the Practice Tracker after the last task.
+              </span>
+            </div>
+            <select
+              value={completionBehavior}
+              onChange={(event) =>
+                onUpdateCompletionBehavior(
+                  event.target.value as TaskCompletionBehavior,
+                )
+              }
+              className="w-full rounded-lg border border-outline-variant/30 bg-surface-container px-3 py-2 font-mono text-xs text-on-surface outline-none transition-colors focus:border-primary"
+              aria-label="Daily task completion behavior"
+            >
+              <option value="stop">Stop Practice Tracker automatically</option>
+              <option value="continue">Keep Practice Tracker running</option>
+              <option value="ask">Ask me every time</option>
+            </select>
+          </div>
+
+          {/* Automatic Task Setup */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-outline-variant/20 pt-4">
+            <div>
+              <span className="font-mono text-xs font-semibold text-on-surface block">
+                Automatic Task Setup
+              </span>
+              <span className="text-[11px] text-on-surface-variant">
+                Automatically configure the dashboard from the active task
+                (scale, tempo, duration).
+              </span>
+            </div>
+            <div className="flex items-center self-start sm:self-auto gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant/30 shrink-0">
+              <button
+                onClick={() => onToggleAutoConfigureDashboardFromTask(false)}
+                className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
+                  !autoConfigureDashboardFromTask
+                    ? "bg-primary text-on-primary font-bold"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                Disabled
+              </button>
+              <button
+                onClick={() => onToggleAutoConfigureDashboardFromTask(true)}
+                className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
+                  autoConfigureDashboardFromTask
+                    ? "bg-primary text-on-primary font-bold"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                Enabled
+              </button>
+            </div>
           </div>
 
           {/* Theme Toggle */}

@@ -21,6 +21,8 @@ import {
   Gauge,
   Sparkles,
   CalendarDays,
+  Play,
+  Pause,
 } from "lucide-react";
 import { ALL_ROOT_NOTES, GUITAR_TUNINGS } from "../data/musicTheory";
 import { CHORD_TYPES_CATALOG } from "../data/chordsData";
@@ -36,13 +38,13 @@ import {
   COMMON_TECHNIQUES,
   COMMON_EXERCISES,
 } from "../utils/taskMentions";
-import { PracticeTask } from "../types";
-import { recordTaskActivity } from "../lib/storage";
+import { PracticeTask, UserTimerPreferences } from "../types";
+import { getTaskDurationSeconds, recordTaskActivity } from "../lib/storage";
 
 export type { PracticeTask } from "../types";
 
 const MENTION_REGEX =
-  /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer)(?:\(([^)]*)\))?)/gi;
+  /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time)(?:\(([^)]*)\))?)/gi;
 
 // Configuration parsing for rendering
 const parseParams = (tool: string, params: string) => {
@@ -66,7 +68,7 @@ const parseParams = (tool: string, params: string) => {
   } else if (tool === "chord") {
     const parsed = parseChordInput(params);
     return { root: parsed.root, type: parsed.type, label: parsed.label };
-  } else if (tool === "timer") {
+  } else if (tool === "timer" || tool === "time") {
     const rawMin = parts[0]
       ? parts[0].replace(/(?:mins|min|minutes|m)/gi, "").trim()
       : "";
@@ -678,6 +680,22 @@ export const InlineTaskRowEditor: React.FC<InlineTaskRowEditorProps> = ({
 
 interface PracticeTasksWidgetProps {
   onOpenRoutine?: () => void;
+  tasks?: PracticeTask[];
+  activeTaskId?: string | null;
+  timerStatus?: "idle" | "running" | "paused" | "finished";
+  timerPreferences?: UserTimerPreferences;
+  onStartDailyTasks?: () => void;
+  isDailyRoutineActive?: boolean;
+  isSessionActive?: boolean;
+  onPauseDailyTasks?: () => void;
+  onResumeDailyTasks?: () => void;
+  onMakeTaskActive?: (taskId: string | null) => void;
+  onToggleTask?: (taskId: string) => void;
+  onUpdateTimerPreferences?: (
+    preferences: Partial<UserTimerPreferences>,
+  ) => void;
+  onTasksChange?: (tasks: PracticeTask[]) => void;
+  onSetTaskManualDuration?: (taskId: string, minutes: number) => void;
 }
 
 const DEFAULT_PRACTICE_TASKS: PracticeTask[] = [
@@ -708,7 +726,7 @@ const DEFAULT_PRACTICE_TASKS: PracticeTask[] = [
   },
 ];
 
-const getSavedPracticeTasks = (): PracticeTask[] => {
+export const getSavedPracticeTasks = (): PracticeTask[] => {
   const saved = localStorage.getItem("mous9iti_tasks");
   if (!saved) return DEFAULT_PRACTICE_TASKS;
 
@@ -723,8 +741,32 @@ const getSavedPracticeTasks = (): PracticeTask[] => {
 
 export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   onOpenRoutine,
+  tasks: controlledTasks,
+  activeTaskId,
+  timerStatus,
+  timerPreferences,
+  onStartDailyTasks,
+  isDailyRoutineActive,
+  isSessionActive,
+  onPauseDailyTasks,
+  onResumeDailyTasks,
+  onMakeTaskActive,
+  onToggleTask: onToggleControlledTask,
+  onUpdateTimerPreferences,
+  onTasksChange,
+  onSetTaskManualDuration,
 }) => {
-  const [tasks, setTasks] = useState<PracticeTask[]>(getSavedPracticeTasks);
+  const [localTasks, setLocalTasks] = useState<PracticeTask[]>(
+    getSavedPracticeTasks,
+  );
+  const tasks = controlledTasks ?? localTasks;
+  const setTasks = (
+    next: PracticeTask[] | ((current: PracticeTask[]) => PracticeTask[]),
+  ) => {
+    const updated = typeof next === "function" ? next(tasks) : next;
+    if (controlledTasks) onTasksChange?.(updated);
+    else setLocalTasks(updated);
+  };
   const [newTaskText, setNewTaskText] = useState("");
   const [cursor, setCursor] = useState(0);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
@@ -737,7 +779,8 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   const backdropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    localStorage.setItem("mous9iti_tasks", JSON.stringify(tasks));
+    if (!controlledTasks)
+      localStorage.setItem("mous9iti_tasks", JSON.stringify(tasks));
   }, [tasks]);
 
   useEffect(() => {
@@ -758,6 +801,10 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   const toggleTask = (id: string) => {
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
+    if (onToggleControlledTask) {
+      onToggleControlledTask(id);
+      return;
+    }
     const nextCompleted = !task.completed;
     if (nextCompleted) {
       recordTaskActivity(task, "started");
@@ -969,6 +1016,43 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
         </span>
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-primary">{progress}%</span>
+          {onStartDailyTasks && !isDailyRoutineActive && (
+            <button
+              type="button"
+              onClick={onStartDailyTasks}
+              className="rounded p-1 text-primary transition-colors hover:bg-primary/10 hover:text-primary-container"
+              title="Start daily session"
+              aria-label="Start daily session"
+            >
+              <Play size={15} fill="currentColor" />
+            </button>
+          )}
+          {isDailyRoutineActive &&
+            (onPauseDailyTasks || onResumeDailyTasks) && (
+              <button
+                type="button"
+                onClick={
+                  isSessionActive ? onPauseDailyTasks : onResumeDailyTasks
+                }
+                className="rounded p-1 text-primary transition-colors hover:bg-primary/10"
+                title={
+                  isSessionActive
+                    ? "Pause daily session"
+                    : "Resume daily session"
+                }
+                aria-label={
+                  isSessionActive
+                    ? "Pause daily session"
+                    : "Resume daily session"
+                }
+              >
+                {isSessionActive ? (
+                  <Pause size={15} fill="currentColor" />
+                ) : (
+                  <Play size={15} fill="currentColor" />
+                )}
+              </button>
+            )}
           {onOpenRoutine && (
             <button
               type="button"
@@ -989,6 +1073,47 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
           style={{ width: `${progress}%` }}
         />
       </div>
+
+      {activeTaskId &&
+        timerPreferences &&
+        !timerPreferences.autoConfigureDashboardFromTask &&
+        !timerPreferences.hasSeenAutoConfigOnboarding &&
+        onUpdateTimerPreferences && (
+          <div className="mb-2 flex items-start gap-2 rounded border border-primary/30 bg-primary/5 p-2 text-[11px] text-on-surface-variant shrink-0">
+            <Sparkles size={13} className="mt-0.5 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
+              <span className="block text-on-surface">
+                Want the dashboard to auto-set scale, tempo and duration from
+                your active task?
+              </span>
+              <div className="mt-1 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onUpdateTimerPreferences({
+                      autoConfigureDashboardFromTask: true,
+                      hasSeenAutoConfigOnboarding: true,
+                    })
+                  }
+                  className="font-mono font-semibold text-primary hover:underline"
+                >
+                  Enable
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onUpdateTimerPreferences({
+                      hasSeenAutoConfigOnboarding: true,
+                    })
+                  }
+                  className="font-mono text-on-surface-variant hover:underline"
+                >
+                  Not now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       <div className="flex-1 overflow-y-auto pr-2 space-y-2 my-2 custom-scrollbar min-h-0">
         {tasks.length === 0 ? (
@@ -1018,9 +1143,10 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
             return (
               <div
                 key={task.id}
-                className={`group/task flex items-start gap-2 p-2 rounded transition-colors ${task.completed ? "bg-surface-container-low opacity-60" : "hover:bg-surface-container-low"}`}
+                className={`group/task flex items-start gap-2 rounded border p-2 transition-colors ${task.id === activeTaskId ? "border-primary/50 bg-primary/10" : task.completed ? "border-transparent bg-surface-container-low opacity-60" : "border-transparent hover:bg-surface-container-low"}`}
               >
                 <button
+                  type="button"
                   onClick={() => toggleTask(task.id)}
                   className="mt-0.5 text-primary focus:outline-none flex-shrink-0"
                 >
@@ -1031,22 +1157,49 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                   )}
                 </button>
                 <div
-                  className={`text-sm flex-1 break-words leading-relaxed ${task.completed ? "line-through text-on-surface-variant" : "text-on-surface"}`}
+                  onClick={() => toggleTask(task.id)}
+                  className={`flex-1 cursor-pointer break-words text-sm leading-relaxed ${task.completed ? "line-through text-on-surface-variant" : "text-on-surface"}`}
                 >
                   {renderTaskText(task)}
                 </div>
-                <div className="opacity-0 group-hover/task:opacity-100 flex items-center gap-1 transition-opacity">
+                {!task.completed &&
+                  onMakeTaskActive &&
+                  task.id !== activeTaskId && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onMakeTaskActive(
+                          task.id === activeTaskId ? null : task.id,
+                        );
+                      }}
+                      className="shrink-0 appearance-none border-0 bg-transparent p-1.5 sm:p-1 text-on-surface-variant opacity-100 sm:opacity-0 transition-opacity sm:group-hover/task:opacity-100 hover:bg-transparent hover:text-primary focus-visible:opacity-100 touch-manipulation"
+                      aria-label="Make task active"
+                    >
+                      <Target size={14} className="sm:hidden" />
+                      <Target size={13} className="hidden sm:block" />
+                    </button>
+                  )}
+                <div className="opacity-100 sm:opacity-0 sm:group-hover/task:opacity-100 flex items-center gap-1 transition-opacity">
                   <button
-                    onClick={() => startEditTask(task.id)}
-                    className="text-primary hover:bg-primary/10 p-1 rounded transition-colors focus:outline-none focus:opacity-100"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      startEditTask(task.id);
+                    }}
+                    className="text-primary hover:bg-primary/10 p-1.5 sm:p-1 rounded transition-colors focus:outline-none focus:opacity-100 touch-manipulation"
                     aria-label="Edit task"
                     title="Edit task inline"
                   >
                     <Edit2 size={14} />
                   </button>
                   <button
-                    onClick={() => deleteTask(task.id)}
-                    className="text-error hover:bg-error/10 p-1 rounded transition-colors focus:outline-none focus:opacity-100"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      deleteTask(task.id);
+                    }}
+                    className="text-error hover:bg-error/10 p-1.5 sm:p-1 rounded transition-colors focus:outline-none focus:opacity-100 touch-manipulation"
                     aria-label="Delete task"
                     title="Delete task"
                   >

@@ -5,6 +5,8 @@ interface GlobalSessionToastProps {
   activeSessionDuration: number;
   isSessionActive: boolean;
   onToggleSession: () => void;
+  onPauseSession?: () => void;
+  onResumeSession?: () => void;
   onEndSession: () => void;
 }
 
@@ -12,6 +14,8 @@ export const GlobalSessionToast: React.FC<GlobalSessionToastProps> = ({
   activeSessionDuration,
   isSessionActive,
   onToggleSession,
+  onPauseSession,
+  onResumeSession,
   onEndSession,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -184,7 +188,11 @@ export const GlobalSessionToast: React.FC<GlobalSessionToastProps> = ({
           <button
             type="button"
             onPointerDown={(event) => event.stopPropagation()}
-            onClick={onToggleSession}
+            onClick={
+              isSessionActive
+                ? onPauseSession || onToggleSession
+                : onResumeSession || onToggleSession
+            }
             className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
               isSessionActive
                 ? "bg-surface-container hover:bg-surface-container-highest text-on-surface"

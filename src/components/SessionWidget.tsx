@@ -7,8 +7,11 @@ interface SessionWidgetProps {
   activeSessionDuration: number; // in seconds
   isSessionActive: boolean;
   onToggleSession: () => void;
+  onPauseSession?: () => void;
+  onResumeSession?: () => void;
   onEndSession: () => void;
   currentScaleName?: string;
+  activeTaskTitle?: string;
   highestBpmSession?: number;
 }
 
@@ -17,8 +20,11 @@ export const SessionWidget: React.FC<SessionWidgetProps> = ({
   activeSessionDuration,
   isSessionActive,
   onToggleSession,
+  onPauseSession,
+  onResumeSession,
   onEndSession,
   currentScaleName = "C Major Scale",
+  activeTaskTitle,
   highestBpmSession = 120,
 }) => {
   // Format seconds to HH:MM:SS
@@ -64,8 +70,11 @@ export const SessionWidget: React.FC<SessionWidgetProps> = ({
           {formatTime(activeSessionDuration)}
         </span>
         <span className="text-[10px] font-mono text-on-surface-variant tracking-wider mt-1 text-center line-clamp-2">
-          FOCUS: <span className="text-primary">{currentScaleName}</span> (Peak{" "}
-          {highestBpmSession} BPM)
+          FOCUS:{" "}
+          <span className="text-primary">
+            {activeTaskTitle || currentScaleName}
+          </span>{" "}
+          (Peak {highestBpmSession} BPM)
         </span>
       </div>
 
@@ -111,7 +120,11 @@ export const SessionWidget: React.FC<SessionWidgetProps> = ({
       {/* Session Controls */}
       <div className="flex flex-wrap items-center justify-between pt-2 border-t border-outline-variant/10 mt-1 gap-2">
         <button
-          onClick={onToggleSession}
+          onClick={
+            isSessionActive
+              ? onPauseSession || onToggleSession
+              : onResumeSession || onToggleSession
+          }
           className={`flex min-h-10 items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono tracking-wider border transition-all md:min-h-0 ${
             isSessionActive
               ? "bg-surface-container-high text-on-surface border-outline-variant/30 hover:bg-surface-container-highest"
@@ -120,7 +133,11 @@ export const SessionWidget: React.FC<SessionWidgetProps> = ({
         >
           {isSessionActive ? <Pause size={12} /> : <Play size={12} />}
           <span className="font-bold">
-            {isSessionActive ? "PAUSE" : "START SESSION"}
+            {isSessionActive
+              ? "PAUSE"
+              : activeSessionDuration > 0
+                ? "RESUME SESSION"
+                : "START SESSION"}
           </span>
         </button>
 

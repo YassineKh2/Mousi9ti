@@ -10,6 +10,8 @@ import {
   DashboardWidgetLayout,
   DashboardLayoutData,
   DashboardRow,
+  PracticeTask,
+  UserTimerPreferences,
 } from "../types";
 import { Metronome } from "../components/Metronome";
 import { RandomDrill } from "../components/RandomDrill";
@@ -39,7 +41,19 @@ import {
   Trash2,
 } from "lucide-react";
 import { useTimer } from "../lib/useTimer";
-import { getSavedDashboardLayout, saveDashboardLayout } from "../lib/storage";
+import {
+  getSavedDashboardLayout,
+  saveDashboardLayout,
+  getSavedChordSelections,
+  saveChordSelections,
+} from "../lib/storage";
+import { audioEngine } from "../lib/audio";
+import {
+  parseTaskConfiguration,
+  hasRecognizedConfiguration,
+  formatConfigurationSummary,
+  decideAutoConfigAction,
+} from "../lib/taskAutoConfig";
 
 const DEFAULT_WIDGET_LAYOUT: DashboardWidgetLayout[] = [
   { id: "metronome", title: "Metronome" },
@@ -50,6 +64,9 @@ const DEFAULT_WIDGET_LAYOUT: DashboardWidgetLayout[] = [
   { id: "instruments", title: "Instruments" },
   { id: "chord-selector", title: "Chord Selector" },
 ];
+
+// Strips @mentions (e.g. "@bpm(120)") from task text for cleaner toast display.
+const MENTION_DISPLAY_REGEX = /@\w+(?:\([^)]*\))?/g;
 
 type DashboardDropTarget = {
   id: DashboardWidgetId;
@@ -160,6 +177,8 @@ interface DashboardPageProps {
   activeSessionDuration: number;
   isSessionActive: boolean;
   onToggleSession: () => void;
+  onPauseSession: () => void;
+  onResumeSession: () => void;
   onEndSession: () => void;
   onLogBpm: (bpm: number) => void;
   settings: AppSettings;
@@ -170,6 +189,20 @@ interface DashboardPageProps {
   metronomeBarCycleMode?: boolean;
   onBarCycleModeChange?: (enabled: boolean) => void;
   onOpenRoutine: () => void;
+  practiceTasks: PracticeTask[];
+  activeTaskId: string | null;
+  timerPreferences: UserTimerPreferences;
+  onStartDailyTasks: () => void;
+  isDailyRoutineActive: boolean;
+  onPauseDailyTasks: () => void;
+  onResumeDailyTasks: () => void;
+  onMakeTaskActive: (taskId: string | null) => void;
+  onTogglePracticeTask: (taskId: string) => void;
+  onPracticeTasksChange: (tasks: PracticeTask[]) => void;
+  onSetTaskManualDuration: (taskId: string, minutes: number) => void;
+  onUpdateTimerPreferences: (
+    preferences: Partial<UserTimerPreferences>,
+  ) => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -179,6 +212,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   activeSessionDuration,
   isSessionActive,
   onToggleSession,
+  onPauseSession,
+  onResumeSession,
   onEndSession,
   onLogBpm,
   settings,
@@ -189,6 +224,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   metronomeBarCycleMode,
   onBarCycleModeChange,
   onOpenRoutine,
+  practiceTasks,
+  activeTaskId,
+  timerPreferences,
+  onStartDailyTasks,
+  isDailyRoutineActive,
+  onPauseDailyTasks,
+  onResumeDailyTasks,
+  onMakeTaskActive,
+  onTogglePracticeTask,
+  onPracticeTasksChange,
+  onSetTaskManualDuration,
+  onUpdateTimerPreferences,
 }) => {
   // Get tuning from settings
   const defaultTuning = useMemo(() => {
@@ -229,6 +276,111 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   // Active Random Note state
   const [activeRandomNote, setActiveRandomNote] = useState<string>("F#");
   const [showTargetNote, setShowTargetNote] = useState<boolean>(false);
+
+  // Automatic Task Setup: feedback banner shown briefly after a task activation configures the dashboard
+  const [autoConfigToast, setAutoConfigToast] = useState<{
+    taskText: string;
+    parts: string[];
+  } | null>(null);
+  const autoConfigToastTimeoutRef = useRef<number | null>(null);
+
+  // Applies recognized settings from the active task exactly once per activation (requirement: no repeated overwrites).
+  useEffect(() => {
+    const AUTO_CONFIG_TASK_KEY = "Mousi9ti_auto_configured_task_id";
+
+    const decision = decideAutoConfigAction({
+      enabled: timerPreferences.autoConfigureDashboardFromTask,
+      activeTaskId,
+      lastConfiguredTaskId: localStorage.getItem(AUTO_CONFIG_TASK_KEY),
+    });
+
+    if (decision.nextLastConfiguredTaskId === null) {
+      localStorage.removeItem(AUTO_CONFIG_TASK_KEY);
+    } else {
+      localStorage.setItem(
+        AUTO_CONFIG_TASK_KEY,
+        decision.nextLastConfiguredTaskId,
+      );
+    }
+
+    if (!decision.shouldApply || !activeTaskId) return;
+
+    const activeTask = practiceTasks.find((task) => task.id === activeTaskId);
+    if (!activeTask) return;
+
+    const config = parseTaskConfiguration(activeTask.text);
+    if (!hasRecognizedConfiguration(config)) return;
+
+    if (config.scale) {
+      const scaleDef = SCALES_DATABASE.find(
+        (s) => s.id === config.scale!.scaleId,
+      );
+      if (scaleDef) {
+        setSelectedRoot(config.scale.root);
+        setSelectedScale(scaleDef);
+      }
+    }
+    if (config.tuning) {
+      const tuningDef = GUITAR_TUNINGS.find((t) => t.name === config.tuning);
+      if (tuningDef) setCurrentTuning(tuningDef);
+    }
+    if (config.chord) {
+      const existingChords = getSavedChordSelections();
+      const alreadyPinned = existingChords.some(
+        (c) => c.root === config.chord!.root && c.type === config.chord!.type,
+      );
+      if (!alreadyPinned) {
+        saveChordSelections([
+          { root: config.chord.root, type: config.chord.type },
+          ...existingChords,
+        ]);
+        window.dispatchEvent(new Event("mousi9ti-chord-selections-changed"));
+      }
+    }
+    if (config.bpm !== undefined) {
+      onBpmChange(config.bpm);
+    }
+    if (config.durationMinutes !== undefined && timer.status === "idle") {
+      timer.start(config.durationMinutes * 60);
+    }
+    if (
+      config.startMetronome &&
+      config.bpm !== undefined &&
+      !metronomeIsPlaying
+    ) {
+      const engineState = audioEngine.getMetronomeState();
+      audioEngine.startMetronome(
+        config.bpm,
+        engineState.timeSignature,
+        engineState.subdivision,
+        engineState.soundType,
+      );
+    }
+
+    setAutoConfigToast({
+      taskText: activeTask.text.replace(MENTION_DISPLAY_REGEX, "").trim(),
+      parts: formatConfigurationSummary(config),
+    });
+    if (autoConfigToastTimeoutRef.current) {
+      window.clearTimeout(autoConfigToastTimeoutRef.current);
+    }
+    autoConfigToastTimeoutRef.current = window.setTimeout(() => {
+      setAutoConfigToast(null);
+    }, 6000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    activeTaskId,
+    timerPreferences.autoConfigureDashboardFromTask,
+    practiceTasks,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (autoConfigToastTimeoutRef.current) {
+        window.clearTimeout(autoConfigToastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const scaleCategories = [
     "Major & Minor",
@@ -531,13 +683,35 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             activeSessionDuration={activeSessionDuration}
             isSessionActive={isSessionActive}
             onToggleSession={onToggleSession}
+            onPauseSession={onPauseSession}
+            onResumeSession={onResumeSession}
             onEndSession={onEndSession}
             currentScaleName={`${selectedRoot} ${selectedScale?.name || "Chromatic"}`}
+            activeTaskTitle={
+              practiceTasks.find((task) => task.id === activeTaskId)?.text
+            }
             highestBpmSession={metronomeBpm}
           />
         );
       case "practice-tasks":
-        return <PracticeTasksWidget onOpenRoutine={onOpenRoutine} />;
+        return (
+          <PracticeTasksWidget
+            onOpenRoutine={onOpenRoutine}
+            tasks={practiceTasks}
+            activeTaskId={activeTaskId}
+            timerPreferences={timerPreferences}
+            onStartDailyTasks={onStartDailyTasks}
+            isDailyRoutineActive={isDailyRoutineActive}
+            isSessionActive={isSessionActive}
+            onPauseDailyTasks={onPauseDailyTasks}
+            onResumeDailyTasks={onResumeDailyTasks}
+            onMakeTaskActive={onMakeTaskActive}
+            onToggleTask={onTogglePracticeTask}
+            onTasksChange={onPracticeTasksChange}
+            onSetTaskManualDuration={onSetTaskManualDuration}
+            onUpdateTimerPreferences={onUpdateTimerPreferences}
+          />
+        );
       case "instruments":
         return (
           <div className="flex flex-col gap-4">
@@ -607,7 +781,35 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
-      <div data-tour="dashboard-customize" className="flex flex-wrap items-center justify-between gap-3">
+      {autoConfigToast && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-xs text-on-surface animate-in fade-in slide-in-from-top-1 duration-200">
+          <Sparkles size={15} className="mt-0.5 shrink-0 text-primary" />
+          <div className="min-w-0 flex-1">
+            <p className="font-mono">
+              Dashboard configured from "
+              <span className="font-semibold">{autoConfigToast.taskText}</span>
+              ."
+            </p>
+            {autoConfigToast.parts.length > 0 && (
+              <p className="mt-0.5 font-mono text-on-surface-variant">
+                {autoConfigToast.parts.join(" · ")}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setAutoConfigToast(null)}
+            className="shrink-0 rounded p-1 text-on-surface-variant hover:text-on-surface"
+            aria-label="Dismiss"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+      <div
+        data-tour="dashboard-customize"
+        className="flex flex-wrap items-center justify-between gap-3"
+      >
         <div>
           {isDashboardEditMode && (
             <p className="mt-1 text-xs text-on-surface-variant">

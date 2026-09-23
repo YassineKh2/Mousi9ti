@@ -74,7 +74,7 @@ export const COMMON_EXERCISES = [
 ];
 
 export const MENTION_REGEX =
-  /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer)(?:\(([^)]*)\))?)/gi;
+  /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time)(?:\(([^)]*)\))?)/gi;
 
 export const parseParams = (tool: string, params: string) => {
   const parts = params ? params.split(",").map((p) => p.trim()) : [];
@@ -97,7 +97,7 @@ export const parseParams = (tool: string, params: string) => {
   } else if (tool === "chord") {
     const parsed = parseChordInput(params);
     return { root: parsed.root, type: parsed.type, label: parsed.label };
-  } else if (tool === "timer") {
+  } else if (tool === "timer" || tool === "time") {
     const rawMin = parts[0]
       ? parts[0].replace(/(?:mins|min|minutes|m)/gi, "").trim()
       : "";
@@ -232,6 +232,7 @@ export const getMentionSuggestions = (
         subLabel: "Metronome BPM & signature",
       },
       { name: "timer", label: "@timer", subLabel: "Practice timer (minutes)" },
+      { name: "time", label: "@time", subLabel: "Planned task time (minutes)" },
     ];
     return tools
       .filter((t) => t.name.startsWith(ctx.query))
@@ -501,11 +502,11 @@ export const applyMentionSuggestion = (
 
 export const renderHighlights = (text: string) => {
   const parts = text.split(
-    /(@(?:custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer)(?:\([^)]*\)?)?)/gi,
+    /(@(?:custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time)(?:\([^)]*\)?)?)/gi,
   );
   return parts.map((part, i) => {
     if (
-      /^@(?:custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer)/i.test(
+      /^@(?:custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time)/i.test(
         part,
       )
     ) {

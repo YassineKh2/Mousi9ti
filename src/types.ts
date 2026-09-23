@@ -208,6 +208,33 @@ export interface PracticeTask {
   id: string;
   text: string;
   completed: boolean;
+  attributedDurationSeconds?: number;
+  manuallyConfirmedDurationSeconds?: number;
+}
+
+export type TaskAttributionSource = "automatic" | "manual";
+
+export interface TaskTimeAttribution {
+  id: string;
+  sessionId: string;
+  taskId: string;
+  durationSeconds: number;
+  startedAt: number;
+  endedAt: number;
+  source: TaskAttributionSource;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type TaskCompletionBehavior = "stop" | "continue" | "ask";
+
+export interface UserTimerPreferences {
+  autoStartTimerWithDailyTasks: boolean;
+  autoActivateFirstTask: boolean;
+  completionBehavior: TaskCompletionBehavior;
+  hasSeenTaskTimerOnboarding: boolean;
+  autoConfigureDashboardFromTask: boolean;
+  hasSeenAutoConfigOnboarding: boolean;
 }
 
 export interface StreakData {

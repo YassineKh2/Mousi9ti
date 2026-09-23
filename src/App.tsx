@@ -1,14 +1,27 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import confetti from "canvas-confetti";
-import { AppSettings, Exercise, NoteName, Session, StreakData } from "./types";
+import {
+  AppSettings,
+  Exercise,
+  NoteName,
+  PracticeTask,
+  Session,
+  StreakData,
+  UserTimerPreferences,
+} from "./types";
 import {
   getSavedSettings,
   getSavedSessions,
   getSavedStreak,
+  getSavedTaskAttributions,
+  getSavedTimerPreferences,
   getTodayDateString,
   recordPracticeActivity,
+  replaceTaskAttributionsForSession,
+  saveTaskAttribution,
   saveSession,
   saveSettings,
+  saveTimerPreferences,
 } from "./lib/storage";
 import { audioEngine } from "./lib/audio";
 import { useTimer } from "./lib/useTimer";
@@ -31,6 +44,9 @@ import { CHORD_TYPES_CATALOG, getCustomChords } from "./data/chordsData";
 import { GlobalSessionToast } from "./components/GlobalSessionToast";
 import { SettingsContext } from "./contexts/SettingsContext";
 import { TourOverlay } from "./components/TourOverlay";
+import { getSavedPracticeTasks } from "./components/PracticeTasksWidget";
+import { SessionReviewModal } from "./components/SessionReviewModal";
+import { TaskCompletionModal } from "./components/TaskCompletionModal";
 
 export function App() {
   type PendingScaleTarget = { scaleId: string; root: NoteName };
@@ -63,6 +79,14 @@ export function App() {
     localStorage.setItem("Mousi9ti_tour_step", String(step));
   };
 
+  const handleRestartTour = () => {
+    localStorage.removeItem("Mousi9ti_tour_done");
+    localStorage.setItem("Mousi9ti_tour_step", "0");
+    setTourStep(0);
+    setIsTourOpen(true);
+    setIsSettingsOpen(false);
+  };
+
   // Navigation
   const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(
@@ -90,6 +114,26 @@ export function App() {
   // Practice & Sessions State
   const [sessions, setSessions] = useState<Session[]>(() => getSavedSessions());
   const [streak, setStreak] = useState<StreakData>(() => getSavedStreak());
+  const [practiceTasks, setPracticeTasks] = useState<PracticeTask[]>(() => {
+    try {
+      const saved = localStorage.getItem("mous9iti_tasks");
+      return saved ? JSON.parse(saved) : getSavedPracticeTasks();
+    } catch {
+      return [];
+    }
+  });
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(() =>
+    localStorage.getItem("Mousi9ti_active_task_id"),
+  );
+  const [isDailyRoutineActive, setIsDailyRoutineActive] = useState(false);
+  const [timerPreferences, setTimerPreferences] =
+    useState<UserTimerPreferences>(() => getSavedTimerPreferences());
+  const [sessionReview, setSessionReview] = useState<{
+    globalDurationSeconds: number;
+    tasks: PracticeTask[];
+    attributedSeconds: Record<string, number>;
+  } | null>(null);
+  const [showTaskCompletionModal, setShowTaskCompletionModal] = useState(false);
 
   // Initialize timer state from local storage
   const [isSessionActive, setIsSessionActive] = useState<boolean>(() => {
@@ -125,10 +169,249 @@ export function App() {
   // Practice Timer
   const timer = useTimer();
   const metronomeStartedAtRef = useRef<number | null>(null);
+  const wasMetronomePlayingBeforePauseRef = useRef<boolean>(false);
+  const taskSegmentRef = useRef<{
+    taskId: string;
+    startedAt: number;
+    sessionId: string;
+  } | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("mous9iti_tasks", JSON.stringify(practiceTasks));
+  }, [practiceTasks]);
+
+  useEffect(() => {
+    if (
+      activeTaskId &&
+      !practiceTasks.some((task) => task.id === activeTaskId)
+    ) {
+      makeTaskActive(null);
+    }
+  }, [activeTaskId, practiceTasks]);
+
+  const flushTaskAttribution = useCallback((endedAt: number) => {
+    const segment = taskSegmentRef.current;
+    if (!segment) return;
+    const durationSeconds = Math.max(
+      0,
+      Math.floor((endedAt - segment.startedAt) / 1000),
+    );
+    if (durationSeconds > 0) {
+      saveTaskAttribution({
+        id: `${segment.sessionId}-${segment.taskId}-${segment.startedAt}`,
+        sessionId: segment.sessionId,
+        taskId: segment.taskId,
+        durationSeconds,
+        startedAt: segment.startedAt,
+        endedAt,
+        source: "automatic",
+        createdAt: segment.startedAt,
+        updatedAt: endedAt,
+      });
+      setPracticeTasks((current) =>
+        current.map((task) =>
+          task.id === segment.taskId
+            ? {
+                ...task,
+                attributedDurationSeconds:
+                  (task.attributedDurationSeconds || 0) + durationSeconds,
+              }
+            : task,
+        ),
+      );
+    }
+    taskSegmentRef.current = null;
+    localStorage.removeItem("Mousi9ti_task_active_segment");
+  }, []);
+
+  useEffect(() => {
+    const now = Date.now();
+    const savedSegment = localStorage.getItem("Mousi9ti_task_active_segment");
+    if (savedSegment && !isSessionActive) {
+      try {
+        const parsed = JSON.parse(savedSegment);
+        taskSegmentRef.current = parsed;
+        flushTaskAttribution(now);
+      } catch {
+        localStorage.removeItem("Mousi9ti_task_active_segment");
+      }
+    }
+
+    if (!isSessionActive || !activeTaskId) {
+      flushTaskAttribution(now);
+      return;
+    }
+
+    if (taskSegmentRef.current?.taskId === activeTaskId) return;
+    flushTaskAttribution(now);
+    const sessionId =
+      localStorage.getItem("Mousi9ti_task_session_id") || `task-session-${now}`;
+    localStorage.setItem("Mousi9ti_task_session_id", sessionId);
+    taskSegmentRef.current = {
+      taskId: activeTaskId,
+      startedAt: now,
+      sessionId,
+    };
+    localStorage.setItem(
+      "Mousi9ti_task_active_segment",
+      JSON.stringify(taskSegmentRef.current),
+    );
+  }, [activeTaskId, flushTaskAttribution, isSessionActive]);
+
+  useEffect(() => {
+    return () => flushTaskAttribution(Date.now());
+  }, [flushTaskAttribution]);
+
+  const updateTimerPreferences = (partial: Partial<UserTimerPreferences>) => {
+    const updated = { ...timerPreferences, ...partial };
+    setTimerPreferences(updated);
+    saveTimerPreferences(updated);
+  };
+
+  const startDailyTasks = () => {
+    setIsDailyRoutineActive(true);
+    const firstIncomplete = practiceTasks.find((task) => !task.completed);
+    if (timerPreferences.autoActivateFirstTask && firstIncomplete) {
+      setActiveTaskId(firstIncomplete.id);
+      localStorage.setItem("Mousi9ti_active_task_id", firstIncomplete.id);
+    }
+    if (timerPreferences.autoStartTimerWithDailyTasks) {
+      if (!isSessionActive) handleToggleSession();
+    }
+  };
+
+  const makeTaskActive = (taskId: string | null) => {
+    const task = practiceTasks.find((item) => item.id === taskId);
+    if (task?.completed) return;
+    setActiveTaskId(taskId);
+    if (taskId) localStorage.setItem("Mousi9ti_active_task_id", taskId);
+    else localStorage.removeItem("Mousi9ti_active_task_id");
+  };
+
+  const togglePracticeTask = (taskId: string) => {
+    const task = practiceTasks.find((item) => item.id === taskId);
+    if (!task) return;
+    const completed = !task.completed;
+    setPracticeTasks((current) =>
+      current.map((item) =>
+        item.id === taskId ? { ...item, completed } : item,
+      ),
+    );
+    if (completed && activeTaskId === taskId) {
+      const next = practiceTasks.find(
+        (item) => item.id !== taskId && !item.completed,
+      );
+      makeTaskActive(next?.id || null);
+      if (!next && isSessionActive) {
+        if (timerPreferences.completionBehavior === "stop") {
+          handleEndSession();
+        } else if (timerPreferences.completionBehavior === "ask") {
+          setShowTaskCompletionModal(true);
+        }
+      }
+    }
+  };
+
+  const handleTaskCompletionChoice = (
+    behavior: UserTimerPreferences["completionBehavior"],
+  ) => {
+    updateTimerPreferences({ completionBehavior: behavior });
+    setShowTaskCompletionModal(false);
+    if (behavior === "stop" && isSessionActive) handleEndSession();
+  };
+
+  const setTaskManualDuration = (taskId: string, minutes: number) => {
+    const now = Date.now();
+    const sessionId =
+      localStorage.getItem("Mousi9ti_task_session_id") ||
+      `manual-task-session-${now}`;
+    saveTaskAttribution({
+      id: `manual-${sessionId}-${taskId}`,
+      sessionId,
+      taskId,
+      durationSeconds: Math.max(0, minutes * 60),
+      startedAt: now,
+      endedAt: now,
+      source: "manual",
+      createdAt: now,
+      updatedAt: now,
+    });
+    setPracticeTasks((current) =>
+      current.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              manuallyConfirmedDurationSeconds: Math.max(0, minutes * 60),
+            }
+          : task,
+      ),
+    );
+  };
+
+  const saveReviewedTaskDurations = (durations: Record<string, number>) => {
+    const now = Date.now();
+    const sessionId =
+      localStorage.getItem("Mousi9ti_task_session_id") ||
+      `reviewed-task-session-${now}`;
+    replaceTaskAttributionsForSession(
+      sessionId,
+      Object.entries(durations).map(([taskId, minutes]) => ({
+        id: `reviewed-${sessionId}-${taskId}`,
+        sessionId,
+        taskId,
+        durationSeconds: Math.max(0, minutes * 60),
+        startedAt: now,
+        endedAt: now,
+        source: "manual",
+        createdAt: now,
+        updatedAt: now,
+      })),
+    );
+    setPracticeTasks((current) =>
+      current.map((task) =>
+        Object.prototype.hasOwnProperty.call(durations, task.id)
+          ? {
+              ...task,
+              manuallyConfirmedDurationSeconds: Math.max(
+                0,
+                durations[task.id] * 60,
+              ),
+            }
+          : task,
+      ),
+    );
+    localStorage.removeItem("Mousi9ti_task_session_id");
+  };
+
+  const openSessionReview = useCallback(
+    (globalDurationSeconds: number) => {
+      const sessionId = localStorage.getItem("Mousi9ti_task_session_id");
+      const sessionAttributions = getSavedTaskAttributions().filter(
+        (attribution) =>
+          (!sessionId || attribution.sessionId === sessionId) &&
+          attribution.source === "automatic",
+      );
+      const attributedSeconds = sessionAttributions.reduce<
+        Record<string, number>
+      >((totals, attribution) => {
+        totals[attribution.taskId] =
+          (totals[attribution.taskId] || 0) + attribution.durationSeconds;
+        return totals;
+      }, {});
+      const involvedTaskIds = new Set(Object.keys(attributedSeconds));
+      setSessionReview({
+        globalDurationSeconds,
+        tasks: practiceTasks.filter((task) => involvedTaskIds.has(task.id)),
+        attributedSeconds,
+      });
+    },
+    [practiceTasks],
+  );
 
   useEffect(() => {
     timer.setOnComplete(() => {
       const durationSeconds = timer.duration;
+      flushTaskAttribution(Date.now());
       if (durationSeconds > 0) {
         recordPracticeActivity({
           source: "timer",
@@ -140,6 +423,7 @@ export function App() {
           tags: ["timer"],
           status: "completed",
         });
+        openSessionReview(durationSeconds);
       }
       if ("vibrate" in navigator) {
         navigator.vibrate([200, 450, 200, 450, 200]);
@@ -162,7 +446,12 @@ export function App() {
         });
       }
     });
-  }, [settings.stopMetronomeOnTimerEnd, timer]);
+  }, [
+    flushTaskAttribution,
+    openSessionReview,
+    settings.stopMetronomeOnTimerEnd,
+    timer,
+  ]);
 
   useEffect(() => {
     const unsubscribe = audioEngine.onMetronomeStateChange(
@@ -243,30 +532,72 @@ export function App() {
     };
   }, [isSessionActive]);
 
-  // Toggle active practice session
+  const handlePauseSession = () => {
+    if (!isSessionActive) return;
+    const accumulated = Number(
+      localStorage.getItem("Mousi9ti_session_accumulated") || "0",
+    );
+    const startedAt = Number(
+      localStorage.getItem("Mousi9ti_session_start_time") || Date.now(),
+    );
+    const elapsed = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+    const pausedDuration = accumulated + elapsed;
+
+    localStorage.setItem("Mousi9ti_session_is_active", "false");
+    localStorage.removeItem("Mousi9ti_session_start_time");
+    localStorage.setItem(
+      "Mousi9ti_session_accumulated",
+      pausedDuration.toString(),
+    );
+    setActiveSessionDuration(pausedDuration);
+    setIsSessionActive(false);
+  };
+
+  const handleResumeSession = () => {
+    if (isSessionActive) return;
+    localStorage.setItem("Mousi9ti_session_is_active", "true");
+    localStorage.setItem("Mousi9ti_session_start_time", Date.now().toString());
+    setIsSessionActive(true);
+  };
+
   const handleToggleSession = () => {
-    setIsSessionActive((prev) => {
-      const nextState = !prev;
-      if (nextState) {
-        localStorage.setItem("Mousi9ti_session_is_active", "true");
-        localStorage.setItem(
-          "Mousi9ti_session_start_time",
-          Date.now().toString(),
-        );
-      } else {
-        localStorage.setItem("Mousi9ti_session_is_active", "false");
-        localStorage.removeItem("Mousi9ti_session_start_time");
-        localStorage.setItem(
-          "Mousi9ti_session_accumulated",
-          activeSessionDuration.toString(),
-        );
-      }
-      return nextState;
-    });
+    if (isSessionActive) handlePauseSession();
+    else handleResumeSession();
+  };
+
+  // Pausing the daily routine also pauses the practice timer and stops the metronome,
+  // remembering its state so resuming brings both back exactly as they were.
+  const handlePauseDailyTasks = () => {
+    handlePauseSession();
+    if (timer.status === "running") {
+      timer.pause();
+    }
+    wasMetronomePlayingBeforePauseRef.current = audioEngine.isRunning();
+    if (audioEngine.isRunning()) {
+      audioEngine.stopMetronome();
+    }
+  };
+
+  const handleResumeDailyTasks = () => {
+    handleResumeSession();
+    if (timer.status === "paused") {
+      timer.resume();
+    }
+    if (wasMetronomePlayingBeforePauseRef.current) {
+      const engineState = audioEngine.getMetronomeState();
+      audioEngine.startMetronome(
+        engineState.bpm,
+        engineState.timeSignature,
+        engineState.subdivision,
+        engineState.soundType,
+      );
+    }
+    wasMetronomePlayingBeforePauseRef.current = false;
   };
 
   // End and Log Practice Session
   const handleEndSession = useCallback(() => {
+    setIsDailyRoutineActive(false);
     if (activeSessionDuration === 0) {
       // Nothing to log, just clean up
       localStorage.removeItem("Mousi9ti_session_is_active");
@@ -278,6 +609,8 @@ export function App() {
     }
 
     const today = getTodayDateString();
+    flushTaskAttribution(Date.now());
+    openSessionReview(activeSessionDuration);
     const highestBpm =
       currentSessionBpms.length > 0
         ? Math.max(...currentSessionBpms)
@@ -315,7 +648,13 @@ export function App() {
     setIsSessionActive(false);
     setActiveSessionDuration(0);
     setCurrentSessionBpms([]);
-  }, [activeSessionDuration, currentSessionBpms, metronomeBpm]);
+  }, [
+    activeSessionDuration,
+    currentSessionBpms,
+    flushTaskAttribution,
+    metronomeBpm,
+    openSessionReview,
+  ]);
 
   // Log BPM to session tracker
   const handleLogBpm = (bpm: number) => {
@@ -697,6 +1036,8 @@ export function App() {
               activeSessionDuration={activeSessionDuration}
               isSessionActive={isSessionActive}
               onToggleSession={handleToggleSession}
+              onPauseSession={handlePauseSession}
+              onResumeSession={handleResumeSession}
               onEndSession={handleEndSession}
               onLogBpm={handleLogBpm}
               settings={settings}
@@ -707,6 +1048,18 @@ export function App() {
               metronomeBarCycleMode={metronomeBarCycleMode}
               onBarCycleModeChange={setMetronomeBarCycleMode}
               onOpenRoutine={() => setActiveTab("routine")}
+              practiceTasks={practiceTasks}
+              activeTaskId={activeTaskId}
+              timerPreferences={timerPreferences}
+              onStartDailyTasks={startDailyTasks}
+              isDailyRoutineActive={isDailyRoutineActive}
+              onPauseDailyTasks={handlePauseDailyTasks}
+              onResumeDailyTasks={handleResumeDailyTasks}
+              onMakeTaskActive={makeTaskActive}
+              onTogglePracticeTask={togglePracticeTask}
+              onPracticeTasksChange={setPracticeTasks}
+              onSetTaskManualDuration={setTaskManualDuration}
+              onUpdateTimerPreferences={updateTimerPreferences}
             />
           )}
 
@@ -775,6 +1128,36 @@ export function App() {
           onUpdateSettings={handleUpdateSettings}
           onExportData={handleExportData}
           onClearData={handleClearData}
+          onRestartTour={handleRestartTour}
+          completionBehavior={timerPreferences.completionBehavior}
+          onUpdateCompletionBehavior={(behavior) =>
+            updateTimerPreferences({ completionBehavior: behavior })
+          }
+          autoConfigureDashboardFromTask={
+            timerPreferences.autoConfigureDashboardFromTask
+          }
+          onToggleAutoConfigureDashboardFromTask={(enabled) =>
+            updateTimerPreferences({ autoConfigureDashboardFromTask: enabled })
+          }
+        />
+
+        {sessionReview && (
+          <SessionReviewModal
+            isOpen
+            globalDurationSeconds={sessionReview.globalDurationSeconds}
+            tasks={sessionReview.tasks}
+            attributedSeconds={sessionReview.attributedSeconds}
+            onClose={() => setSessionReview(null)}
+            onSave={(durations) => {
+              saveReviewedTaskDurations(durations);
+            }}
+          />
+        )}
+
+        <TaskCompletionModal
+          isOpen={showTaskCompletionModal}
+          onChoose={handleTaskCompletionChoice}
+          onClose={() => setShowTaskCompletionModal(false)}
         />
 
         {/* Onboarding Tour */}
@@ -793,6 +1176,8 @@ export function App() {
             activeSessionDuration={activeSessionDuration}
             isSessionActive={isSessionActive}
             onToggleSession={handleToggleSession}
+            onPauseSession={handlePauseSession}
+            onResumeSession={handleResumeSession}
             onEndSession={handleEndSession}
           />
         )}

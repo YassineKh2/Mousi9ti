@@ -9,6 +9,8 @@ import {
   PracticeTask,
   PracticeActivity,
   TaskActivity,
+  TaskTimeAttribution,
+  UserTimerPreferences,
 } from "../types";
 
 const STORAGE_KEYS = {
@@ -20,6 +22,18 @@ const STORAGE_KEYS = {
   DASHBOARD_LAYOUT_V2: "Mousi9ti_dashboard_layout_v2",
   TASK_ACTIVITIES: "Mousi9ti_task_activities_v1",
   PRACTICE_ACTIVITIES: "Mousi9ti_practice_activities_v1",
+  TASK_TIME_ATTRIBUTIONS: "Mousi9ti_task_time_attributions_v1",
+  TIMER_PREFERENCES: "Mousi9ti_timer_preferences_v1",
+};
+
+export const DEFAULT_TIMER_PREFERENCES: UserTimerPreferences = {
+  autoStartTimerWithDailyTasks: true,
+  autoActivateFirstTask: true,
+  completionBehavior: "ask",
+  hasSeenTaskTimerOnboarding: false,
+  // Off by default: activating a task must not silently change dashboard controls.
+  autoConfigureDashboardFromTask: false,
+  hasSeenAutoConfigOnboarding: false,
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -291,6 +305,61 @@ export function saveSettings(settings: AppSettings): void {
   }
 }
 
+export function getSavedTimerPreferences(): UserTimerPreferences {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.TIMER_PREFERENCES);
+    if (!raw) return DEFAULT_TIMER_PREFERENCES;
+    return { ...DEFAULT_TIMER_PREFERENCES, ...JSON.parse(raw) };
+  } catch (e) {
+    console.error("Failed to get timer preferences", e);
+    return DEFAULT_TIMER_PREFERENCES;
+  }
+}
+
+export function saveTimerPreferences(preferences: UserTimerPreferences): void {
+  localStorage.setItem(
+    STORAGE_KEYS.TIMER_PREFERENCES,
+    JSON.stringify(preferences),
+  );
+}
+
+export function getSavedTaskAttributions(): TaskTimeAttribution[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.TASK_TIME_ATTRIBUTIONS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error("Failed to get task time attributions", e);
+    return [];
+  }
+}
+
+export function saveTaskAttribution(attribution: TaskTimeAttribution): void {
+  const existing = getSavedTaskAttributions();
+  const index = existing.findIndex((item) => item.id === attribution.id);
+  const updated = [...existing];
+  if (index >= 0) updated[index] = attribution;
+  else updated.unshift(attribution);
+  localStorage.setItem(
+    STORAGE_KEYS.TASK_TIME_ATTRIBUTIONS,
+    JSON.stringify(updated.slice(0, 5000)),
+  );
+}
+
+export function replaceTaskAttributionsForSession(
+  sessionId: string,
+  attributions: TaskTimeAttribution[],
+): void {
+  const existing = getSavedTaskAttributions().filter(
+    (item) => item.sessionId !== sessionId,
+  );
+  localStorage.setItem(
+    STORAGE_KEYS.TASK_TIME_ATTRIBUTIONS,
+    JSON.stringify([...attributions, ...existing].slice(0, 5000)),
+  );
+}
+
 export function getSavedChordSelections(): ChordSelection[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.CHORD_SELECTIONS);
@@ -385,10 +454,10 @@ function getTaskMetadata(text: string): TaskMetadata {
   const subject = structuredSubject || bareCustomSubject;
   const bpmMatch = text.match(/@(bpm|metronome)\s*(?:\((\d+)|([0-9]+))/i);
   const timerMatch = text.match(
-    /@timer\s*(?:\(\s*(\d+)\s*(?:m|min|mins|minutes)?\s*\)|([0-9]+)\s*m?)/i,
+    /@(timer|time)\s*(?:\(\s*(\d+)\s*(?:m|min|mins|minutes)?\s*\)|([0-9]+)\s*m?)/i,
   );
   const durationSeconds = timerMatch
-    ? Number(timerMatch[1] || timerMatch[2]) * 60
+    ? Number(timerMatch[2] || timerMatch[3]) * 60
     : 0;
   return {
     area:
