@@ -109,6 +109,12 @@ describe("parseTaskConfiguration", () => {
     assert.equal(config.startMetronome, true);
   });
 
+  it("auto-starts the metronome from an @bpm mention", () => {
+    const config = parseTaskConfiguration("Play along with @bpm(90)");
+    assert.equal(config.bpm, 90);
+    assert.equal(config.startMetronome, true);
+  });
+
   it("recognizes free-text bpm within the supported metronome range", () => {
     const config = parseTaskConfiguration("Play scales at 999 bpm");
     // Free text bpm capture is limited to 2-3 digits, so 999 is still parsed and clamped.

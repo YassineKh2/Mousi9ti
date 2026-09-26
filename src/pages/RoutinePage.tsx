@@ -59,6 +59,7 @@ import {
 } from "../components/PracticeTasksWidget";
 import { useTimer } from "../lib/useTimer";
 import { getSavedSessions, recordTaskActivity } from "../lib/storage";
+import { clampDurationMinutes } from "../lib/taskAutoConfig";
 import { SessionWidget } from "../components/SessionWidget";
 import { StreakData } from "../types";
 
@@ -510,6 +511,9 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
     null,
   );
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingDayField, setEditingDayField] = useState<
+    "focus" | "duration" | null
+  >(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -624,6 +628,14 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
         }
         return d;
       }),
+    );
+  };
+
+  const updateActiveDay = (updates: Partial<DayBlueprint>) => {
+    setWeeklySchedule((prev) =>
+      prev.map((day) =>
+        day.day === activeDayCode ? { ...day, ...updates } : day,
+      ),
     );
   };
 
@@ -1101,17 +1113,85 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
               </span>
             </div>
             <div className="flex flex-col gap-1 text-xs font-mono text-on-surface-variant">
-              <div className="flex justify-between">
-                <span>Focus:</span>
-                <span className="text-on-surface font-semibold">
-                  {activeDay.focusTheme}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Target Duration:</span>
-                <span className="text-on-surface font-semibold">
-                  {activeDay.goalDurationMins} minutes
-                </span>
+              {editingDayField === "focus" ? (
+                <label className="flex items-center justify-between gap-3">
+                  <span className="shrink-0">Focus:</span>
+                  <input
+                    type="text"
+                    value={activeDay.focusTheme}
+                    onChange={(event) =>
+                      updateActiveDay({ focusTheme: event.target.value })
+                    }
+                    onBlur={() => setEditingDayField(null)}
+                    aria-label="Active day focus"
+                    autoFocus
+                    className="min-w-0 flex-1 rounded border border-primary bg-surface-container-lowest px-2 py-1 text-right text-on-surface outline-none ring-1 ring-primary/50"
+                  />
+                </label>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setEditingDayField("focus")}
+                  title="Click to edit focus"
+                  aria-label="Click to edit active day focus"
+                  className="group flex w-full items-center justify-between gap-3 rounded px-1 py-1 text-left transition-colors hover:bg-surface-container-highest"
+                >
+                  <span className="shrink-0">Focus:</span>
+                  <span className="min-w-0 flex-1 truncate text-right text-on-surface font-semibold">
+                    {activeDay.focusTheme}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1 text-[9px] font-bold text-primary opacity-70 transition-opacity group-hover:opacity-100">
+                    <Edit2 size={11} />
+                  </span>
+                </button>
+              )}
+              <div className="flex items-center justify-between gap-3">
+                {editingDayField === "duration" ? (
+                  <>
+                    <label htmlFor="active-day-duration" className="shrink-0">
+                      Target Duration:
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        id="active-day-duration"
+                        type="number"
+                        min={1}
+                        max={180}
+                        step={1}
+                        value={activeDay.goalDurationMins}
+                        onChange={(event) => {
+                          const value = Number(event.target.value);
+                          if (Number.isFinite(value) && value > 0) {
+                            updateActiveDay({
+                              goalDurationMins: clampDurationMinutes(value),
+                            });
+                          }
+                        }}
+                        onBlur={() => setEditingDayField(null)}
+                        aria-label="Active day target duration in minutes"
+                        autoFocus
+                        className="w-20 rounded border border-primary bg-surface-container-lowest px-2 py-1 text-right text-on-surface outline-none ring-1 ring-primary/50"
+                      />
+                      <span>minutes</span>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setEditingDayField("duration")}
+                    title="Click to edit target duration"
+                    aria-label="Click to edit active day target duration"
+                    className="group flex w-full items-center justify-between gap-3 rounded px-1 py-1 text-left transition-colors hover:bg-surface-container-highest"
+                  >
+                    <span className="shrink-0">Target Duration:</span>
+                    <span className="flex shrink-0 items-center gap-1 text-on-surface font-semibold">
+                      {activeDay.goalDurationMins} minutes
+                      <span className="ml-1 flex items-center gap-1 text-[9px] font-bold text-primary opacity-70 transition-opacity group-hover:opacity-100">
+                        <Edit2 size={11} />
+                      </span>
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

@@ -94,7 +94,7 @@ function parseFromMentions(text: string): TaskConfiguration {
       if (parsed.tuning) config.tuning = parsed.tuning;
     }
 
-    if (tool === "metronome") config.startMetronome = true;
+    if (tool === "bpm" || tool === "metronome") config.startMetronome = true;
   }
 
   return config;

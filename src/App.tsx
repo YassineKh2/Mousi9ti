@@ -47,6 +47,7 @@ import { TourOverlay } from "./components/TourOverlay";
 import { getSavedPracticeTasks } from "./components/PracticeTasksWidget";
 import { SessionReviewModal } from "./components/SessionReviewModal";
 import { TaskCompletionModal } from "./components/TaskCompletionModal";
+import { parseTaskConfiguration } from "./lib/taskAutoConfig";
 
 export function App() {
   type PendingScaleTarget = { scaleId: string; root: NoteName };
@@ -165,6 +166,7 @@ export function App() {
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState<boolean>(false);
   const [metronomeBarCycleMode, setMetronomeBarCycleMode] =
     useState<boolean>(false);
+  const previousActiveTaskIdRef = useRef<string | null>(activeTaskId);
 
   // Practice Timer
   const timer = useTimer();
@@ -186,6 +188,19 @@ export function App() {
       !practiceTasks.some((task) => task.id === activeTaskId)
     ) {
       makeTaskActive(null);
+    }
+  }, [activeTaskId, practiceTasks]);
+
+  useEffect(() => {
+    if (previousActiveTaskIdRef.current === activeTaskId) return;
+    previousActiveTaskIdRef.current = activeTaskId;
+
+    const activeTask = practiceTasks.find((task) => task.id === activeTaskId);
+    const config = activeTask
+      ? parseTaskConfiguration(activeTask.text)
+      : undefined;
+    if (!config?.startMetronome && audioEngine.isRunning()) {
+      audioEngine.stopMetronome();
     }
   }, [activeTaskId, practiceTasks]);
 
