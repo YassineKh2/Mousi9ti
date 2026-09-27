@@ -740,7 +740,7 @@ export function App() {
         return;
       }
 
-      if (e.code === "Space") {
+      if (e.code === "Space" && activeTab === "dashboard") {
         e.preventDefault();
         // Toggle metronome directly
         if (audioEngine.isRunning()) {
@@ -774,7 +774,7 @@ export function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [metronomeBpm]);
+  }, [activeTab, metronomeBpm]);
 
   const parseRootQuery = (raw: string) => {
     const compact = raw
@@ -1108,6 +1108,8 @@ export function App() {
             <RoutinePage
               timer={timer}
               streak={streak}
+              practiceTasks={practiceTasks}
+              onPracticeTasksChange={setPracticeTasks}
               activeSessionDuration={activeSessionDuration}
               isSessionActive={isSessionActive}
               onToggleSession={handleToggleSession}

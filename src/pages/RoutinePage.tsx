@@ -27,7 +27,7 @@ import {
   Edit2,
   Activity,
 } from "lucide-react";
-import { NoteName } from "../types";
+import { NoteName, PracticeTask } from "../types";
 import {
   ALL_ROOT_NOTES,
   SCALES_DATABASE,
@@ -381,6 +381,8 @@ const getTodayCode = () => DAY_CODES[new Date().getDay()];
 interface RoutinePageProps {
   timer?: ReturnType<typeof useTimer>;
   streak?: StreakData;
+  practiceTasks?: PracticeTask[];
+  onPracticeTasksChange?: (tasks: PracticeTask[]) => void;
   activeSessionDuration?: number;
   isSessionActive?: boolean;
   onToggleSession?: () => void;
@@ -390,6 +392,8 @@ interface RoutinePageProps {
 export const RoutinePage: React.FC<RoutinePageProps> = ({
   timer: propTimer,
   streak: propStreak,
+  practiceTasks,
+  onPracticeTasksChange,
   activeSessionDuration = 0,
   isSessionActive = false,
   onToggleSession = () => {},
@@ -441,6 +445,12 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       } catch (e) {}
     }
 
+    if (practiceTasks) {
+      return schedule.map((day) =>
+        day.day === getTodayCode() ? { ...day, tasks: practiceTasks } : day,
+      );
+    }
+
     const savedDailyTasks = localStorage.getItem("mous9iti_tasks");
     if (!savedDailyTasks) return schedule;
     try {
@@ -482,6 +492,12 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       localStorage.setItem("mous9iti_tasks", JSON.stringify(activeDay.tasks));
     }
   }, [weeklySchedule, activeDayCode]);
+
+  useEffect(() => {
+    if (activeDay?.day === getTodayCode()) {
+      onPracticeTasksChange?.(activeDay.tasks);
+    }
+  }, [weeklySchedule, activeDayCode, onPracticeTasksChange]);
 
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
