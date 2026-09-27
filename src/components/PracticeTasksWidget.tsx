@@ -45,6 +45,41 @@ export type { PracticeTask } from "../types";
 
 const MENTION_REGEX =
   /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time)(?:\(([^)]*)\))?)/gi;
+const CUSTOM_TAGS_STORAGE_KEY = "mous9iti_custom_tags";
+const MAX_SAVED_CUSTOM_TAGS = 15;
+
+const getSavedCustomTags = (): string[] => {
+  try {
+    const saved = localStorage.getItem(CUSTOM_TAGS_STORAGE_KEY);
+    const tags: unknown = saved ? JSON.parse(saved) : [];
+    return Array.isArray(tags)
+      ? tags
+          .filter((tag): tag is string => typeof tag === "string")
+          .slice(0, MAX_SAVED_CUSTOM_TAGS)
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const rememberCustomTags = (text: string): string[] => {
+  const tags = [...text.matchAll(/@custom\(([^)]*)\)/gi)]
+    .map((match) => match[1].trim())
+    .filter(Boolean);
+  if (tags.length === 0) return getSavedCustomTags();
+
+  const updated = [...getSavedCustomTags()];
+  tags.forEach((tag) => {
+    const existingIndex = updated.findIndex(
+      (savedTag) => savedTag.toLowerCase() === tag.toLowerCase(),
+    );
+    if (existingIndex !== -1) updated.splice(existingIndex, 1);
+    updated.unshift(tag);
+  });
+  const limited = updated.slice(0, MAX_SAVED_CUSTOM_TAGS);
+  localStorage.setItem(CUSTOM_TAGS_STORAGE_KEY, JSON.stringify(limited));
+  return limited;
+};
 
 // Configuration parsing for rendering
 const parseParams = (tool: string, params: string) => {
@@ -166,6 +201,7 @@ const getMentionContext = (
 
 const getMentionSuggestions = (
   ctx: MentionContext | null,
+  customTags: string[] = getSavedCustomTags(),
 ): { label: string; value: string; subLabel?: string }[] => {
   if (!ctx) return [];
   if (ctx.type === "tool") {
@@ -210,34 +246,29 @@ const getMentionSuggestions = (
       .map((t) => ({ label: t.label, value: t.name, subLabel: t.subLabel }));
   } else if (ctx.type === "param" && ctx.tool) {
     if (ctx.tool === "custom") {
-      const presets = [
-        "Warm-up",
-        "Alternate Picking",
-        "Backing Track",
-        "Clean Tone",
-        "High Gain Lead",
-        "Solo Section",
-        "Improvisation",
-        "Triad Shapes",
-        "Fingerstyle",
-        "Bending",
-      ];
       const list: { label: string; value: string; subLabel?: string }[] = [];
-      if (ctx.query.trim()) {
+      const query = ctx.query.trim();
+      if (
+        query &&
+        !customTags.some((tag) => tag.toLowerCase() === query.toLowerCase())
+      ) {
         list.push({
-          label: `"${ctx.query.trim()}"`,
-          value: ctx.query.trim(),
-          subLabel: "Custom note",
+          label: `"${query}"`,
+          value: query,
+          subLabel: "New custom tag",
         });
       }
-      presets
+      customTags
         .filter(
-          (p) =>
-            !ctx.query || p.toLowerCase().includes(ctx.query.toLowerCase()),
+          (tag) => !query || tag.toLowerCase().includes(query.toLowerCase()),
         )
-        .forEach((p) => {
-          if (p.toLowerCase() !== ctx.query.toLowerCase()) {
-            list.push({ label: p, value: p, subLabel: "Quick tag" });
+        .forEach((tag) => {
+          if (tag.toLowerCase() !== query.toLowerCase()) {
+            list.push({
+              label: tag,
+              value: tag,
+              subLabel: "Recent custom tag",
+            });
           }
         });
       return list.slice(0, 7);
@@ -510,6 +541,7 @@ export const InlineTaskRowEditor: React.FC<InlineTaskRowEditorProps> = ({
   const [text, setText] = useState(initialText);
   const [cursor, setCursor] = useState(initialText.length);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [customTags, setCustomTags] = useState(getSavedCustomTags);
   const inputRef = useRef<HTMLInputElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -523,7 +555,7 @@ export const InlineTaskRowEditor: React.FC<InlineTaskRowEditorProps> = ({
   }, [text, cursor]);
 
   const ctx = getMentionContext(text, cursor);
-  const suggestions = getMentionSuggestions(ctx);
+  const suggestions = getMentionSuggestions(ctx, customTags);
   const safeSuggestionIndex = Math.max(
     0,
     Math.min(suggestionIndex, suggestions.length - 1),
@@ -531,6 +563,8 @@ export const InlineTaskRowEditor: React.FC<InlineTaskRowEditorProps> = ({
 
   const applySuggestion = (val: string) => {
     if (!ctx) return;
+    if (ctx.tool === "custom")
+      setCustomTags(rememberCustomTags(`@custom(${val})`));
     const { newText, newCursor } = applyMentionSuggestion(
       text,
       cursor,
@@ -569,6 +603,7 @@ export const InlineTaskRowEditor: React.FC<InlineTaskRowEditorProps> = ({
     if (e.key === "Enter") {
       e.preventDefault();
       if (text.trim()) {
+        setCustomTags(rememberCustomTags(text));
         onSave(text.trim());
       }
     } else if (e.key === "Escape") {
@@ -613,7 +648,11 @@ export const InlineTaskRowEditor: React.FC<InlineTaskRowEditorProps> = ({
       <div className="flex items-center gap-1 shrink-0">
         <button
           type="button"
-          onClick={() => text.trim() && onSave(text.trim())}
+          onClick={() => {
+            if (!text.trim()) return;
+            setCustomTags(rememberCustomTags(text));
+            onSave(text.trim());
+          }}
           disabled={!text.trim()}
           className="text-primary hover:bg-primary/20 p-1.5 rounded transition-colors focus:outline-none disabled:opacity-40"
           title="Save changes"
@@ -770,6 +809,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   const [newTaskText, setNewTaskText] = useState("");
   const [cursor, setCursor] = useState(0);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [customTags, setCustomTags] = useState(getSavedCustomTags);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<ActiveDropdown | null>(
     null,
@@ -790,6 +830,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   const addTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskText.trim()) return;
+    setCustomTags(rememberCustomTags(newTaskText));
     setTasks([
       ...tasks,
       { id: Date.now().toString(), text: newTaskText.trim(), completed: false },
@@ -840,7 +881,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   };
 
   const ctx = getMentionContext(newTaskText, cursor);
-  const suggestions = getMentionSuggestions(ctx);
+  const suggestions = getMentionSuggestions(ctx, customTags);
   const safeSuggestionIndex = Math.max(
     0,
     Math.min(suggestionIndex, suggestions.length - 1),
@@ -848,6 +889,8 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
 
   const applySuggestion = (val: string) => {
     if (!ctx) return;
+    if (ctx.tool === "custom")
+      setCustomTags(rememberCustomTags(`@custom(${val})`));
     const { newText, newCursor } = applyMentionSuggestion(
       newTaskText,
       cursor,
@@ -1009,7 +1052,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
     tasks.length === 0 ? 0 : Math.round((completedCount / tasks.length) * 100);
 
   return (
-    <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex flex-col shadow-xl relative group h-[400px]">
+    <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex flex-col shadow-xl relative group h-125 min-h-125 max-h-125 flex-none">
       <div className="flex items-center justify-between pb-3 border-b border-outline-variant/10 shrink-0">
         <span className="font-mono text-xs font-semibold tracking-[0.2em] text-on-surface uppercase">
           Daily Practice Goals
@@ -1320,6 +1363,9 @@ export const DropdownEditor: React.FC<{
 
   // Custom text state
   const [customText, setCustomText] = useState(active.params || "");
+  const [savedCustomTags, setSavedCustomTags] = useState(() =>
+    getSavedCustomTags().slice(0, 7),
+  );
 
   // Tuning search
   const [tuningQuery, setTuningQuery] = useState("");
@@ -1507,6 +1553,13 @@ export const DropdownEditor: React.FC<{
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
+                    if (customText.trim()) {
+                      setSavedCustomTags(
+                        rememberCustomTags(
+                          `@custom(${customText.trim()})`,
+                        ).slice(0, 7),
+                      );
+                    }
                     onSave(customText.trim() || "Custom", true);
                   }
                 }}
@@ -1519,17 +1572,7 @@ export const DropdownEditor: React.FC<{
                   Quick Presets:
                 </span>
                 <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto custom-scrollbar p-0.5">
-                  {[
-                    "Warm-up",
-                    "Alternate Picking",
-                    "Clean Tone",
-                    "Backing Track",
-                    "Triad Shapes",
-                    "Solo Section",
-                    "Improvisation",
-                    "Legato",
-                    "Bending",
-                  ].map((preset) => (
+                  {savedCustomTags.map((preset) => (
                     <button
                       key={preset}
                       type="button"
