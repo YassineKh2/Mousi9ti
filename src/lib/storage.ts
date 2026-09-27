@@ -30,6 +30,7 @@ export const DEFAULT_TIMER_PREFERENCES: UserTimerPreferences = {
   autoStartTimerWithDailyTasks: true,
   autoActivateFirstTask: true,
   completionBehavior: "ask",
+  hasSeenDailyTasksOnboarding: false,
   hasSeenTaskTimerOnboarding: false,
   // Off by default: activating a task must not silently change dashboard controls.
   autoConfigureDashboardFromTask: false,

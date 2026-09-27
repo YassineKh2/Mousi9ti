@@ -8,6 +8,7 @@ import {
   Music,
   Hash,
   Clock,
+  ImageIcon,
   Command,
   Edit2,
   X,
@@ -21,6 +22,7 @@ import {
   Gauge,
   Sparkles,
   CalendarDays,
+  ChevronLeft,
   Play,
   Pause,
 } from "lucide-react";
@@ -38,7 +40,11 @@ import {
   COMMON_TECHNIQUES,
   COMMON_EXERCISES,
 } from "../utils/taskMentions";
-import { PracticeTask, UserTimerPreferences } from "../types";
+import {
+  PracticeTask,
+  TaskCompletionBehavior,
+  UserTimerPreferences,
+} from "../types";
 import { getTaskDurationSeconds, recordTaskActivity } from "../lib/storage";
 
 export type { PracticeTask } from "../types";
@@ -719,6 +725,7 @@ export const InlineTaskRowEditor: React.FC<InlineTaskRowEditorProps> = ({
 
 interface PracticeTasksWidgetProps {
   onOpenRoutine?: () => void;
+  onFinishDailyTasksOnboarding?: () => void;
   tasks?: PracticeTask[];
   activeTaskId?: string | null;
   timerStatus?: "idle" | "running" | "paused" | "finished";
@@ -737,49 +744,22 @@ interface PracticeTasksWidgetProps {
   onSetTaskManualDuration?: (taskId: string, minutes: number) => void;
 }
 
-const DEFAULT_PRACTICE_TASKS: PracticeTask[] = [
-  {
-    id: "1",
-    text: "Warm up with @exercise(Spider Drill) in @tuning(E Standard)",
-    completed: false,
-  },
-  {
-    id: "2",
-    text: "Practice @scale(C major) and @chord(G major) changes",
-    completed: false,
-  },
-  {
-    id: "3",
-    text: "Work on @technique(Alternate Picking) at @bpm(120)",
-    completed: false,
-  },
-  {
-    id: "4",
-    text: "Play along with @metronome(80,4/4) for @timer(5)",
-    completed: false,
-  },
-  {
-    id: "5",
-    text: "@custom(Focus on clean fretting hand posture)",
-    completed: false,
-  },
-];
-
 export const getSavedPracticeTasks = (): PracticeTask[] => {
   const saved = localStorage.getItem("mous9iti_tasks");
-  if (!saved) return DEFAULT_PRACTICE_TASKS;
+  if (!saved) return [];
 
   try {
     const parsed = JSON.parse(saved);
-    return Array.isArray(parsed) ? parsed : DEFAULT_PRACTICE_TASKS;
+    return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
     console.error("Failed to parse tasks", error);
-    return DEFAULT_PRACTICE_TASKS;
+    return [];
   }
 };
 
 export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   onOpenRoutine,
+  onFinishDailyTasksOnboarding,
   tasks: controlledTasks,
   activeTaskId,
   timerStatus,
@@ -814,6 +794,10 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   const [activeDropdown, setActiveDropdown] = useState<ActiveDropdown | null>(
     null,
   );
+  const [onboardingStep, setOnboardingStep] = useState<number | null>(null);
+  const [onboardingCompletionBehavior, setOnboardingCompletionBehavior] =
+    useState<TaskCompletionBehavior>("ask");
+  const [onboardingAutoTaskSetup, setOnboardingAutoTaskSetup] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -1050,6 +1034,289 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   const completedCount = tasks.filter((t) => t.completed).length;
   const progress =
     tasks.length === 0 ? 0 : Math.round((completedCount / tasks.length) * 100);
+
+  const finishOnboarding = () => {
+    onUpdateTimerPreferences?.({
+      completionBehavior: onboardingCompletionBehavior,
+      autoConfigureDashboardFromTask: onboardingAutoTaskSetup,
+      hasSeenDailyTasksOnboarding: true,
+      hasSeenAutoConfigOnboarding: true,
+      hasSeenTaskTimerOnboarding: true,
+    });
+    setOnboardingStep(null);
+    onFinishDailyTasksOnboarding?.();
+  };
+
+  if (tasks.length === 0 && !timerPreferences?.hasSeenDailyTasksOnboarding) {
+    const steps: {
+      title: string;
+      description: string;
+      icon: React.ReactNode;
+      gifPlaceholder: string;
+      trackingDetails?: string[];
+      control?: "completion" | "automatic-setup";
+    }[] = [
+      {
+        title: "Your daily tasks",
+        description:
+          "A daily task is one practice goal for today, such as working on a scale or learning a chord change. Your list belongs to you: nothing is added automatically, and you can edit or remove goals whenever your plans change.",
+        icon: <Target size={20} />,
+        gifPlaceholder: "Adding and organizing daily tasks",
+      },
+      {
+        title: "Track your time",
+        description:
+          "Start your day by pressing Start on your task list. Your practice session begins automatically by default, and your time is recorded as you work.",
+        icon: <Clock size={20} />,
+        gifPlaceholder: "Starting a task session and tracking time",
+        trackingDetails: [
+          "Your active task records its practice time.",
+          "Switch your active task when you move to another exercise, and time follows your focus.",
+          "Task time is recorded while your session runs.",
+        ],
+      },
+      {
+        title: "Automatic and manual time",
+        description:
+          "Automatic tracking gives you a useful record without stopping to take notes. You can also edit a task's recorded duration manually whenever you need to correct it or add time.",
+        icon: <Sliders size={20} />,
+        gifPlaceholder: "Automatic tracking and manual time adjustments",
+      },
+      {
+        title: "Choose what happens at the end",
+        description:
+          "After you complete the last task, the Practice Tracker can stop, keep running, or ask what you want to do. Choose the behavior that feels right, you can change it later in Settings.",
+        icon: <CheckCircle2 size={20} />,
+        gifPlaceholder: "Choosing what happens after the last task",
+        control: "completion",
+      },
+      {
+        title: "Automatic Task Setup",
+        description:
+          "When this is on, details in your active task, such as a scale, tempo, or duration, can update the matching dashboard controls for you. It never creates or changes your task list. You can switch it any time in Settings.",
+        icon: <Sparkles size={20} />,
+        gifPlaceholder: "Task details updating dashboard controls",
+        control: "automatic-setup",
+      },
+    ];
+    const currentStep = steps[onboardingStep ?? -1];
+
+    return (
+      <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex min-h-80 flex-col shadow-xl relative">
+        <div className="flex items-center gap-2 border-b border-outline-variant/10 pb-3">
+          <Target size={16} className="text-primary" />
+          <span className="font-mono text-xs font-semibold text-on-surface">
+            Daily Practice Goals
+          </span>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center px-3 py-7 text-center">
+          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <CalendarDays size={21} />
+          </div>
+          <h3 className="text-base font-semibold text-on-surface">
+            Make today yours
+          </h3>
+          <p className="mt-2 max-w-xs text-sm leading-relaxed text-on-surface-variant">
+            Daily tasks help you choose a few practice goals and keep track of
+            your progress.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setOnboardingCompletionBehavior(
+                timerPreferences?.completionBehavior ?? "ask",
+              );
+              setOnboardingAutoTaskSetup(
+                timerPreferences?.autoConfigureDashboardFromTask ?? false,
+              );
+              setOnboardingStep(0);
+            }}
+            className="mt-5 inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-container hover:text-on-primary-container"
+          >
+            Get started <Play size={14} fill="currentColor" />
+          </button>
+        </div>
+
+        {onboardingStep !== null && currentStep && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setOnboardingStep(null);
+            }}
+          >
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="daily-task-onboarding-title"
+              className="max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-lg border border-outline-variant/30 bg-surface p-5 shadow-2xl"
+            >
+              <div className="mb-5 flex items-center justify-between">
+                <span className="font-mono text-xs text-on-surface-variant">
+                  Step {onboardingStep + 1} of {steps.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setOnboardingStep(null)}
+                  className="rounded p-1 text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
+                  aria-label="Close onboarding"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              {currentStep && (
+                <div className="px-2 pb-2 pt-2">
+                  <div className="mb-5 flex items-center gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                      {currentStep.icon}
+                    </div>
+                    <h2
+                      id="daily-task-onboarding-title"
+                      className="text-2xl font-semibold text-on-surface"
+                    >
+                      {currentStep.title}
+                    </h2>
+                  </div>
+
+                  <p className="text-sm leading-7 text-on-surface-variant">
+                    {currentStep.description}
+                  </p>
+
+                  {currentStep.trackingDetails && (
+                    <div className="mt-6">
+                      <h3 className="text-sm font-semibold text-on-surface">
+                        How tracking works
+                      </h3>
+                      <div className="mt-3 space-y-2.5">
+                        {currentStep.trackingDetails.map((detail) => (
+                          <div
+                            key={detail}
+                            className="flex gap-3 text-sm leading-6 text-on-surface-variant"
+                          >
+                            <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                            <p>{detail}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-6 border-l-2 border-primary/40 pl-4">
+                        <h3 className="text-sm font-semibold text-on-surface">
+                          Practice without tasks
+                        </h3>
+                        <p className="mt-1.5 text-sm leading-6 text-on-surface-variant">
+                          Start the Practice Timer on its own to track your
+                          overall practice session, even when you are not
+                          working through a task.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-6 rounded-xl border border-dashed border-outline-variant/40 bg-surface-container-low p-2">
+                    <div
+                      role="img"
+                      aria-label={`GIF placeholder: ${currentStep.gifPlaceholder}`}
+                      className="flex min-h-[220px] flex-col items-center justify-center rounded-lg border border-outline-variant/20 bg-surface-container px-6 text-center"
+                    >
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
+                        <ImageIcon size={25} strokeWidth={1.7} />
+                      </div>
+                      <span className="mt-4 rounded-md border border-outline-variant/30 bg-surface-container-low px-2.5 py-1 text-[11px] font-medium uppercase text-on-surface-variant">
+                        GIF
+                      </span>
+                      <p className="mt-3 text-sm text-on-surface-variant">
+                        {currentStep.gifPlaceholder}
+                      </p>
+                    </div>
+                  </div>
+
+                  {currentStep.control === "completion" && (
+                    <label className="mt-5 block">
+                      <span className="mb-2 block text-xs font-semibold text-on-surface">
+                        Daily Task Completion
+                      </span>
+                      <select
+                        value={onboardingCompletionBehavior}
+                        onChange={(event) =>
+                          setOnboardingCompletionBehavior(
+                            event.target.value as TaskCompletionBehavior,
+                          )
+                        }
+                        className="w-full rounded border border-outline-variant/30 bg-surface-container px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
+                      >
+                        <option value="stop">Stop the tracker</option>
+                        <option value="continue">
+                          Keep the tracker running
+                        </option>
+                        <option value="ask">Ask me each time</option>
+                      </select>
+                    </label>
+                  )}
+                  {currentStep.control === "automatic-setup" && (
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={onboardingAutoTaskSetup}
+                      aria-label="Automatic Task Setup"
+                      onClick={() =>
+                        setOnboardingAutoTaskSetup((enabled) => !enabled)
+                      }
+                      className="mt-5 flex w-full items-center justify-between gap-4 rounded border border-outline-variant/30 bg-surface-container p-3 text-left transition-colors hover:bg-surface-container-high focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                    >
+                      <span>
+                        <span className="block text-sm font-semibold text-on-surface">
+                          Automatic Task Setup
+                        </span>
+                        <span className="mt-1 block text-xs text-on-surface-variant">
+                          Update dashboard controls from the active task
+                        </span>
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${onboardingAutoTaskSetup ? "bg-primary" : "bg-surface-container-highest"}`}
+                      >
+                        <span
+                          className={`absolute top-1 h-4 w-4 rounded-full bg-surface transition-transform ${onboardingAutoTaskSetup ? "left-6" : "left-1"}`}
+                        />
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
+              <div className="mt-6 flex items-center justify-between border-t border-outline-variant/20 pt-4">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOnboardingStep((step) => Math.max(0, (step ?? 0) - 1))
+                  }
+                  disabled={onboardingStep === 0}
+                  className="inline-flex items-center gap-1 rounded px-3 py-2 text-sm text-on-surface-variant hover:bg-surface-container disabled:invisible"
+                >
+                  <ChevronLeft size={16} /> Back
+                </button>
+                {onboardingStep === steps.length - 1 ? (
+                  <button
+                    type="button"
+                    onClick={finishOnboarding}
+                    className="rounded bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:bg-primary-container hover:text-on-primary-container"
+                  >
+                    Finish and open my tasks
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setOnboardingStep((step) => (step ?? 0) + 1)}
+                    className="inline-flex items-center gap-1 rounded bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:bg-primary-container hover:text-on-primary-container"
+                  >
+                    Next <Play size={13} fill="currentColor" />
+                  </button>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex flex-col shadow-xl relative group h-125 min-h-125 max-h-125 flex-none">

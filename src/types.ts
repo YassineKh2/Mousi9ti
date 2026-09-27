@@ -232,6 +232,7 @@ export interface UserTimerPreferences {
   autoStartTimerWithDailyTasks: boolean;
   autoActivateFirstTask: boolean;
   completionBehavior: TaskCompletionBehavior;
+  hasSeenDailyTasksOnboarding: boolean;
   hasSeenTaskTimerOnboarding: boolean;
   autoConfigureDashboardFromTask: boolean;
   hasSeenAutoConfigOnboarding: boolean;

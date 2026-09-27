@@ -1063,6 +1063,7 @@ export function App() {
               metronomeBarCycleMode={metronomeBarCycleMode}
               onBarCycleModeChange={setMetronomeBarCycleMode}
               onOpenRoutine={() => setActiveTab("routine")}
+              onFinishDailyTasksOnboarding={() => setActiveTab("routine")}
               practiceTasks={practiceTasks}
               activeTaskId={activeTaskId}
               timerPreferences={timerPreferences}

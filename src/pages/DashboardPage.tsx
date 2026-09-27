@@ -189,6 +189,7 @@ interface DashboardPageProps {
   metronomeBarCycleMode?: boolean;
   onBarCycleModeChange?: (enabled: boolean) => void;
   onOpenRoutine: () => void;
+  onFinishDailyTasksOnboarding: () => void;
   practiceTasks: PracticeTask[];
   activeTaskId: string | null;
   timerPreferences: UserTimerPreferences;
@@ -224,6 +225,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   metronomeBarCycleMode,
   onBarCycleModeChange,
   onOpenRoutine,
+  onFinishDailyTasksOnboarding,
   practiceTasks,
   activeTaskId,
   timerPreferences,
@@ -697,6 +699,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         return (
           <PracticeTasksWidget
             onOpenRoutine={onOpenRoutine}
+            onFinishDailyTasksOnboarding={onFinishDailyTasksOnboarding}
             tasks={practiceTasks}
             activeTaskId={activeTaskId}
             timerPreferences={timerPreferences}
