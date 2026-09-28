@@ -47,6 +47,8 @@ interface MetronomeProps {
   onIsPlayingChange?: (playing: boolean) => void;
   barCycleMode?: boolean;
   onBarCycleModeChange?: (enabled: boolean) => void;
+  timeSignature?: TimeSignature;
+  onTimeSignatureChange?: (signature: TimeSignature) => void;
 }
 
 export const Metronome: React.FC<MetronomeProps> = ({
@@ -59,6 +61,8 @@ export const Metronome: React.FC<MetronomeProps> = ({
   onIsPlayingChange,
   barCycleMode: controlledBarCycleMode,
   onBarCycleModeChange,
+  timeSignature: controlledTimeSignature,
+  onTimeSignatureChange,
 }) => {
   const [isHydratedFromEngine, setIsHydratedFromEngine] =
     useState<boolean>(false);
@@ -67,7 +71,9 @@ export const Metronome: React.FC<MetronomeProps> = ({
   );
   const isPlaying =
     controlledIsPlaying !== undefined ? controlledIsPlaying : localIsPlaying;
-  const [timeSignature, setTimeSignature] = useState<TimeSignature>("4/4");
+  const [localTimeSignature, setLocalTimeSignature] =
+    useState<TimeSignature>("4/4");
+  const timeSignature = controlledTimeSignature ?? localTimeSignature;
   const [subdivision, setSubdivision] =
     useState<MetronomeSubdivision>("quarter");
   const [soundType, setSoundType] = useState<MetronomeSound>(
@@ -82,6 +88,11 @@ export const Metronome: React.FC<MetronomeProps> = ({
     controlledBarCycleMode !== undefined
       ? controlledBarCycleMode
       : localBarCycleMode;
+
+  const handleTimeSignatureChange = (signature: TimeSignature) => {
+    setLocalTimeSignature(signature);
+    onTimeSignatureChange?.(signature);
+  };
 
   const setBarCycleMode = useCallback(
     (nextValue: boolean | ((prev: boolean) => boolean)) => {
@@ -156,7 +167,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
     const engineState = audioEngine.getMetronomeState();
 
     setIsPlayingState(engineState.isPlaying);
-    setTimeSignature(engineState.timeSignature as TimeSignature);
+    setLocalTimeSignature(engineState.timeSignature as TimeSignature);
     setSubdivision(engineState.subdivision);
     setSoundType(engineState.soundType);
     setCurrentBeat(engineState.currentBeat);
@@ -283,7 +294,9 @@ export const Metronome: React.FC<MetronomeProps> = ({
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <select
             value={timeSignature}
-            onChange={(e) => setTimeSignature(e.target.value as TimeSignature)}
+            onChange={(e) =>
+              handleTimeSignatureChange(e.target.value as TimeSignature)
+            }
             className="min-h-10 min-w-0 bg-surface-container-low border border-outline-variant/30 rounded px-2 py-1 text-[11px] font-mono text-on-surface focus:outline-none focus:border-primary/50 cursor-pointer md:min-h-0"
           >
             <option value="2/2">2/2</option>

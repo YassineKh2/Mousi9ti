@@ -12,6 +12,7 @@ import {
   DashboardRow,
   PracticeTask,
   UserTimerPreferences,
+  TimeSignature,
 } from "../types";
 import { Metronome } from "../components/Metronome";
 import { RandomDrill } from "../components/RandomDrill";
@@ -243,6 +244,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onSetTaskManualDuration,
   onUpdateTimerPreferences,
 }) => {
+  const [metronomeTimeSignature, setMetronomeTimeSignature] =
+    useState<TimeSignature>(
+      () => audioEngine.getMetronomeState().timeSignature as TimeSignature,
+    );
   // Get tuning from settings
   const defaultTuning = useMemo(() => {
     return (
@@ -293,10 +298,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   // Applies recognized settings from the active task exactly once per activation (requirement: no repeated overwrites).
   useEffect(() => {
     const AUTO_CONFIG_TASK_KEY = "Mousi9ti_auto_configured_task_id";
+    const activeTask = practiceTasks.find((task) => task.id === activeTaskId);
+    const config = activeTask
+      ? parseTaskConfiguration(activeTask.text)
+      : undefined;
+    const activeTaskKey = activeTaskId
+      ? `${activeTaskId}:${JSON.stringify(config)}`
+      : null;
 
     const decision = decideAutoConfigAction({
       enabled: timerPreferences.autoConfigureDashboardFromTask,
-      activeTaskId,
+      activeTaskId: activeTaskKey,
       lastConfiguredTaskId: localStorage.getItem(AUTO_CONFIG_TASK_KEY),
     });
 
@@ -310,12 +322,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     }
 
     if (!decision.shouldApply || !activeTaskId) return;
-
-    const activeTask = practiceTasks.find((task) => task.id === activeTaskId);
-    if (!activeTask) return;
-
-    const config = parseTaskConfiguration(activeTask.text);
-    if (!hasRecognizedConfiguration(config)) return;
+    if (!activeTask || !config || !hasRecognizedConfiguration(config)) return;
 
     if (config.scale) {
       const scaleDef = SCALES_DATABASE.find(
@@ -346,6 +353,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     if (config.bpm !== undefined) {
       onBpmChange(config.bpm);
     }
+    if (config.timeSignature) {
+      setMetronomeTimeSignature(config.timeSignature);
+    }
     if (config.durationMinutes !== undefined && timer.status === "idle") {
       timer.start(config.durationMinutes * 60);
     }
@@ -357,7 +367,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       const engineState = audioEngine.getMetronomeState();
       audioEngine.startMetronome(
         config.bpm,
-        engineState.timeSignature,
+        config.timeSignature ?? engineState.timeSignature,
         engineState.subdivision,
         engineState.soundType,
       );
@@ -654,6 +664,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             onIsPlayingChange={onMetronomePlayingChange}
             barCycleMode={metronomeBarCycleMode}
             onBarCycleModeChange={onBarCycleModeChange}
+            timeSignature={metronomeTimeSignature}
+            onTimeSignatureChange={setMetronomeTimeSignature}
           />
         );
       case "timer":

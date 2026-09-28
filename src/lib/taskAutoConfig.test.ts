@@ -54,6 +54,26 @@ describe("parseTaskConfiguration", () => {
     assert.equal(config.durationMinutes, 20);
     assert.equal(config.scale?.root, "A");
     assert.equal(config.scale?.scaleId, "pentatonic_minor");
+    assert.equal(config.timeSignature, "4/4");
+  });
+
+  it("parses a supported time signature from a metronome mention", () => {
+    const config = parseTaskConfiguration("Play along with @metronome(90,3/4)");
+    assert.equal(config.bpm, 90);
+    assert.equal(config.timeSignature, "3/4");
+  });
+
+  it("parses the time signature even when an earlier mention set the bpm", () => {
+    const config = parseTaskConfiguration(
+      "Use @bpm(90), then play with @metronome(110,3/4)",
+    );
+    assert.equal(config.bpm, 90);
+    assert.equal(config.timeSignature, "3/4");
+  });
+
+  it("ignores unsupported time signatures", () => {
+    const config = parseTaskConfiguration("Play along with @metronome(90,5/8)");
+    assert.equal(config.timeSignature, undefined);
   });
 
   it("clamps an out-of-range bpm mention to the supported range", () => {
@@ -193,6 +213,16 @@ describe("decideAutoConfigAction", () => {
     });
     assert.equal(decision.shouldApply, true);
     assert.equal(decision.nextLastConfiguredTaskId, "task-2");
+  });
+
+  it("applies again when an active task's configuration changes", () => {
+    const decision = decideAutoConfigAction({
+      enabled: true,
+      activeTaskId: 'task-1:{"bpm":110}',
+      lastConfiguredTaskId: 'task-1:{"bpm":90}',
+    });
+    assert.equal(decision.shouldApply, true);
+    assert.equal(decision.nextLastConfiguredTaskId, 'task-1:{"bpm":110}');
   });
 
   it("clears the tracker when the task is deactivated", () => {

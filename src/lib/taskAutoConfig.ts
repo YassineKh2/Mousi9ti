@@ -1,4 +1,4 @@
-import { NoteName } from "../types";
+import { NoteName, TimeSignature } from "../types";
 import {
   ALL_ROOT_NOTES,
   GUITAR_TUNINGS,
@@ -14,6 +14,7 @@ export interface TaskConfiguration {
   chord?: { root: NoteName; type: string; label: string };
   tuning?: string;
   bpm?: number;
+  timeSignature?: TimeSignature;
   durationMinutes?: number;
   exerciseType?: string;
   // Whether the task explicitly calls for the metronome (not just a target tempo).
@@ -24,6 +25,19 @@ const MIN_BPM = 20;
 const MAX_BPM = 300;
 const MIN_DURATION_MINUTES = 1;
 const MAX_DURATION_MINUTES = 180;
+const TIME_SIGNATURES = new Set<TimeSignature>([
+  "2/2",
+  "2/4",
+  "3/4",
+  "3/8",
+  "4/4",
+  "5/4",
+  "6/4",
+  "6/8",
+  "7/8",
+  "9/8",
+  "12/8",
+]);
 // searchScales()/searchChords() score for an exact root+alias match (e.g. "C" + "major"); below this we treat the match as a guess.
 const SCALE_MATCH_CONFIDENCE_THRESHOLD = 100;
 const CHORD_MATCH_CONFIDENCE_THRESHOLD = 100;
@@ -63,12 +77,19 @@ function parseFromMentions(text: string): TaskConfiguration {
           label: parsed.label || `${parsed.root} ${parsed.type}`,
         };
       }
-    } else if (
-      (tool === "bpm" || tool === "metronome") &&
-      config.bpm === undefined
-    ) {
+    } else if (tool === "bpm" || tool === "metronome") {
       const parsed = parseParams(tool, params);
-      if (typeof parsed.bpm === "number") config.bpm = clampBpm(parsed.bpm);
+      if (config.bpm === undefined && typeof parsed.bpm === "number") {
+        config.bpm = clampBpm(parsed.bpm);
+      }
+      const signature = parsed.signature as string | undefined;
+      if (
+        config.timeSignature === undefined &&
+        params.split(",")[1]?.trim() &&
+        TIME_SIGNATURES.has(signature as TimeSignature)
+      ) {
+        config.timeSignature = signature as TimeSignature;
+      }
     } else if (
       (tool === "timer" || tool === "time") &&
       config.durationMinutes === undefined
@@ -276,6 +297,7 @@ export function hasRecognizedConfiguration(config: TaskConfiguration): boolean {
     config.chord !== undefined ||
     config.tuning !== undefined ||
     config.bpm !== undefined ||
+    config.timeSignature !== undefined ||
     config.durationMinutes !== undefined
   );
 }
@@ -288,6 +310,9 @@ export function formatConfigurationSummary(
   if (config.chord) parts.push(`Chord: ${config.chord.label}`);
   if (config.tuning) parts.push(`Tuning: ${config.tuning}`);
   if (config.bpm !== undefined) parts.push(`Tempo: ${config.bpm} BPM`);
+  if (config.timeSignature) {
+    parts.push(`Time signature: ${config.timeSignature}`);
+  }
   if (config.durationMinutes !== undefined) {
     parts.push(`Duration: ${config.durationMinutes} min`);
   }
