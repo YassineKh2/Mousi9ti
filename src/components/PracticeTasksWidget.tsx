@@ -53,6 +53,27 @@ const MENTION_REGEX =
   /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time)(?:\(([^)]*)\))?)/gi;
 const CUSTOM_TAGS_STORAGE_KEY = "mous9iti_custom_tags";
 const MAX_SAVED_CUSTOM_TAGS = 15;
+const BPM_PRESETS = [
+  "60",
+  "80",
+  "100",
+  "120",
+  "130",
+  "140",
+  "160",
+  "180",
+  "200",
+];
+const TIME_SIGNATURES = [
+  "2/4",
+  "3/4",
+  "4/4",
+  "5/4",
+  "6/8",
+  "7/8",
+  "9/8",
+  "12/8",
+];
 
 const getSavedCustomTags = (): string[] => {
   try {
@@ -124,9 +145,12 @@ const parseParams = (tool: string, params: string) => {
   } else if (tool === "technique") {
     return { technique: params?.trim() || "Alternate Picking" };
   } else if (tool === "bpm") {
-    const rawBpm = (params || "").replace(/bpm/gi, "").trim();
+    const rawBpm = (parts[0] || "").replace(/bpm/gi, "").trim();
     const parsedBpm = parseInt(rawBpm, 10);
-    return { bpm: !isNaN(parsedBpm) && parsedBpm > 0 ? parsedBpm : 120 };
+    return {
+      bpm: !isNaN(parsedBpm) && parsedBpm > 0 ? parsedBpm : 120,
+      signature: parts[1] || "4/4",
+    };
   } else if (tool === "exercise") {
     return { exercise: params?.trim() || "Spider Drill" };
   }
@@ -318,17 +342,7 @@ const getMentionSuggestions = (
       );
       return list.slice(0, 7);
     } else if (ctx.tool === "bpm") {
-      const baseList = [
-        "60",
-        "80",
-        "100",
-        "120",
-        "130",
-        "140",
-        "160",
-        "180",
-        "200",
-      ];
+      const baseList = [...BPM_PRESETS];
       const numMatch = ctx.query.match(/\d+/);
       if (numMatch) {
         const strVal = parseInt(numMatch[0], 10).toString();
@@ -377,7 +391,7 @@ const getMentionSuggestions = (
       }));
     } else if (ctx.tool === "metronome") {
       if (ctx.paramIndex === 0) {
-        const baseList = ["60", "80", "100", "120", "140", "160"];
+        const baseList = [...BPM_PRESETS];
         const numMatch = ctx.query.match(/\d+/);
         if (numMatch) {
           const strVal = parseInt(numMatch[0], 10).toString();
@@ -953,7 +967,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
 
       let label = tool;
       const p = parseParams(tool, params);
-      if (tool === "metronome") label = `${p.bpm} BPM`;
+      if (tool === "metronome") label = `${p.bpm} BPM · ${p.signature}`;
       else if (tool === "scale") label = p.label || `${p.root} ${p.type}`;
       else if (tool === "chord") label = p.label || `${p.root} ${p.type}`;
       else if (tool === "timer") label = `${p.minutes}m`;
@@ -961,7 +975,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
       else if (tool === "tuning") label = p.tuning || "Tuning";
       else if (tool === "key") label = p.key || "Key";
       else if (tool === "technique") label = p.technique || "Technique";
-      else if (tool === "bpm") label = `${p.bpm} BPM`;
+      else if (tool === "bpm") label = `${p.bpm} BPM · ${p.signature}`;
       else if (tool === "exercise") label = p.exercise || "Exercise";
 
       parts.push(
@@ -1102,7 +1116,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
     const currentStep = steps[onboardingStep ?? -1];
 
     return (
-      <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex min-h-80 flex-col shadow-xl relative">
+      <div className="font-mono bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex min-h-80 flex-col shadow-xl relative">
         <div className="flex items-center gap-2 border-b border-outline-variant/10 pb-3">
           <Target size={16} className="text-primary" />
           <span className="font-mono text-xs font-semibold text-on-surface">
@@ -1319,7 +1333,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   }
 
   return (
-    <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex flex-col shadow-xl relative group h-125 min-h-125 max-h-125 flex-none">
+    <div className="font-mono bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex flex-col shadow-xl relative group h-125 min-h-125 max-h-125 flex-none">
       <div className="flex items-center justify-between pb-3 border-b border-outline-variant/10 shrink-0">
         <span className="font-mono text-xs font-semibold tracking-[0.2em] text-on-surface uppercase">
           Daily Practice Goals
@@ -1678,7 +1692,7 @@ export const DropdownEditor: React.FC<{
   const chordResults = searchChords(searchQuery, 5);
   const scaleResults = searchScales(searchQuery, 8);
 
-  const saveMetronome = (newBpm: string, newSig: string) => {
+  const saveTempo = (newBpm: string, newSig: string) => {
     const cleanBpm = parseInt(newBpm, 10);
     if (!isNaN(cleanBpm) && cleanBpm > 0) {
       onSave(`${cleanBpm},${newSig || "4/4"}`, false);
@@ -2045,13 +2059,13 @@ export const DropdownEditor: React.FC<{
                   const val = e.target.value.replace(/\D/g, "");
                   setBpmOnlyStr(val);
                   if (val && parseInt(val, 10) > 0) {
-                    onSave(val, false);
+                    saveTempo(val, signature);
                   }
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    onSave(bpmOnlyStr.trim() || "120", true);
+                    onSave(`${bpmOnlyStr.trim() || "120"},${signature}`, true);
                   }
                 }}
                 placeholder="e.g. 120"
@@ -2059,21 +2073,44 @@ export const DropdownEditor: React.FC<{
                 autoFocus
               />
               <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">
+                  Time Signature
+                </label>
+                <select
+                  value={signature}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSignature(value);
+                    saveTempo(bpmOnlyStr, value);
+                  }}
+                  className="bg-surface-container-lowest px-2 py-1.5 rounded text-sm text-on-surface border border-outline-variant/50 focus:border-primary outline-none font-mono"
+                >
+                  {!TIME_SIGNATURES.includes(signature) && (
+                    <option value={signature}>{signature} (custom)</option>
+                  )}
+                  {TIME_SIGNATURES.map((timeSignature) => (
+                    <option key={timeSignature} value={timeSignature}>
+                      {timeSignature}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
                 <span className="text-[9px] text-on-surface-variant uppercase font-mono font-bold tracking-wider">
                   Quick Tempos:
                 </span>
                 <div className="grid grid-cols-4 gap-1">
-                  {[60, 80, 100, 120, 140, 160, 180, 200].map((b) => (
+                  {BPM_PRESETS.map((bpm) => (
                     <button
-                      key={b}
+                      key={bpm}
                       type="button"
                       onClick={() => {
-                        setBpmOnlyStr(String(b));
-                        onSave(String(b), true);
+                        setBpmOnlyStr(bpm);
+                        onSave(`${bpm},${signature}`, true);
                       }}
                       className="px-1 py-1 rounded text-xs font-mono bg-surface-container-highest text-on-surface hover:bg-rose-500/20 hover:text-rose-300 transition-colors text-center"
                     >
-                      {b}
+                      {bpm}
                     </button>
                   ))}
                 </div>
@@ -2148,13 +2185,13 @@ export const DropdownEditor: React.FC<{
                     const val = e.target.value.replace(/\D/g, "");
                     setBpmStr(val);
                     if (val) {
-                      saveMetronome(val, signature);
+                      saveTempo(val, signature);
                     }
                   }}
                   onBlur={() => {
                     if (!bpmStr.trim() || parseInt(bpmStr, 10) <= 0) {
                       setBpmStr("120");
-                      saveMetronome("120", signature);
+                      saveTempo("120", signature);
                     }
                   }}
                   placeholder="e.g. 105"
@@ -2164,19 +2201,46 @@ export const DropdownEditor: React.FC<{
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">
-                  Signature
+                  Time Signature
                 </label>
-                <input
-                  type="text"
+                <select
                   value={signature}
                   onChange={(e) => {
                     const val = e.target.value;
                     setSignature(val);
-                    saveMetronome(bpmStr, val);
+                    saveTempo(bpmStr, val);
                   }}
-                  placeholder="e.g. 4/4"
                   className="bg-surface-container-lowest px-2 py-1.5 rounded text-sm text-on-surface border border-outline-variant/50 focus:border-primary outline-none font-mono"
-                />
+                >
+                  {!TIME_SIGNATURES.includes(signature) && (
+                    <option value={signature}>{signature} (custom)</option>
+                  )}
+                  {TIME_SIGNATURES.map((timeSignature) => (
+                    <option key={timeSignature} value={timeSignature}>
+                      {timeSignature}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] text-on-surface-variant uppercase font-mono font-bold tracking-wider">
+                  Quick Tempos:
+                </span>
+                <div className="grid grid-cols-4 gap-1">
+                  {BPM_PRESETS.map((bpm) => (
+                    <button
+                      key={bpm}
+                      type="button"
+                      onClick={() => {
+                        setBpmStr(bpm);
+                        onSave(`${bpm},${signature}`, true);
+                      }}
+                      className="px-1 py-1 rounded text-xs font-mono bg-surface-container-highest text-on-surface hover:bg-rose-500/20 hover:text-rose-300 transition-colors text-center"
+                    >
+                      {bpm}
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}

@@ -38,8 +38,8 @@ const renderTaskLabel = (task: PracticeTask) => {
     const params = match[3] || "";
     const parsed = parseParams(tool, params) as Record<string, string | number>;
     const label =
-      tool === "metronome"
-        ? `${parsed.bpm} BPM`
+      tool === "metronome" || tool === "bpm"
+        ? `${parsed.bpm} BPM · ${parsed.signature}`
         : tool === "scale"
           ? parsed.label || `${parsed.root} ${parsed.type}`
           : tool === "chord"
@@ -56,11 +56,9 @@ const renderTaskLabel = (task: PracticeTask) => {
                       ? parsed.key || "Key"
                       : tool === "technique"
                         ? parsed.technique || "Technique"
-                        : tool === "bpm"
-                          ? `${parsed.bpm} BPM`
-                          : tool === "exercise"
-                            ? parsed.exercise || "Exercise"
-                            : params;
+                        : tool === "exercise"
+                          ? parsed.exercise || "Exercise"
+                          : params;
 
     parts.push(
       <span

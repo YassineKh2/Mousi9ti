@@ -100,7 +100,7 @@ const DashboardWidget: React.FC<DashboardWidgetProps> = ({
   <section
     draggable={false}
     data-dashboard-widget={widget.id}
-    className={`relative flex min-w-0 flex-1 flex-col transition-[transform,opacity] duration-200 ease-out ${editMode ? "rounded-xl" : ""} ${isDragging ? "scale-[1.02] opacity-60 shadow-2xl" : ""}`}
+    className={`relative flex min-w-0 flex-1 flex-col transition-[transform,opacity] duration-200 ease-out ${editMode ? "rounded-b-xl" : ""} ${isDragging ? "scale-[1.02] opacity-60 shadow-2xl" : ""}`}
   >
     {insertionPosition === "before" && insertionAxis === "vertical" && (
       <span className="pointer-events-none absolute -top-3 left-1 right-1 z-10 h-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--color-primary)]" />
@@ -115,11 +115,11 @@ const DashboardWidget: React.FC<DashboardWidgetProps> = ({
       <span className="pointer-events-none absolute -right-3 top-1 bottom-1 z-10 w-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--color-primary)]" />
     )}
     {editMode && (
-      <div className="pointer-events-none absolute inset-0 z-10 rounded-xl border-2 border-dashed border-primary/50 bg-primary/5" />
+      <div className="pointer-events-none absolute inset-0 z-10 rounded-b-xl border-2 border-dashed border-primary/50 bg-primary/5" />
     )}
     {editMode && (
       <div
-        className="relative z-20 flex cursor-grab items-center gap-2 rounded-t-xl border border-b-0 border-primary/30 bg-surface-container-high px-3 py-2 active:cursor-grabbing"
+        className="relative z-20 flex cursor-grab items-center gap-2 border border-b-0 border-primary/30 bg-surface-container-high px-3 py-2 active:cursor-grabbing"
         onPointerDown={(event) => {
           event.preventDefault();
           onPointerStart(widget.id);
@@ -166,7 +166,11 @@ const DashboardWidget: React.FC<DashboardWidgetProps> = ({
         </button>
       </div>
     )}
-    <div className="flex min-h-0 flex-1 flex-col *:h-full">{children}</div>
+    <div
+      className={`flex min-h-0 flex-1 flex-col *:h-full ${editMode ? "*:rounded-t-none" : ""}`}
+    >
+      {children}
+    </div>
   </section>
 );
 

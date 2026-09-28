@@ -729,7 +729,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 
       let label = tool;
       const p = parseParams(tool, params);
-      if (tool === "metronome") label = `${p.bpm} BPM`;
+      if (tool === "metronome") label = `${p.bpm} BPM · ${p.signature}`;
       else if (tool === "scale") label = p.label || `${p.root} ${p.type}`;
       else if (tool === "chord") label = p.label || `${p.root} ${p.type}`;
       else if (tool === "timer") label = `${p.minutes}m`;
@@ -737,7 +737,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       else if (tool === "tuning") label = p.tuning || "Tuning";
       else if (tool === "key") label = p.key || "Key";
       else if (tool === "technique") label = p.technique || "Technique";
-      else if (tool === "bpm") label = `${p.bpm} BPM`;
+      else if (tool === "bpm") label = `${p.bpm} BPM · ${p.signature}`;
       else if (tool === "exercise") label = p.exercise || "Exercise";
 
       parts.push(

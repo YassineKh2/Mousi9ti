@@ -112,9 +112,12 @@ export const parseParams = (tool: string, params: string) => {
   } else if (tool === "technique") {
     return { technique: params?.trim() || "Alternate Picking" };
   } else if (tool === "bpm") {
-    const rawBpm = (params || "").replace(/bpm/gi, "").trim();
+    const rawBpm = (parts[0] || "").replace(/bpm/gi, "").trim();
     const parsedBpm = parseInt(rawBpm, 10);
-    return { bpm: !isNaN(parsedBpm) && parsedBpm > 0 ? parsedBpm : 120 };
+    return {
+      bpm: !isNaN(parsedBpm) && parsedBpm > 0 ? parsedBpm : 120,
+      signature: parts[1] || "4/4",
+    };
   } else if (tool === "exercise") {
     return { exercise: params?.trim() || "Spider Drill" };
   }
