@@ -16,6 +16,8 @@ import {
   getSavedTaskAttributions,
   getSavedTimerPreferences,
   getTodayDateString,
+  clearSavedChordSelections,
+  clearSavedStatsData,
   recordPracticeActivity,
   replaceTaskAttributionsForSession,
   saveTaskAttribution,
@@ -40,7 +42,11 @@ import { ToolsPage } from "./pages/ToolsPage";
 import { StatsPage } from "./pages/StatsPage";
 import { RoutinePage } from "./pages/RoutinePage";
 import { ALL_ROOT_NOTES, SCALES_DATABASE } from "./data/musicTheory";
-import { CHORD_TYPES_CATALOG, getCustomChords } from "./data/chordsData";
+import {
+  CHORD_TYPES_CATALOG,
+  clearCustomChords,
+  getCustomChords,
+} from "./data/chordsData";
 import { GlobalSessionToast } from "./components/GlobalSessionToast";
 import { SettingsContext } from "./contexts/SettingsContext";
 import { TourOverlay } from "./components/TourOverlay";
@@ -48,6 +54,12 @@ import { getSavedPracticeTasks } from "./components/PracticeTasksWidget";
 import { SessionReviewModal } from "./components/SessionReviewModal";
 import { TaskCompletionModal } from "./components/TaskCompletionModal";
 import { parseTaskConfiguration } from "./lib/taskAutoConfig";
+import {
+  AppBackup,
+  BackupCategory,
+  downloadAppBackup,
+  restoreAppBackup,
+} from "./lib/appBackup";
 
 export function App() {
   type PendingScaleTarget = { scaleId: string; root: NoteName };
@@ -438,7 +450,6 @@ export function App() {
           tags: ["timer"],
           status: "completed",
         });
-        openSessionReview(durationSeconds);
       }
       if ("vibrate" in navigator) {
         navigator.vibrate([200, 450, 200, 450, 200]);
@@ -451,9 +462,9 @@ export function App() {
       audioEngine.playTimerCompletionSound(3, 0.65);
 
       if (
+        settings.timerNotificationsEnabled &&
         "Notification" in window &&
-        Notification.permission === "granted" &&
-        document.hidden
+        Notification.permission === "granted"
       ) {
         new Notification("Practice Timer Finished!", {
           body: "Your practice session is complete.",
@@ -463,8 +474,8 @@ export function App() {
     });
   }, [
     flushTaskAttribution,
-    openSessionReview,
     settings.stopMetronomeOnTimerEnd,
+    settings.timerNotificationsEnabled,
     timer,
   ]);
 
@@ -694,26 +705,30 @@ export function App() {
 
   // Export JSON data
   const handleExportData = () => {
-    const data = {
-      sessions,
-      streak,
-      settings,
-      exportDate: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Mousi9ti-practice-export-${getTodayDateString()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadAppBackup();
+  };
+
+  const handleImportFullData = (_backup: AppBackup) => {
+    restoreAppBackup(_backup);
+    window.location.reload();
+  };
+
+  const handleImportSelectedData = (
+    backup: AppBackup,
+    categories: BackupCategory[],
+  ) => {
+    restoreAppBackup(backup, categories);
+    window.location.reload();
   };
 
   // Clear data
   const handleClearData = () => {
     localStorage.clear();
+    window.location.reload();
+  };
+
+  const handleClearStatsData = () => {
+    clearSavedStatsData();
     setSessions([]);
     setStreak({
       currentStreak: 0,
@@ -722,10 +737,36 @@ export function App() {
       graceDaysUsed: 0,
       history: [],
     });
-    setIsSessionActive(false);
-    setActiveSessionDuration(0);
-    setCurrentSessionBpms([]);
-    setIsSettingsOpen(false);
+    setPracticeTasks((tasks) =>
+      tasks.map(
+        ({
+          attributedDurationSeconds,
+          manuallyConfirmedDurationSeconds,
+          ...task
+        }) => task,
+      ),
+    );
+    localStorage.removeItem("Mousi9ti_task_active_segment");
+    taskSegmentRef.current = null;
+    if (isSessionActive && activeTaskId) {
+      const startedAt = Date.now();
+      const sessionId =
+        localStorage.getItem("Mousi9ti_task_session_id") ||
+        `task-session-${startedAt}`;
+      taskSegmentRef.current = { taskId: activeTaskId, startedAt, sessionId };
+      localStorage.setItem(
+        "Mousi9ti_task_active_segment",
+        JSON.stringify(taskSegmentRef.current),
+      );
+    }
+    setSessionReview(null);
+  };
+
+  const handleClearSavedChords = () => {
+    clearCustomChords();
+    clearSavedChordSelections();
+    localStorage.removeItem("Mousi9ti_saved_progressions");
+    window.dispatchEvent(new Event("mousi9ti-saved-progressions-cleared"));
   };
 
   // Global Keyboard Shortcuts
@@ -1145,7 +1186,11 @@ export function App() {
           settings={settings}
           onUpdateSettings={handleUpdateSettings}
           onExportData={handleExportData}
+          onImportFullData={handleImportFullData}
+          onImportSelectedData={handleImportSelectedData}
           onClearData={handleClearData}
+          onClearStatsData={handleClearStatsData}
+          onClearSavedChords={handleClearSavedChords}
           onRestartTour={handleRestartTour}
           completionBehavior={timerPreferences.completionBehavior}
           onUpdateCompletionBehavior={(behavior) =>

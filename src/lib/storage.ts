@@ -48,11 +48,14 @@ const DEFAULT_SETTINGS: AppSettings = {
   fretboardTheme: "original",
   fretboardNoteSize: "medium",
   fretboardColorMode: "default",
+  fretboardNotesColored: false,
   fretboardMarkerShape: "round",
   fretboardMinimalDetails: false,
+  taskTagsColored: true,
   autoSaveSession: true,
   timerPresets: [3, 5, 10, 30],
   stopMetronomeOnTimerEnd: false,
+  timerNotificationsEnabled: true,
 };
 
 const DEFAULT_DASHBOARD_LAYOUT: DashboardLayoutData = {
@@ -379,6 +382,26 @@ export function saveChordSelections(chords: ChordSelection[]): void {
   } catch (e) {
     console.error("Failed to save chord selections", e);
   }
+}
+
+export function clearSavedChordSelections(): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CHORD_SELECTIONS, "[]");
+    window.dispatchEvent(new Event("mousi9ti-chord-selections-changed"));
+  } catch (e) {
+    console.error("Failed to clear chord selections", e);
+  }
+}
+
+export function clearSavedStatsData(): void {
+  [
+    STORAGE_KEYS.SESSIONS,
+    STORAGE_KEYS.STREAK,
+    STORAGE_KEYS.TASK_ACTIVITIES,
+    STORAGE_KEYS.PRACTICE_ACTIVITIES,
+    STORAGE_KEYS.TASK_TIME_ATTRIBUTIONS,
+    "fretmaster_streak_v1",
+  ].forEach((key) => localStorage.removeItem(key));
 }
 
 export function getSavedSessions(): Session[] {

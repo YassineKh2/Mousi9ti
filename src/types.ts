@@ -264,11 +264,14 @@ export interface AppSettings {
   fretboardTheme: FretboardTheme;
   fretboardNoteSize: "small" | "medium" | "large" | "xlarge";
   fretboardColorMode: "default" | "colorblind" | "monochrome";
+  fretboardNotesColored: boolean;
   fretboardMarkerShape: "round" | "square";
   fretboardMinimalDetails: boolean;
+  taskTagsColored: boolean;
   autoSaveSession: boolean;
   timerPresets: number[]; // in minutes
   stopMetronomeOnTimerEnd: boolean;
+  timerNotificationsEnabled: boolean;
 }
 
 export type DashboardWidgetId =

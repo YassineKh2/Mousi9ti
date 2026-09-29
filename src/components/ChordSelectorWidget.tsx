@@ -16,6 +16,8 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
   instrumentView,
 }) => {
   const loadChordSelections = (): ChordSelection[] => {
+    const hasSavedSelections =
+      localStorage.getItem("Mousi9ti_chord_selections_v1") !== null;
     const savedSelections = getSavedChordSelections();
     const normalizeType = (type: string) =>
       type === "maj" ? "major" : type === "min" ? "minor" : type;
@@ -40,7 +42,7 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
       }
     });
 
-    if (selections.length === 0) {
+    if (selections.length === 0 && !hasSavedSelections) {
       return [
         { root: "C", type: "maj" },
         { root: "G", type: "maj" },

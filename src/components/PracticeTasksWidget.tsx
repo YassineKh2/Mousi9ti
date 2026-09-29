@@ -46,13 +46,38 @@ import {
   UserTimerPreferences,
 } from "../types";
 import { getTaskDurationSeconds, recordTaskActivity } from "../lib/storage";
+import { useSettingsContext } from "../contexts/SettingsContext";
+import {
+  CUSTOM_TASK_TAGS_CHANGED_EVENT,
+  getSavedCustomTags,
+  rememberCustomTags,
+} from "../lib/customTaskTags";
 
 export type { PracticeTask } from "../types";
 
 const MENTION_REGEX =
   /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time)(?:\(([^)]*)\))?)/gi;
-const CUSTOM_TAGS_STORAGE_KEY = "mous9iti_custom_tags";
-const MAX_SAVED_CUSTOM_TAGS = 15;
+const TASK_TAG_COLOR_CLASSES: Record<string, string> = {
+  scale:
+    "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20",
+  chord:
+    "bg-violet-500/20 text-violet-300 border border-violet-500/40 hover:bg-violet-500/25",
+  timer:
+    "bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/25",
+  time: "bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/25",
+  custom:
+    "bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-500/25",
+  tuning:
+    "bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/25",
+  key: "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/25",
+  technique:
+    "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25",
+  bpm: "bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/25",
+  exercise:
+    "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/25",
+  metronome:
+    "bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/25",
+};
 const BPM_PRESETS = [
   "60",
   "80",
@@ -74,39 +99,6 @@ const TIME_SIGNATURES = [
   "9/8",
   "12/8",
 ];
-
-const getSavedCustomTags = (): string[] => {
-  try {
-    const saved = localStorage.getItem(CUSTOM_TAGS_STORAGE_KEY);
-    const tags: unknown = saved ? JSON.parse(saved) : [];
-    return Array.isArray(tags)
-      ? tags
-          .filter((tag): tag is string => typeof tag === "string")
-          .slice(0, MAX_SAVED_CUSTOM_TAGS)
-      : [];
-  } catch {
-    return [];
-  }
-};
-
-const rememberCustomTags = (text: string): string[] => {
-  const tags = [...text.matchAll(/@custom\(([^)]*)\)/gi)]
-    .map((match) => match[1].trim())
-    .filter(Boolean);
-  if (tags.length === 0) return getSavedCustomTags();
-
-  const updated = [...getSavedCustomTags()];
-  tags.forEach((tag) => {
-    const existingIndex = updated.findIndex(
-      (savedTag) => savedTag.toLowerCase() === tag.toLowerCase(),
-    );
-    if (existingIndex !== -1) updated.splice(existingIndex, 1);
-    updated.unshift(tag);
-  });
-  const limited = updated.slice(0, MAX_SAVED_CUSTOM_TAGS);
-  localStorage.setItem(CUSTOM_TAGS_STORAGE_KEY, JSON.stringify(limited));
-  return limited;
-};
 
 // Configuration parsing for rendering
 const parseParams = (tool: string, params: string) => {
@@ -571,6 +563,13 @@ export const InlineTaskRowEditor: React.FC<InlineTaskRowEditorProps> = ({
   }, [initialText]);
 
   useEffect(() => {
+    const refreshTags = () => setCustomTags(getSavedCustomTags());
+    window.addEventListener(CUSTOM_TASK_TAGS_CHANGED_EVENT, refreshTags);
+    return () =>
+      window.removeEventListener(CUSTOM_TASK_TAGS_CHANGED_EVENT, refreshTags);
+  }, []);
+
+  useEffect(() => {
     setSuggestionIndex(0);
   }, [text, cursor]);
 
@@ -789,6 +788,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   onTasksChange,
   onSetTaskManualDuration,
 }) => {
+  const settings = useSettingsContext();
   const [localTasks, setLocalTasks] = useState<PracticeTask[]>(
     getSavedPracticeTasks,
   );
@@ -820,6 +820,13 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
     if (!controlledTasks)
       localStorage.setItem("mous9iti_tasks", JSON.stringify(tasks));
   }, [tasks]);
+
+  useEffect(() => {
+    const refreshTags = () => setCustomTags(getSavedCustomTags());
+    window.addEventListener(CUSTOM_TASK_TAGS_CHANGED_EVENT, refreshTags);
+    return () =>
+      window.removeEventListener(CUSTOM_TASK_TAGS_CHANGED_EVENT, refreshTags);
+  }, []);
 
   useEffect(() => {
     setSuggestionIndex(0);
@@ -942,8 +949,9 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
       const currentMatchIndex = match.index;
 
       let Icon = Activity;
-      let badgeClass =
-        "bg-surface-container-high text-on-surface border border-outline-variant/40 hover:bg-surface-container-highest";
+      const badgeClass = settings.taskTagsColored
+        ? TASK_TAG_COLOR_CLASSES[tool] || TASK_TAG_COLOR_CLASSES.custom
+        : "border border-outline-variant/40 bg-surface-container-high text-on-surface-variant";
 
       if (tool === "scale") {
         Icon = Music;
@@ -994,11 +1002,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
               rect: e.currentTarget.getBoundingClientRect(),
             });
           }}
-          className={`inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-mono font-bold align-middle shadow-sm cursor-pointer transition-colors ${
-            task.completed
-              ? "bg-surface-container-high text-on-surface-variant hover:text-on-surface line-through opacity-70"
-              : badgeClass
-          }`}
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-mono font-bold align-middle shadow-sm cursor-pointer transition-colors ${badgeClass} ${task.completed ? "line-through" : ""}`}
         >
           <Icon size={12} />
           {label}
@@ -1647,6 +1651,14 @@ export const DropdownEditor: React.FC<{
   const [savedCustomTags, setSavedCustomTags] = useState(() =>
     getSavedCustomTags().slice(0, 7),
   );
+
+  useEffect(() => {
+    const refreshTags = () =>
+      setSavedCustomTags(getSavedCustomTags().slice(0, 7));
+    window.addEventListener(CUSTOM_TASK_TAGS_CHANGED_EVENT, refreshTags);
+    return () =>
+      window.removeEventListener(CUSTOM_TASK_TAGS_CHANGED_EVENT, refreshTags);
+  }, []);
 
   // Tuning search
   const [tuningQuery, setTuningQuery] = useState("");

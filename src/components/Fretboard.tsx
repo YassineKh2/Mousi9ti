@@ -13,6 +13,7 @@ export const Fretboard: React.FC<FretboardProps> = (props) => {
   const hasModifiers =
     settings.fretboardNoteSize !== "medium" ||
     settings.fretboardColorMode !== "default" ||
+    settings.fretboardNotesColored ||
     settings.fretboardMinimalDetails ||
     // OriginalFretboard's native markers are square-cornered, so "round" needs the dynamic engine
     settings.fretboardMarkerShape === "round";

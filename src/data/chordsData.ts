@@ -5327,6 +5327,13 @@ export function getCustomChords(): CustomChord[] {
   }
 }
 
+export function clearCustomChords(): void {
+  if (typeof localStorage === "undefined") return;
+
+  localStorage.removeItem(CUSTOM_CHORDS_KEY);
+  window.dispatchEvent(new CustomEvent("mousi9ti-custom-chords-changed"));
+}
+
 export function saveCustomChord(chord: CustomChord): void {
   if (typeof localStorage === "undefined") return;
 

@@ -9,6 +9,21 @@ import { useSettingsContext } from "../../contexts/SettingsContext";
 import { useFretboardLogic } from "./useFretboardLogic";
 import { FretboardProps } from "./OriginalFretboard";
 
+const PITCH_COLORS = [
+  "#b42318",
+  "#c2410c",
+  "#a16207",
+  "#4d7c0f",
+  "#15803d",
+  "#0f766e",
+  "#0e7490",
+  "#1d4ed8",
+  "#4338ca",
+  "#7e22ce",
+  "#a21caf",
+  "#be123c",
+];
+
 export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
   const settings = useSettingsContext();
   const logic = useFretboardLogic(props);
@@ -36,6 +51,7 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
   const isMinimal = settings.fretboardMinimalDetails;
   const theme = settings.fretboardTheme;
   const colorMode = settings.fretboardColorMode || "default";
+  const usePitchColors = settings.fretboardNotesColored;
 
   let boardBgClass = "bg-surface-container-highest/60";
   let wrapperBgClass = "bg-surface-container-low";
@@ -129,11 +145,14 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
 
   // Note rendering helper
   const markerShape = settings.fretboardMarkerShape || "round";
+  const getPitchColor = (noteSemitone: number) =>
+    PITCH_COLORS[noteSemitone % PITCH_COLORS.length];
   const getNoteClasses = (
     isRoot: boolean,
     isRandomActive: boolean,
     isPlayingActive: boolean,
     isLegend: boolean = false,
+    noteSemitone?: number,
   ) => {
     let classes = `${isLegend ? currSize.openBtn : currSize.noteBtn} flex items-center justify-center font-mono font-bold transition-transform shadow-md `;
 
@@ -151,6 +170,10 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
         classes +
         "bg-secondary text-on-secondary scale-110 shadow-lg border-2 border-on-secondary "
       );
+    }
+
+    if (usePitchColors && noteSemitone !== undefined && !isLegend) {
+      return classes + "text-white font-black shadow-sm ";
     }
 
     if (colorMode === "monochrome") {
@@ -385,7 +408,19 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
                             isRoot,
                             isRandomActive,
                             isPlayingActive,
+                            false,
+                            noteSemitone,
                           )}
+                          style={
+                            usePitchColors
+                              ? {
+                                  backgroundColor: isRoot
+                                    ? "#facc15"
+                                    : getPitchColor(noteSemitone),
+                                  color: isRoot ? "#111827" : "#ffffff",
+                                }
+                              : undefined
+                          }
                         >
                           {displayText}
                         </button>
@@ -459,7 +494,19 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
                                   isRoot,
                                   isRandomActive,
                                   isPlayingActive,
+                                  false,
+                                  noteSemitone,
                                 ) + " hover:scale-125 z-30"
+                              }
+                              style={
+                                usePitchColors
+                                  ? {
+                                      backgroundColor: isRoot
+                                        ? "#facc15"
+                                        : getPitchColor(noteSemitone),
+                                      color: isRoot ? "#111827" : "#ffffff",
+                                    }
+                                  : undefined
                               }
                             >
                               {displayText}
@@ -496,7 +543,14 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
             Note Markers:
           </span>
           <div className="flex items-center gap-1.5 font-mono text-[10px]">
-            <div className={getNoteClasses(true, false, false, true)}>
+            <div
+              className={getNoteClasses(true, false, false, true)}
+              style={
+                usePitchColors
+                  ? { backgroundColor: "#facc15", color: "#111827" }
+                  : undefined
+              }
+            >
               <span className="scale-[0.8] block">R</span>
             </div>
             <span className="text-on-surface">Root Note</span>
