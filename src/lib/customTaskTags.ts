@@ -1,6 +1,10 @@
 const CUSTOM_TAGS_STORAGE_KEY = "mous9iti_custom_tags";
 const MAX_SAVED_CUSTOM_TAGS = 15;
-export const CUSTOM_TAG_CATEGORIES = ["general", "exercise", "technique"] as const;
+export const CUSTOM_TAG_CATEGORIES = [
+  "general",
+  "exercise",
+  "technique",
+] as const;
 export type CustomTagCategory = (typeof CUSTOM_TAG_CATEGORIES)[number];
 export interface SavedCustomTag {
   name: string;
@@ -71,7 +75,8 @@ export const rememberCustomTags = (text: string): string[] => {
     const existingIndex = updated.findIndex(
       (savedTag) => savedTag.name.toLowerCase() === tag.toLowerCase(),
     );
-    const existing = existingIndex !== -1 ? updated.splice(existingIndex, 1)[0] : null;
+    const existing =
+      existingIndex !== -1 ? updated.splice(existingIndex, 1)[0] : null;
     updated.unshift({ name: tag, category: existing?.category ?? "general" });
   });
   const limited = updated.slice(0, MAX_SAVED_CUSTOM_TAGS);

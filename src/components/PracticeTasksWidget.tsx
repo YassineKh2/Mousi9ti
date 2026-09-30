@@ -45,7 +45,11 @@ import {
   TaskCompletionBehavior,
   UserTimerPreferences,
 } from "../types";
-import { getTaskDurationSeconds, recordTaskActivity } from "../lib/storage";
+import {
+  getTaskDurationSeconds,
+  purgeTaskActivities,
+  setTaskCompletion,
+} from "../lib/storage";
 import { useSettingsContext } from "../contexts/SettingsContext";
 import {
   CUSTOM_TASK_TAGS_CHANGED_EVENT,
@@ -56,7 +60,7 @@ import {
 export type { PracticeTask } from "../types";
 
 const MENTION_REGEX =
-  /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time)(?:\(([^)]*)\))?)/gi;
+  /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time|random)(?:\(([^)]*)\))?)/gi;
 const TASK_TAG_COLOR_CLASSES: Record<string, string> = {
   scale:
     "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20",
@@ -77,6 +81,8 @@ const TASK_TAG_COLOR_CLASSES: Record<string, string> = {
     "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/25",
   metronome:
     "bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/25",
+  random:
+    "bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/25",
 };
 const BPM_PRESETS = [
   "60",
@@ -145,6 +151,31 @@ const parseParams = (tool: string, params: string) => {
     };
   } else if (tool === "exercise") {
     return { exercise: params?.trim() || "Spider Drill" };
+  } else if (tool === "random") {
+    const values = parts.map((value) => value.toLowerCase());
+    const hasInterval = [
+      "1s",
+      "2s",
+      "5s",
+      "10s",
+      "15s",
+      "20s",
+      "30s",
+      "60s",
+    ].includes(values[1]);
+    return {
+      accidentalMode: ["both", "sharps", "flats", "naturals"].includes(
+        values[0],
+      )
+        ? values[0]
+        : "both",
+      autoAdvance: hasInterval,
+      interval: ["1s", "2s", "5s", "10s", "15s", "20s", "30s", "60s"].includes(
+        values[1],
+      )
+        ? values[1]
+        : "5s",
+    };
   }
   return {};
 };
@@ -262,6 +293,7 @@ const getMentionSuggestions = (
         subLabel: "Metronome BPM & signature",
       },
       { name: "timer", label: "@timer", subLabel: "Practice timer (minutes)" },
+      { name: "random", label: "@random", subLabel: "Random note settings" },
     ];
     return tools
       .filter((t) => t.name.startsWith(ctx.query))
@@ -438,6 +470,28 @@ const getMentionSuggestions = (
             subLabel: "Duration",
           }));
       }
+    } else if (ctx.tool === "random") {
+      if (ctx.paramIndex === 0) {
+        return ["both", "sharps", "flats", "naturals"]
+          .filter((mode) => !ctx.query || mode.startsWith(ctx.query))
+          .map((mode) => ({
+            label: mode[0].toUpperCase() + mode.slice(1),
+            value: mode,
+            subLabel: "Accidental mode",
+          }));
+      }
+      if (ctx.paramIndex === 1) {
+        return ["1s", "2s", "5s", "10s", "15s", "20s", "30s", "60s"]
+          .filter((interval) => !ctx.query || interval.startsWith(ctx.query))
+          .map((interval) => ({
+            label: interval,
+            value: interval,
+            subLabel: "Auto-advance interval",
+          }));
+      }
+      if (ctx.paramIndex === 2) {
+        return [];
+      }
     }
   }
   return [];
@@ -492,6 +546,7 @@ const applyMentionSuggestion = (
     let isLast = false;
     if (ctx.tool === "metronome" && ctx.paramIndex === 1) isLast = true;
     if (ctx.tool === "timer" && ctx.paramIndex === 0) isLast = true;
+    if (ctx.tool === "random" && ctx.paramIndex === 1) isLast = true;
 
     const suffix = isLast ? ") " : ",";
 
@@ -517,11 +572,11 @@ const applyMentionSuggestion = (
 
 const renderHighlights = (text: string) => {
   const parts = text.split(
-    /(@(?:custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer)(?:\([^)]*\)?)?)/gi,
+    /(@(?:custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time|random)(?:\([^)]*\)?)?)/gi,
   );
   return parts.map((part, i) => {
     if (
-      /^@(?:custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer)/i.test(
+      /^@(?:custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time|random)/i.test(
         part,
       )
     ) {
@@ -852,16 +907,14 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
       return;
     }
     const nextCompleted = !task.completed;
-    if (nextCompleted) {
-      recordTaskActivity(task, "started");
-      recordTaskActivity(task, "completed");
-    }
+    setTaskCompletion(task, nextCompleted);
     setTasks(
       tasks.map((t) => (t.id === id ? { ...t, completed: nextCompleted } : t)),
     );
   };
   const deleteTask = (id: string) => {
     if (editingTaskId === id) setEditingTaskId(null);
+    purgeTaskActivities(id);
     setTasks(tasks.filter((t) => t.id !== id));
   };
 
@@ -985,6 +1038,15 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
       else if (tool === "technique") label = p.technique || "Technique";
       else if (tool === "bpm") label = `${p.bpm} BPM · ${p.signature}`;
       else if (tool === "exercise") label = p.exercise || "Exercise";
+      else if (tool === "random") {
+        const modeLabels: Record<string, string> = {
+          both: "all notes",
+          sharps: "sharp notes",
+          flats: "flat notes",
+          naturals: "natural notes",
+        };
+        label = `random (${modeLabels[p.accidentalMode] || "all notes"})${p.autoAdvance ? ` · auto advance for ${p.interval}` : ""}`;
+      }
 
       parts.push(
         <button
@@ -1689,6 +1751,12 @@ export const DropdownEditor: React.FC<{
   const [minutesStr, setMinutesStr] = useState(
     initial.minutes ? String(initial.minutes) : "5",
   );
+  const [randomMode, setRandomMode] = useState(
+    initial.accidentalMode || "both",
+  );
+  const [randomInterval, setRandomInterval] = useState(
+    initial.autoAdvance ? initial.interval : "",
+  );
 
   const initialDisplay =
     initial.label ||
@@ -2054,6 +2122,80 @@ export const DropdownEditor: React.FC<{
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Random-note mention editor */}
+          {active.tool === "random" && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">
+                Note Selection
+              </label>
+              <div className="grid grid-cols-2 gap-1">
+                {[
+                  ["both", "All notes"],
+                  ["naturals", "Natural notes"],
+                  ["sharps", "Sharp notes"],
+                  ["flats", "Flat notes"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setRandomMode(value);
+                      onSave(
+                        randomInterval ? `${value},${randomInterval}` : value,
+                        false,
+                      );
+                    }}
+                    className={`rounded px-2 py-1 text-left text-xs font-mono transition-colors ${
+                      randomMode === value
+                        ? "bg-primary text-on-primary font-bold"
+                        : "bg-surface-container-highest text-on-surface hover:bg-sky-500/20 hover:text-sky-300"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <span className="mt-1 text-[9px] text-on-surface-variant uppercase font-mono font-bold tracking-wider">
+                Auto Advance
+              </span>
+              <div className="grid grid-cols-4 gap-1">
+                {["1s", "2s", "5s", "10s", "15s", "20s", "30s", "60s"].map(
+                  (interval) => (
+                    <button
+                      key={interval}
+                      type="button"
+                      onClick={() => {
+                        setRandomInterval(interval);
+                        onSave(`${randomMode},${interval}`, true);
+                      }}
+                      className={`rounded px-1 py-1 text-xs font-mono transition-colors ${
+                        randomInterval === interval
+                          ? "bg-primary text-on-primary font-bold"
+                          : "bg-surface-container-highest text-on-surface hover:bg-sky-500/20 hover:text-sky-300"
+                      }`}
+                    >
+                      {interval}
+                    </button>
+                  ),
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setRandomInterval("");
+                  onSave(randomMode, true);
+                }}
+                className={`rounded px-2 py-1 text-xs font-mono transition-colors ${
+                  !randomInterval
+                    ? "bg-primary text-on-primary font-bold"
+                    : "bg-surface-container-highest text-on-surface hover:bg-sky-500/20 hover:text-sky-300"
+                }`}
+              >
+                Manual advance
+              </button>
             </div>
           )}
 

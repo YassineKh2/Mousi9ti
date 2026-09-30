@@ -78,6 +78,32 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: "stats", label: "STATS", icon: <BarChart3 size={18} /> },
   ];
 
+  const [highlightedIndex, setHighlightedIndex] = React.useState(-1);
+  const optionRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
+
+  React.useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [searchQuery, searchResults]);
+
+  React.useEffect(() => {
+    if (highlightedIndex < 0) return;
+    optionRefs.current[highlightedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [highlightedIndex]);
+
+  React.useEffect(() => {
+    if (!searchQuery) return;
+
+    const handleGlobalSearchEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onSearchChange("");
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalSearchEscape);
+    return () =>
+      window.removeEventListener("keydown", handleGlobalSearchEscape);
+  }, [onSearchChange, searchQuery]);
+
   return (
     <>
       {/* Desktop Persistent Left Sidebar */}
@@ -219,26 +245,88 @@ export const Navigation: React.FC<NavigationProps> = ({
             />
             <input
               type="text"
-              placeholder="Search theory, scales, chords..."
+              role="combobox"
+              aria-expanded={searchQuery.trim().length > 0}
+              aria-controls="global-search-listbox"
+              aria-autocomplete="list"
+              aria-activedescendant={
+                highlightedIndex >= 0 && searchResults[highlightedIndex]
+                  ? `global-search-option-${searchResults[highlightedIndex].id}`
+                  : undefined
+              }
+              placeholder="Search pages, scales, chords..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  onSearchChange("");
+                  return;
+                }
+                if (!searchQuery.trim() || searchResults.length === 0) return;
+
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setHighlightedIndex((prev) =>
+                    prev < searchResults.length - 1 ? prev + 1 : 0,
+                  );
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setHighlightedIndex((prev) =>
+                    prev > 0 ? prev - 1 : searchResults.length - 1,
+                  );
+                } else if (e.key === "Tab") {
+                  e.preventDefault();
+                  setHighlightedIndex((prev) =>
+                    e.shiftKey
+                      ? prev > 0
+                        ? prev - 1
+                        : searchResults.length - 1
+                      : prev < searchResults.length - 1
+                        ? prev + 1
+                        : 0,
+                  );
+                } else if (e.key === "Enter") {
+                  e.preventDefault();
+                  const target =
+                    highlightedIndex >= 0
+                      ? searchResults[highlightedIndex]
+                      : searchResults[0];
+                  if (target) onSelectSearchResult(target);
+                }
+              }}
               className="w-full bg-surface-container border border-outline-variant/30 rounded py-1.5 pl-9 pr-4 text-xs font-mono text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
             />
 
             {searchQuery.trim().length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-outline-variant/40 rounded-lg shadow-2xl overflow-hidden z-50">
+              <div
+                id="global-search-listbox"
+                role="listbox"
+                className="absolute top-full left-0 right-0 mt-2 bg-surface border border-outline-variant/40 rounded-lg shadow-2xl overflow-hidden z-50"
+              >
                 {searchResults.length === 0 ? (
                   <div className="px-3 py-2.5 text-xs font-mono text-on-surface-variant">
                     No results found
                   </div>
                 ) : (
                   <div className="max-h-72 overflow-y-auto">
-                    {searchResults.map((result) => (
+                    {searchResults.map((result, index) => (
                       <button
                         key={result.id}
+                        ref={(el) => {
+                          optionRefs.current[index] = el;
+                        }}
+                        id={`global-search-option-${result.id}`}
+                        role="option"
+                        aria-selected={index === highlightedIndex}
                         type="button"
+                        tabIndex={-1}
                         onClick={() => onSelectSearchResult(result)}
-                        className="w-full text-left px-3 py-2.5 border-b last:border-b-0 border-outline-variant/20 hover:bg-surface-container-low transition-colors"
+                        onMouseEnter={() => setHighlightedIndex(index)}
+                        className={`w-full text-left px-3 py-2.5 border-b last:border-b-0 border-outline-variant/20 outline-none transition-colors ${
+                          index === highlightedIndex
+                            ? "bg-surface-container-highest"
+                            : "hover:bg-surface-container-low"
+                        }`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-mono font-bold text-on-surface truncate">
@@ -275,7 +363,10 @@ export const Navigation: React.FC<NavigationProps> = ({
       </header>
 
       {/* Mobile Bottom Tab Bar */}
-      <nav data-tour="sidebar-nav" className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-container-lowest border-t border-outline-variant/30 z-50 flex items-center justify-start gap-1 overflow-x-auto px-2 no-scrollbar">
+      <nav
+        data-tour="sidebar-nav"
+        className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-container-lowest border-t border-outline-variant/30 z-50 flex items-center justify-start gap-1 overflow-x-auto px-2 no-scrollbar"
+      >
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
           return (

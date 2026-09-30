@@ -74,7 +74,7 @@ export const COMMON_EXERCISES = [
 ];
 
 export const MENTION_REGEX =
-  /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time)(?:\(([^)]*)\))?)/gi;
+  /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time|random)(?:\(([^)]*)\))?)/gi;
 
 export const parseParams = (tool: string, params: string) => {
   const parts = params ? params.split(",").map((p) => p.trim()) : [];
@@ -120,6 +120,31 @@ export const parseParams = (tool: string, params: string) => {
     };
   } else if (tool === "exercise") {
     return { exercise: params?.trim() || "Spider Drill" };
+  } else if (tool === "random") {
+    const values = parts.map((value) => value.toLowerCase());
+    const hasInterval = [
+      "1s",
+      "2s",
+      "5s",
+      "10s",
+      "15s",
+      "20s",
+      "30s",
+      "60s",
+    ].includes(values[1]);
+    return {
+      accidentalMode: ["both", "sharps", "flats", "naturals"].includes(
+        values[0],
+      )
+        ? values[0]
+        : "both",
+      autoAdvance: hasInterval,
+      interval: ["1s", "2s", "5s", "10s", "15s", "20s", "30s", "60s"].includes(
+        values[1],
+      )
+        ? values[1]
+        : "5s",
+    };
   }
   return {};
 };
@@ -236,6 +261,7 @@ export const getMentionSuggestions = (
       },
       { name: "timer", label: "@timer", subLabel: "Practice timer (minutes)" },
       { name: "time", label: "@time", subLabel: "Planned task time (minutes)" },
+      { name: "random", label: "@random", subLabel: "Random note settings" },
     ];
     return tools
       .filter((t) => t.name.startsWith(ctx.query))

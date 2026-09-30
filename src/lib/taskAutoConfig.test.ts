@@ -57,6 +57,24 @@ describe("parseTaskConfiguration", () => {
     assert.equal(config.timeSignature, "4/4");
   });
 
+  it("parses random-note drill settings from an @random mention", () => {
+    const config = parseTaskConfiguration(
+      "Find notes with @random(naturals,2s)",
+    );
+    assert.deepEqual(config.randomNote, {
+      accidentalMode: "naturals",
+      interval: "2s",
+      autoAdvance: true,
+    });
+    assert.equal(hasRecognizedConfiguration(config), true);
+
+    const longIntervalConfig = parseTaskConfiguration(
+      "Review notes with @random(both,60s)",
+    );
+    assert.equal(longIntervalConfig.randomNote?.interval, "60s");
+    assert.equal(longIntervalConfig.randomNote?.autoAdvance, true);
+  });
+
   it("parses a supported time signature from a metronome mention", () => {
     const config = parseTaskConfiguration("Play along with @metronome(90,3/4)");
     assert.equal(config.bpm, 90);

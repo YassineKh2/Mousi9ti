@@ -50,6 +50,23 @@ export type TimeSignature =
   | "9/8"
   | "12/8";
 
+export type RandomNoteAccidentalMode = "both" | "sharps" | "flats" | "naturals";
+export type RandomNoteInterval =
+  | "1s"
+  | "2s"
+  | "5s"
+  | "10s"
+  | "15s"
+  | "20s"
+  | "30s"
+  | "60s";
+
+export interface RandomNoteSettings {
+  accidentalMode: RandomNoteAccidentalMode;
+  autoAdvance: boolean;
+  interval: RandomNoteInterval;
+}
+
 export interface Tuning {
   name: string;
   strings: NoteName[]; // 6 strings from 6th (lowest) to 1st (highest) e.g., ['E', 'A', 'D', 'G', 'B', 'E']
@@ -217,6 +234,7 @@ export type TaskAttributionSource = "automatic" | "manual";
 export interface TaskTimeAttribution {
   id: string;
   sessionId: string;
+  practiceSessionId?: string;
   taskId: string;
   durationSeconds: number;
   startedAt: number;

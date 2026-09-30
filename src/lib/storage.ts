@@ -65,21 +65,23 @@ const DEFAULT_DASHBOARD_LAYOUT: DashboardLayoutData = {
       widgets: [
         { id: "metronome", title: "Metronome" },
         { id: "timer", title: "Practice Timer" },
-        { id: "random-drill", title: "Random Note Drill" },
-        { id: "session", title: "Practice Streak" },
+        { id: "session", title: "Practice Tracker" },
       ],
     },
     {
       id: "row-2",
-      widgets: [{ id: "practice-tasks", title: "Daily Practice Goals" }],
+      widgets: [{ id: "instruments", title: "Scale Overlay / Instrument" }],
     },
     {
       id: "row-3",
-      widgets: [{ id: "instruments", title: "Instruments" }],
+      widgets: [
+        { id: "practice-tasks", title: "Daily Practice Goals" },
+        { id: "random-drill", title: "Random Note Drill" },
+      ],
     },
     {
       id: "row-4",
-      widgets: [{ id: "chord-selector", title: "Chord Selector" }],
+      widgets: [{ id: "chord-selector", title: "Chords" }],
     },
   ],
   hiddenWidgets: [],
@@ -523,12 +525,21 @@ export function recordTaskActivity(
 ): void {
   try {
     const now = Date.now();
+    const today = getTodayDateString();
+    // A task can only be started/completed once per day; re-toggling must not inflate counts.
+    const alreadyLogged = getSavedTaskActivities().some(
+      (activity) =>
+        activity.taskId === task.id &&
+        activity.kind === kind &&
+        activity.date === today,
+    );
+    if (alreadyLogged) return;
     const metadata = getTaskMetadata(task.text);
     const activity: TaskActivity = {
       id: `task-activity-${now}-${Math.random().toString(36).slice(2, 7)}`,
       taskId: task.id,
       taskText: task.text,
-      date: getTodayDateString(),
+      date: today,
       timestamp: now,
       kind,
       durationSeconds: kind === "completed" ? metadata.durationSeconds : 0,
@@ -547,6 +558,60 @@ export function recordTaskActivity(
     if (kind === "completed") recordPracticeDay(activity.date, 0);
   } catch (e) {
     console.error("Failed to record task activity", e);
+  }
+}
+
+/** Undo today's completion event for a task (used when a task is unchecked). */
+export function removeTaskCompletion(taskId: string): void {
+  try {
+    const today = getTodayDateString();
+    const activities = getSavedTaskActivities();
+    const remaining = activities.filter(
+      (activity) =>
+        !(
+          activity.taskId === taskId &&
+          activity.kind === "completed" &&
+          activity.date === today
+        ),
+    );
+    if (remaining.length === activities.length) return;
+    localStorage.setItem(
+      STORAGE_KEYS.TASK_ACTIVITIES,
+      JSON.stringify(remaining),
+    );
+  } catch (e) {
+    console.error("Failed to remove task completion", e);
+  }
+}
+
+/** Single entry point for check/uncheck so every surface counts completions identically. */
+export function setTaskCompletion(
+  task: Pick<PracticeTask, "id" | "text">,
+  completed: boolean,
+): void {
+  if (completed) {
+    recordTaskActivity(task, "started");
+    recordTaskActivity(task, "completed");
+  } else {
+    removeTaskCompletion(task.id);
+  }
+}
+
+/** Drop today's logged activity for a deleted task so stats don't count a task that no longer exists. */
+export function purgeTaskActivities(taskId: string): void {
+  try {
+    const today = getTodayDateString();
+    const activities = getSavedTaskActivities();
+    const remaining = activities.filter(
+      (activity) => !(activity.taskId === taskId && activity.date === today),
+    );
+    if (remaining.length === activities.length) return;
+    localStorage.setItem(
+      STORAGE_KEYS.TASK_ACTIVITIES,
+      JSON.stringify(remaining),
+    );
+  } catch (e) {
+    console.error("Failed to purge task activities", e);
   }
 }
 

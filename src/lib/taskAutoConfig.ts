@@ -1,4 +1,9 @@
-import { NoteName, TimeSignature } from "../types";
+import {
+  NoteName,
+  RandomNoteAccidentalMode,
+  RandomNoteInterval,
+  TimeSignature,
+} from "../types";
 import {
   ALL_ROOT_NOTES,
   GUITAR_TUNINGS,
@@ -10,6 +15,11 @@ import { MENTION_REGEX, parseParams } from "../utils/taskMentions";
 // Normalized, partial dashboard configuration recognized from a task's text.
 // Every field is optional: only confidently recognized values are populated.
 export interface TaskConfiguration {
+  randomNote?: {
+    accidentalMode: RandomNoteAccidentalMode;
+    autoAdvance: boolean;
+    interval: RandomNoteInterval;
+  };
   scale?: { root: NoteName; scaleId: string; label: string };
   chord?: { root: NoteName; type: string; label: string };
   tuning?: string;
@@ -113,6 +123,35 @@ function parseFromMentions(text: string): TaskConfiguration {
     } else if (tool === "tuning" && !config.tuning) {
       const parsed = parseParams("tuning", params);
       if (parsed.tuning) config.tuning = parsed.tuning;
+    } else if (tool === "random" && !config.randomNote) {
+      const values = params
+        .split(",")
+        .map((value) => value.trim().toLowerCase());
+      const modes: RandomNoteAccidentalMode[] = [
+        "both",
+        "sharps",
+        "flats",
+        "naturals",
+      ];
+      const intervals: RandomNoteInterval[] = [
+        "1s",
+        "2s",
+        "5s",
+        "10s",
+        "15s",
+        "20s",
+        "30s",
+        "60s",
+      ];
+      config.randomNote = {
+        accidentalMode: modes.includes(values[0] as RandomNoteAccidentalMode)
+          ? (values[0] as RandomNoteAccidentalMode)
+          : "both",
+        interval: intervals.includes(values[1] as RandomNoteInterval)
+          ? (values[1] as RandomNoteInterval)
+          : "5s",
+        autoAdvance: intervals.includes(values[1] as RandomNoteInterval),
+      };
     }
 
     if (tool === "bpm" || tool === "metronome") config.startMetronome = true;
@@ -298,7 +337,8 @@ export function hasRecognizedConfiguration(config: TaskConfiguration): boolean {
     config.tuning !== undefined ||
     config.bpm !== undefined ||
     config.timeSignature !== undefined ||
-    config.durationMinutes !== undefined
+    config.durationMinutes !== undefined ||
+    config.randomNote !== undefined
   );
 }
 
@@ -315,6 +355,17 @@ export function formatConfigurationSummary(
   }
   if (config.durationMinutes !== undefined) {
     parts.push(`Duration: ${config.durationMinutes} min`);
+  }
+  if (config.randomNote) {
+    const modeLabels: Record<RandomNoteAccidentalMode, string> = {
+      both: "all notes",
+      sharps: "sharp notes",
+      flats: "flat notes",
+      naturals: "natural notes",
+    };
+    parts.push(
+      `Random note: ${modeLabels[config.randomNote.accidentalMode]}${config.randomNote.autoAdvance ? ` · auto advance for ${config.randomNote.interval}` : ""}`,
+    );
   }
   if (config.startMetronome) parts.push("Metronome: started");
   return parts;

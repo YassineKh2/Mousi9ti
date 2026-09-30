@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Flame, Clock, CheckCircle2, Play, Pause } from "lucide-react";
 import { StreakData } from "../types";
+import { MENTION_REGEX } from "../utils/taskMentions";
 
 interface SessionWidgetProps {
   streak: StreakData;
@@ -14,6 +15,43 @@ interface SessionWidgetProps {
   activeTaskTitle?: string;
   highestBpmSession?: number;
 }
+
+const renderFocusTitle = (title: string): React.ReactNode => {
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  MENTION_REGEX.lastIndex = 0;
+
+  while ((match = MENTION_REGEX.exec(title)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(
+        <span key={`focus-text-${lastIndex}`}>
+          {title.slice(lastIndex, match.index)}
+        </span>,
+      );
+    }
+
+    const tool = match[2].toLowerCase();
+    const label = match[3]?.trim() || tool;
+    parts.push(
+      <span
+        key={`focus-tag-${match.index}`}
+        className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded border border-primary/30 bg-primary/10 text-primary font-bold align-middle"
+      >
+        {label}
+      </span>,
+    );
+    lastIndex = MENTION_REGEX.lastIndex;
+  }
+
+  if (lastIndex < title.length) {
+    parts.push(
+      <span key={`focus-text-${lastIndex}`}>{title.slice(lastIndex)}</span>,
+    );
+  }
+
+  return parts.length > 0 ? parts : title;
+};
 
 export const SessionWidget: React.FC<SessionWidgetProps> = ({
   streak,
@@ -71,9 +109,11 @@ export const SessionWidget: React.FC<SessionWidgetProps> = ({
         </span>
         <span className="text-[10px] font-mono text-on-surface-variant tracking-wider mt-1 text-center line-clamp-2">
           FOCUS:{" "}
-          <span className="text-primary">
-            {activeTaskTitle || currentScaleName}
-          </span>{" "}
+          {activeTaskTitle ? (
+            renderFocusTitle(activeTaskTitle)
+          ) : (
+            <span className="text-primary">{currentScaleName}</span>
+          )}{" "}
           (Peak {highestBpmSession} BPM)
         </span>
       </div>

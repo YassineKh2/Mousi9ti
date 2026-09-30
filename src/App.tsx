@@ -19,11 +19,13 @@ import {
   clearSavedChordSelections,
   clearSavedStatsData,
   recordPracticeActivity,
+  recordTaskActivity,
   replaceTaskAttributionsForSession,
   saveTaskAttribution,
   saveSession,
   saveSettings,
   saveTimerPreferences,
+  setTaskCompletion,
 } from "./lib/storage";
 import { audioEngine } from "./lib/audio";
 import { useTimer } from "./lib/useTimer";
@@ -142,6 +144,7 @@ export function App() {
   const [timerPreferences, setTimerPreferences] =
     useState<UserTimerPreferences>(() => getSavedTimerPreferences());
   const [sessionReview, setSessionReview] = useState<{
+    practiceSessionId: string;
     globalDurationSeconds: number;
     tasks: PracticeTask[];
     attributedSeconds: Record<string, number>;
@@ -310,6 +313,7 @@ export function App() {
   const makeTaskActive = (taskId: string | null) => {
     const task = practiceTasks.find((item) => item.id === taskId);
     if (task?.completed) return;
+    if (task) recordTaskActivity(task, "started");
     setActiveTaskId(taskId);
     if (taskId) localStorage.setItem("Mousi9ti_active_task_id", taskId);
     else localStorage.removeItem("Mousi9ti_active_task_id");
@@ -319,6 +323,7 @@ export function App() {
     const task = practiceTasks.find((item) => item.id === taskId);
     if (!task) return;
     const completed = !task.completed;
+    setTaskCompletion(task, completed);
     setPracticeTasks((current) =>
       current.map((item) =>
         item.id === taskId ? { ...item, completed } : item,
@@ -385,6 +390,7 @@ export function App() {
       Object.entries(durations).map(([taskId, minutes]) => ({
         id: `reviewed-${sessionId}-${taskId}`,
         sessionId,
+        practiceSessionId: sessionReview?.practiceSessionId,
         taskId,
         durationSeconds: Math.max(0, minutes * 60),
         startedAt: now,
@@ -411,7 +417,7 @@ export function App() {
   };
 
   const openSessionReview = useCallback(
-    (globalDurationSeconds: number) => {
+    (globalDurationSeconds: number, practiceSessionId: string) => {
       const sessionId = localStorage.getItem("Mousi9ti_task_session_id");
       const sessionAttributions = getSavedTaskAttributions().filter(
         (attribution) =>
@@ -425,10 +431,10 @@ export function App() {
           (totals[attribution.taskId] || 0) + attribution.durationSeconds;
         return totals;
       }, {});
-      const involvedTaskIds = new Set(Object.keys(attributedSeconds));
       setSessionReview({
+        practiceSessionId,
         globalDurationSeconds,
-        tasks: practiceTasks.filter((task) => involvedTaskIds.has(task.id)),
+        tasks: practiceTasks,
         attributedSeconds,
       });
     },
@@ -595,6 +601,7 @@ export function App() {
   // remembering its state so resuming brings both back exactly as they were.
   const handlePauseDailyTasks = () => {
     handlePauseSession();
+    window.dispatchEvent(new Event("random-drill-pause"));
     if (timer.status === "running") {
       timer.pause();
     }
@@ -606,6 +613,7 @@ export function App() {
 
   const handleResumeDailyTasks = () => {
     handleResumeSession();
+    window.dispatchEvent(new Event("random-drill-resume"));
     if (timer.status === "paused") {
       timer.resume();
     }
@@ -636,7 +644,6 @@ export function App() {
 
     const today = getTodayDateString();
     flushTaskAttribution(Date.now());
-    openSessionReview(activeSessionDuration);
     const highestBpm =
       currentSessionBpms.length > 0
         ? Math.max(...currentSessionBpms)
@@ -651,12 +658,13 @@ export function App() {
       bpmsUsed:
         currentSessionBpms.length > 0 ? currentSessionBpms : [metronomeBpm],
       highestBpm,
-      scalesPracticed: ["Fretboard Theory & Metronome"],
+      scalesPracticed: [],
       exercisesOpened: [],
-      focus: "Fretboard Theory & Metronome Technique",
+      focus: "General practice",
       completed: true,
     };
 
+    openSessionReview(activeSessionDuration, newSession.id);
     saveSession(newSession);
     setSessions(getSavedSessions());
     setStreak(getSavedStreak());
@@ -916,6 +924,13 @@ export function App() {
         label: "Builder",
         subtitle: "Progression and arrangement builder",
         tab: "builder",
+        kind: "tab",
+      },
+      {
+        id: "tab-routine",
+        label: "Routine",
+        subtitle: "Plan and track your practice routine",
+        tab: "routine",
         kind: "tab",
       },
       // Hidden until further improvement

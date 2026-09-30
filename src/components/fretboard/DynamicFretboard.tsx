@@ -168,7 +168,9 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
     if (isRandomActive && !isLegend) {
       return (
         classes +
-        "bg-secondary text-on-secondary scale-110 shadow-lg border-2 border-on-secondary "
+        (usePitchColors
+          ? `bg-secondary text-on-secondary scale-110 shadow-lg ring-2 ${settings.theme === "light" ? "ring-black" : "ring-white"} `
+          : "bg-secondary text-on-secondary scale-110 shadow-lg ")
       );
     }
 

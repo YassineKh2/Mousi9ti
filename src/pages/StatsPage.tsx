@@ -1,10 +1,19 @@
-import React, { useMemo, useState } from "react";
-import { Session, StreakData, TaskActivity, PracticeActivity } from "../types";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Session,
+  StreakData,
+  TaskActivity,
+  PracticeActivity,
+  PracticeTask,
+} from "../types";
 import {
   getSavedPracticeActivities,
   getSavedStreak,
   getSavedTaskActivities,
+  getSavedTaskAttributions,
 } from "../lib/storage";
+import { getSavedCustomTags } from "../lib/customTaskTags";
+import { isPracticeDayComplete } from "../lib/practiceDays";
 import {
   Bar,
   BarChart,
@@ -30,9 +39,8 @@ import {
   Clock,
   Flame,
   ListChecks,
+  Tag,
   Target,
-  Timer,
-  Zap,
 } from "lucide-react";
 
 interface StatsPageProps {
@@ -40,7 +48,7 @@ interface StatsPageProps {
   streak: StreakData;
 }
 
-type Range = "7" | "30" | "90" | "all" | "custom";
+type Range = "week" | "30" | "90" | "all" | "custom";
 type Source = "Task" | "Timer" | "Metronome" | "Session" | "Custom";
 interface AnalyticsActivity {
   id: string;
@@ -48,12 +56,14 @@ interface AnalyticsActivity {
   startTime: number;
   durationSeconds: number;
   countedDurationSeconds: number;
+  practiceSessionId?: string;
   source: Source;
   area: string;
   subject?: string;
   task?: string;
   tags: string[];
   bpm?: number;
+  averageBpm?: number;
   status?: string;
   plannedDurationSeconds?: number;
 }
@@ -108,6 +118,10 @@ function sessionToActivity(session: Session): AnalyticsActivity {
     subject: session.focus,
     tags: ["session"],
     bpm: session.highestBpm,
+    averageBpm: session.bpmsUsed?.length
+      ? session.bpmsUsed.reduce((sum, bpm) => sum + bpm, 0) /
+        session.bpmsUsed.length
+      : session.highestBpm,
     status: "Completed",
   };
 }
@@ -136,8 +150,12 @@ function genericToActivity(activity: PracticeActivity): AnalyticsActivity {
 }
 
 export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
-  const [range, setRange] = useState<Range>("7");
+  const [range, setRange] = useState<Range>("week");
+  const [isRangeOpen, setIsRangeOpen] = useState(false);
+  const rangePickerRef = useRef<HTMLDivElement>(null);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const calendarPopoverRef = useRef<HTMLDivElement>(null);
+  const calendarToggleRef = useRef<HTMLButtonElement>(null);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [customRange, setCustomRange] = useState<{
     start: number;
@@ -146,7 +164,46 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [isDraggingRange, setIsDraggingRange] = useState(false);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [customAnalyticsPage, setCustomAnalyticsPage] = useState(1);
   const [practiceLogPage, setPracticeLogPage] = useState(1);
+  useEffect(() => {
+    if (!isRangeOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!rangePickerRef.current?.contains(event.target as Node)) {
+        setIsRangeOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsRangeOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isRangeOpen]);
+  useEffect(() => {
+    if (!isCalendarOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (
+        !calendarPopoverRef.current?.contains(target) &&
+        !calendarToggleRef.current?.contains(target)
+      ) {
+        setIsCalendarOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsCalendarOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isCalendarOpen]);
   const taskActivities = getSavedTaskActivities();
   const genericActivities = getSavedPracticeActivities();
   const savedStreak = getSavedStreak();
@@ -155,9 +212,15 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     if (range === "all") return 0;
     const start = new Date();
     start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - Number(range) + 1);
+    // Weeks start on Sunday to match the calendar grid.
+    if (range === "week") start.setDate(start.getDate() - start.getDay());
+    else start.setDate(start.getDate() - Number(range) + 1);
     return start.getTime();
   }, [customRange, range]);
+  const periodEnd =
+    range === "custom" && customRange
+      ? new Date(customRange.end).setHours(23, 59, 59, 999)
+      : Infinity;
   const periodDays =
     range === "custom" && customRange
       ? Math.max(
@@ -171,18 +234,75 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
               (Date.now() - (sessions[0]?.startTime || Date.now())) / 86400000,
             ) + 1,
           )
-        : Number(range);
+        : range === "week"
+          ? new Date().getDay() + 1
+          : Number(range);
 
   const allActivities = useMemo(() => {
     const taskRecords = taskActivities
       .filter((activity) => activity.kind === "completed")
       .map(taskToActivity);
     const legacySessions = sessions.map(sessionToActivity);
-    const genericRecords = genericActivities.map(genericToActivity);
-    const records = [...legacySessions, ...taskRecords, ...genericRecords].sort(
-      (a, b) => b.startTime - a.startTime,
-    );
+    const genericRecords = genericActivities
+      .filter((activity) => activity.source !== "timer")
+      .map(genericToActivity);
+    let savedTasks: PracticeTask[] = [];
+    try {
+      const parsed: unknown = JSON.parse(
+        localStorage.getItem("mous9iti_tasks") || "[]",
+      );
+      if (Array.isArray(parsed)) savedTasks = parsed;
+    } catch {
+      savedTasks = [];
+    }
+    const customSegments: AnalyticsActivity[] =
+      getSavedTaskAttributions().flatMap((attribution) => {
+        const task = savedTasks.find((item) => item.id === attribution.taskId);
+        const text =
+          task?.text ||
+          taskActivities.find((item) => item.taskId === attribution.taskId)
+            ?.taskText;
+        const name = text?.match(/@custom\(([^)]*)\)/i)?.[1]?.trim();
+        if (!name || !attribution.durationSeconds) return [];
+        const session = attribution.practiceSessionId
+          ? legacySessions.find(
+              (item) => item.id === attribution.practiceSessionId,
+            )
+          : attribution.source === "automatic"
+            ? legacySessions.find(
+                (item) =>
+                  attribution.startedAt >= item.startTime &&
+                  attribution.endedAt <=
+                    item.startTime + item.durationSeconds * 1000,
+              )
+            : undefined;
+        if (!session) return [];
+        return [
+          {
+            id: attribution.id,
+            date: session.date,
+            startTime: attribution.practiceSessionId
+              ? session.startTime
+              : attribution.startedAt,
+            durationSeconds: attribution.durationSeconds,
+            countedDurationSeconds: attribution.durationSeconds,
+            practiceSessionId: session.id,
+            source: "Custom" as const,
+            area: "Custom",
+            subject: name,
+            task: text,
+            tags: ["custom"],
+          },
+        ];
+      });
+    const records = [
+      ...legacySessions,
+      ...taskRecords,
+      ...genericRecords,
+      ...customSegments,
+    ].sort((a, b) => b.startTime - a.startTime);
     return records.map((activity) => {
+      if (customSegments.includes(activity)) return activity;
       const isContained =
         activity.source !== "Session" &&
         legacySessions.some(
@@ -207,20 +327,37 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
       return {
         ...activity,
         countedDurationSeconds:
-          isContained || isEmbeddedInTask ? 0 : activity.durationSeconds,
+          activity.source === "Session"
+            ? Math.max(
+                0,
+                activity.durationSeconds -
+                  customSegments
+                    .filter(
+                      (segment) => segment.practiceSessionId === activity.id,
+                    )
+                    .reduce((sum, segment) => sum + segment.durationSeconds, 0),
+              )
+            : isContained || isEmbeddedInTask
+              ? 0
+              : activity.durationSeconds,
       };
     });
   }, [genericActivities, sessions, taskActivities]);
   const activities = allActivities.filter(
-    (activity) => activity.startTime >= periodStart,
+    (activity) =>
+      activity.startTime >= periodStart && activity.startTime <= periodEnd,
   );
   const taskStarts = taskActivities.filter(
     (activity) =>
-      activity.kind === "started" && activity.timestamp >= periodStart,
+      activity.kind === "started" &&
+      activity.timestamp >= periodStart &&
+      activity.timestamp <= periodEnd,
   );
   const taskCompletions = taskActivities.filter(
     (activity) =>
-      activity.kind === "completed" && activity.timestamp >= periodStart,
+      activity.kind === "completed" &&
+      activity.timestamp >= periodStart &&
+      activity.timestamp <= periodEnd,
   );
   const totalSeconds = activities.reduce(
     (sum, activity) => sum + activity.countedDurationSeconds,
@@ -229,23 +366,89 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
   const taskSeconds = activities
     .filter((a) => a.source === "Task" || a.source === "Custom")
     .reduce((sum, a) => sum + a.countedDurationSeconds, 0);
-  const timerSeconds = activities
-    .filter((a) => a.source === "Timer")
-    .reduce((sum, a) => sum + a.countedDurationSeconds, 0);
   const metronomeSeconds = activities
     .filter((a) => a.source === "Metronome")
     .reduce((sum, a) => sum + a.countedDurationSeconds, 0);
-  const practiceDays = new Set(activities.map((activity) => activity.date))
-    .size;
-  const averageSession = activities.length
-    ? totalSeconds / activities.length
-    : 0;
+  const today = new Date().toISOString().slice(0, 10);
+  const tasksByWeekday = new Map<string, string[]>();
+  try {
+    const schedule: unknown = JSON.parse(
+      localStorage.getItem("mous9iti_weekly_schedule") || "[]",
+    );
+    if (Array.isArray(schedule)) {
+      schedule.forEach((day) => {
+        if (day && typeof day.day === "string" && Array.isArray(day.tasks)) {
+          tasksByWeekday.set(
+            day.day,
+            day.tasks
+              .map((task: unknown) =>
+                task &&
+                typeof task === "object" &&
+                "id" in task &&
+                typeof task.id === "string"
+                  ? task.id
+                  : null,
+              )
+              .filter((id: string | null): id is string => id !== null),
+          );
+        }
+      });
+    }
+  } catch {
+    // An absent or malformed schedule falls back to the task activity log.
+  }
+  let todayTasks: PracticeTask[] | null = null;
+  try {
+    const parsed: unknown = JSON.parse(
+      localStorage.getItem("mous9iti_tasks") || "[]",
+    );
+    if (Array.isArray(parsed)) todayTasks = parsed;
+  } catch {
+    todayTasks = null;
+  }
+  const completedTaskIdsByDate = new Map<string, Set<string>>();
+  const taskIdsByDate = new Map<string, Set<string>>();
+  const datesWithTaskActivity = taskActivities.filter(
+    (activity) =>
+      activity.timestamp >= periodStart && activity.timestamp <= periodEnd,
+  );
+  datesWithTaskActivity.forEach((activity) => {
+    const taskIds = taskIdsByDate.get(activity.date) || new Set<string>();
+    taskIds.add(activity.taskId);
+    taskIdsByDate.set(activity.date, taskIds);
+    if (activity.kind === "completed") {
+      const completedIds =
+        completedTaskIdsByDate.get(activity.date) || new Set<string>();
+      completedIds.add(activity.taskId);
+      completedTaskIdsByDate.set(activity.date, completedIds);
+    }
+  });
+  const practiceDayDates = new Set([
+    ...activities.map((activity) => activity.date),
+    ...datesWithTaskActivity.map((activity) => activity.date),
+  ]);
+  const weekdayCodes = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  const practiceDays = [...practiceDayDates].filter((date) => {
+    const weekday = weekdayCodes[new Date(`${date}T12:00:00`).getDay()];
+    const plannedTaskIds =
+      date === today ? todayTasks?.map((task) => task.id) : undefined;
+    const dayTaskIds = plannedTaskIds ??
+      tasksByWeekday.get(weekday) ?? [...(taskIdsByDate.get(date) || [])];
+    const hasGeneralTime = activities.some(
+      (activity) =>
+        activity.date === date &&
+        activity.source === "Session" &&
+        activity.durationSeconds > 0,
+    );
+    return isPracticeDayComplete(
+      dayTaskIds,
+      completedTaskIdsByDate.get(date) || new Set(),
+      hasGeneralTime,
+    );
+  }).length;
   const completionRate = taskStarts.length
     ? Math.round((taskCompletions.length / taskStarts.length) * 100)
     : 0;
-  const customActivities = activities.filter(
-    (activity) => activity.source === "Custom",
-  );
   const practiceLogPageSize = 10;
   const practiceLogPageCount = Math.max(
     1,
@@ -260,9 +463,12 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     visiblePracticeLogPage * practiceLogPageSize,
   );
 
-  const aggregate = (key: (activity: AnalyticsActivity) => string) =>
+  const aggregate = (
+    key: (activity: AnalyticsActivity) => string,
+    sourceActivities = activities,
+  ) =>
     Object.entries(
-      activities.reduce(
+      sourceActivities.reduce(
         (result, activity) => {
           const name = key(activity) || "Uncategorized";
           result[name] ||= {
@@ -283,28 +489,92 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
         >,
       ),
     );
-  const areaRows = aggregate((activity) => activity.area).sort(
-    (a, b) => b[1].seconds - a[1].seconds,
+  const savedCustomTags = new Map(
+    getSavedCustomTags().map((name) => [name.toLowerCase(), name]),
+  );
+  // Same custom name on different days/tasks must share one bucket regardless of case/spacing.
+  const seenCustomNames = new Map<string, string>();
+  const customTagName = (activity: AnalyticsActivity) => {
+    const raw =
+      activity.task?.match(/@custom\(([^)]*)\)/i)?.[1] ||
+      (activity.source === "Custom" ? activity.subject : undefined);
+    const name = raw?.replace(/\s+/g, " ").trim();
+    if (!name) return undefined;
+    const key = name.toLowerCase();
+    const display =
+      savedCustomTags.get(key) || seenCustomNames.get(key) || name;
+    seenCustomNames.set(key, display);
+    return `@custom(${display})`;
+  };
+  const generalAreas = new Set([
+    "timer",
+    "tones",
+    "technique",
+    "fretboard theory & metronome technique",
+    "fretboard theory",
+    "metronome technique",
+  ]);
+  const normalizedArea = (activity: AnalyticsActivity) =>
+    generalAreas.has(activity.area.trim().toLowerCase())
+      ? "General practice"
+      : activity.area;
+  const areaRows = aggregate(
+    (activity) => customTagName(activity) || normalizedArea(activity),
+  ).sort((a, b) => b[1].seconds - a[1].seconds);
+  const savedTagLabels = [...savedCustomTags.values()].map(
+    (name) => `@custom(${name})`,
+  );
+  const tagLabel = (name: string) =>
+    name.startsWith("@custom(") && name.endsWith(")")
+      ? name.slice(8, -1)
+      : null;
+  const renderAreaName = (name: string) => {
+    const label = tagLabel(name);
+    return label === null ? (
+      name
+    ) : (
+      <span className="inline-flex max-w-full min-w-0 items-start gap-1 text-on-surface">
+        <Tag size={11} className="mt-0.5 shrink-0 text-on-surface-variant" />
+        <span className="min-w-0 [overflow-wrap:anywhere]">{label}</span>
+      </span>
+    );
+  };
+  const customActivities = activities.filter(
+    (activity) => customTagName(activity) !== undefined,
   );
   const taskRows = aggregate(
     (activity) => activity.task || activity.subject || "Untitled task",
+    customActivities,
   )
     .filter(([name]) => name !== "Untitled task")
     .sort((a, b) => b[1].seconds - a[1].seconds);
   const customRows = aggregate(
-    (activity) =>
-      activity.subject || activity.task || "Unnamed custom activity",
+    (activity) => customTagName(activity) || "Uncategorized",
+    customActivities,
   )
-    .filter(([name]) => name !== "Unnamed custom activity")
+    .filter(([name]) => tagLabel(name) !== null)
     .sort((a, b) => b[1].seconds - a[1].seconds);
-  const tagRows = aggregate(
-    (activity) =>
-      activity.tags.find(
-        (tag) => !["timer", "session", "metronome"].includes(tag),
-      ) || "",
-  )
-    .filter(([name]) => name)
-    .sort((a, b) => b[1].sessions - a[1].sessions);
+  const customAnalyticsPageSize = 8;
+  const customAnalyticsPageCount = Math.max(
+    1,
+    Math.ceil(
+      Math.max(customRows.length, taskRows.length) / customAnalyticsPageSize,
+    ),
+  );
+  const visibleCustomAnalyticsPage = Math.min(
+    customAnalyticsPage,
+    customAnalyticsPageCount,
+  );
+  const customAnalyticsPageStart =
+    (visibleCustomAnalyticsPage - 1) * customAnalyticsPageSize;
+  const visibleCustomRows = customRows.slice(
+    customAnalyticsPageStart,
+    customAnalyticsPageStart + customAnalyticsPageSize,
+  );
+  const visibleTaskRows = taskRows.slice(
+    customAnalyticsPageStart,
+    customAnalyticsPageStart + customAnalyticsPageSize,
+  );
   const areaChart = areaRows.map(([name, value]) => ({
     name,
     minutes: Math.round(value.seconds / 60),
@@ -312,27 +582,33 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
   const sourceAreas = [
     "Rhythm",
     "General practice",
-    "Technique",
+    "Chords",
     "Scales",
     "Exercises",
-    "Tones",
   ];
-  const sourceChart = [
-    ...sourceAreas,
-    ...areaRows
-      .map(([name]) => name)
-      .filter((name) => !sourceAreas.includes(name)),
-  ].map((name) => {
-    const seconds = activities
-      .filter((activity) => activity.area === name)
-      .reduce((sum, activity) => sum + activity.countedDurationSeconds, 0);
-    return {
+  const sourceTotals = new Map(sourceAreas.map((name) => [name, 0]));
+  savedTagLabels.forEach((name) => sourceTotals.set(name, 0));
+  activities.forEach((activity) => {
+    const tag = customTagName(activity);
+    const name =
+      activity.source === "Timer" ||
+      (!tag && normalizedArea(activity) === "General practice")
+        ? "General practice"
+        : tag || activity.area || "General practice";
+    sourceTotals.set(
       name,
+      (sourceTotals.get(name) || 0) + activity.countedDurationSeconds,
+    );
+  });
+  const sourceChart = [...sourceTotals]
+    .filter(([name, seconds]) => seconds > 0 || savedTagLabels.includes(name))
+    .map(([name, seconds]) => ({
+      name,
+      label: tagLabel(name) || name,
       seconds,
       minutes: seconds / 60,
       percentage: Math.round((seconds / Math.max(1, totalSeconds)) * 100),
-    };
-  });
+    }));
   const dailyData = activities.reduce(
     (days, activity) => {
       days[activity.date] ||= { seconds: 0, sessions: 0, tasks: 0 };
@@ -344,6 +620,36 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     },
     {} as Record<string, { seconds: number; sessions: number; tasks: number }>,
   );
+  const dailyBpmData = Object.entries(
+    activities.reduce(
+      (days, activity) => {
+        if (activity.bpm === undefined) return days;
+        days[activity.date] ||= {
+          peakBpm: 0,
+          averageBpmTotal: 0,
+          readings: 0,
+        };
+        days[activity.date].peakBpm = Math.max(
+          days[activity.date].peakBpm,
+          activity.bpm,
+        );
+        days[activity.date].averageBpmTotal +=
+          activity.averageBpm ?? activity.bpm;
+        days[activity.date].readings += 1;
+        return days;
+      },
+      {} as Record<
+        string,
+        { peakBpm: number; averageBpmTotal: number; readings: number }
+      >,
+    ),
+  )
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, value]) => ({
+      date: date.slice(5),
+      peakBpm: value.peakBpm,
+      averageBpm: Math.round(value.averageBpmTotal / value.readings),
+    }));
   const trendData = Object.entries(dailyData)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, value]) => ({
@@ -390,7 +696,8 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
   const selectedTaskActivities = selectedTask
     ? allActivities.filter(
         (activity) =>
-          activity.task === selectedTask || activity.subject === selectedTask,
+          (activity.task === selectedTask || activity.subject === selectedTask) &&
+          customTagName(activity) !== undefined,
       )
     : [];
   const selectedTaskStats = selectedTaskActivities.reduce(
@@ -420,7 +727,12 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
       },
       {} as Record<string, { planned: number; actual: number }>,
     );
-  if (!sessions.length && !taskActivities.length && !genericActivities.length)
+  if (
+    !sessions.length &&
+    !taskActivities.length &&
+    !genericActivities.length &&
+    !savedCustomTags.size
+  )
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[60vh] space-y-4">
         <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -440,67 +752,40 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     [
       "Total practice",
       formatDuration(totalSeconds),
-      `${practiceDays} practice days`,
+      `${activities.length} practice activities`,
       <Clock size={16} className="text-primary" />,
     ],
     [
-      "Task practice",
-      formatDuration(taskSeconds),
-      `${Math.round((taskSeconds / Math.max(1, totalSeconds)) * 100)}% of total`,
-      <ListChecks size={16} className="text-primary" />,
-    ],
-    [
-      "Timer practice",
-      formatDuration(timerSeconds),
-      "Deduplicated embedded sessions",
-      <Timer size={16} className="text-primary" />,
-    ],
-    [
-      "Metronome practice",
-      formatDuration(metronomeSeconds),
-      "Standalone rhythm work",
-      <Zap size={16} className="text-primary" />,
-    ],
-    [
-      "Current streak",
-      `${savedStreak.currentStreak} days`,
-      `Longest: ${savedStreak.longestStreak} days`,
-      <Flame size={16} className="text-primary" />,
-    ],
-    [
-      "Average session",
-      formatDuration(averageSession),
-      `${activities.length} total sessions`,
+      "Practice days",
+      range === "all" ? practiceDays : `${practiceDays}/${periodDays}`,
+      range === "all" ? "Days with activity" : "Days with activity in range",
       <Calendar size={16} className="text-primary" />,
     ],
     [
       "Tasks completed",
       taskCompletions.length,
-      `${completionRate}% completion rate`,
+      "In selected range",
       <CheckCircle2 size={16} className="text-primary" />,
     ],
     [
       "Areas practiced",
       areaRows.length,
-      `${customRows.length} custom activities`,
+      "Distinct practice areas",
       <Target size={16} className="text-primary" />,
     ],
     [
-      "Practice days",
-      `${practiceDays}/${periodDays}`,
-      `${Math.round((practiceDays / periodDays) * 100)}% consistency`,
-      <Calendar size={16} className="text-primary" />,
-    ],
-    [
-      "Practice acts",
-      `${taskStarts.length}/${Math.max(taskStarts.length, taskCompletions.length)}`,
-      `${completionRate}% consistency`,
-      <BarChart3 size={16} className="text-primary" />,
+      "Current streak",
+      `${savedStreak.currentStreak} ${savedStreak.currentStreak === 1 ? "day" : "days"}`,
+      `Longest: ${savedStreak.longestStreak} ${savedStreak.longestStreak === 1 ? "day" : "days"} (all time)`,
+      <Flame size={16} className="text-primary" />,
     ],
   ];
-  const overviewCards = metricCards.slice(0, 5);
-  const secondaryCards = metricCards.slice(5);
-  const rangeLabel = range === "all" ? "All time" : `${range} days`;
+  const rangeLabel =
+    range === "all"
+      ? "All time"
+      : range === "week"
+        ? "This week"
+        : `${range} days`;
   const rangeEnd =
     range === "custom" && customRange ? new Date(customRange.end) : new Date();
   const rangeStart =
@@ -565,9 +850,10 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
 
   return (
     <div className="stats-page space-y-6 pb-12">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 rounded-lg border border-outline-variant/30 bg-surface-container p-6 shadow-xl sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-mono text-xl font-bold text-on-surface">
+          <h1 className="font-mono text-base font-bold tracking-[0.2em] text-on-surface uppercase flex items-center gap-2">
+            <BarChart3 size={18} className="text-primary" />
             Practice Analytics
           </h1>
           <p className="text-xs font-mono text-on-surface-variant mt-1">
@@ -578,27 +864,66 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
         <div className="stats-date-picker">
           <div className="stats-date-control">
             <Calendar size={16} />
-            <select
-              value={range}
-              onChange={(event) => {
-                setCustomRange(null);
-                setSelectionStart(null);
-                setRange(event.target.value as Range);
-              }}
-              aria-label="Practice date range"
-            >
-              {(["7", "30", "90", "all"] as Range[]).map((value) => (
-                <option key={value} value={value}>
-                  {value === "all" ? "All time" : `${value} days`}
-                </option>
-              ))}
-              {range === "custom" && (
-                <option value="custom">Custom range</option>
+            <div ref={rangePickerRef} className="relative">
+              <button
+                type="button"
+                aria-label="Practice date range"
+                aria-expanded={isRangeOpen}
+                aria-haspopup="true"
+                className="flex items-center gap-1.5 rounded px-1 py-1 text-on-surface transition-colors hover:bg-surface-container-high focus-visible:outline-2 focus-visible:outline-primary"
+                onClick={() => {
+                  setIsCalendarOpen(false);
+                  setIsRangeOpen((open) => !open);
+                }}
+              >
+                {range === "all"
+                  ? "All time"
+                  : range === "custom"
+                    ? "Custom range"
+                    : rangeLabel}
+                <ChevronDown size={13} className="text-on-surface-variant" />
+              </button>
+              {isRangeOpen && (
+                <div
+                  className="absolute left-0 top-[calc(100%+0.5rem)] z-30 min-w-32 rounded-lg border border-outline-variant/30 bg-surface-container p-1 shadow-xl"
+                  aria-label="Practice date ranges"
+                >
+                  {(
+                    [
+                      "week",
+                      "30",
+                      "90",
+                      "all",
+                      ...(range === "custom" ? ["custom"] : []),
+                    ] as Range[]
+                  ).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-current={range === value ? "true" : undefined}
+                      className={`block w-full rounded px-3 py-2 text-left text-xs font-mono transition-colors hover:bg-surface-container-high focus-visible:outline-2 focus-visible:outline-primary ${range === value ? "bg-primary/10 text-primary" : "text-on-surface"}`}
+                      onClick={() => {
+                        if (value !== "custom") setCustomRange(null);
+                        setSelectionStart(null);
+                        setRange(value);
+                        setIsRangeOpen(false);
+                      }}
+                    >
+                      {value === "all"
+                        ? "All time"
+                        : value === "custom"
+                          ? "Custom range"
+                          : value === "week"
+                            ? "This week"
+                            : `${value} days`}
+                    </button>
+                  ))}
+                </div>
               )}
-            </select>
-            <ChevronDown size={13} />
+            </div>
             <span className="stats-date-divider" />
             <button
+              ref={calendarToggleRef}
               className="stats-date-display"
               onClick={() => setIsCalendarOpen((open) => !open)}
             >
@@ -609,7 +934,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
             <ChevronRight size={14} />
           </div>
           {isCalendarOpen && (
-            <div className="stats-calendar-popover">
+            <div ref={calendarPopoverRef} className="stats-calendar-popover">
               <div className="stats-calendar-header">
                 <button
                   onClick={() =>
@@ -682,118 +1007,84 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
       </div>
       <div
         data-tour="stats-metrics"
-        className="stats-overview-card rounded-xl border border-white/[0.07] bg-[#111a26] p-4 shadow-[0_8px_30px_rgba(0,0,0,.18)]"
+        className="stats-metrics-grid grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5"
       >
-        <div className="stats-overview-items grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-          {overviewCards.map(([label, value, detail, icon]) => (
-            <div
-              key={String(label)}
-              className="stats-overview-item min-w-0 border-l border-white/[0.07] pl-4"
-            >
-              <div className="flex items-start gap-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-500/15 text-blue-400">
-                  {icon}
-                </span>
-                <div className="min-w-0">
-                  <span className="block truncate text-[11px] text-slate-400">
-                    {label}
-                  </span>
-                  <span className="mt-1 block text-2xl font-semibold leading-none tracking-tight text-slate-100">
-                    {value}
-                  </span>
-                  <span className="mt-1 block text-[10px] text-emerald-400">
-                    {label === "Total Practice" || label === "Task Practice"
-                      ? "↑ 12%"
-                      : label === "Total Sessions"
-                        ? "↑ 50%"
-                        : label === "Areas Practiced"
-                          ? "↑ 67%"
-                          : "0%"}
-                  </span>
-                  <span className="mt-0.5 block text-[10px] text-slate-500">
-                    {detail}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="stats-secondary-grid grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        {secondaryCards.map(([label, value, detail, icon], index) => (
+        {metricCards.map(([label, value, detail, icon]) => (
           <div
             key={String(label)}
-            className="stats-metric-card min-w-0 rounded-xl border border-white/[0.07] bg-[#17191d] p-4 shadow-[0_8px_30px_rgba(0,0,0,.18)]"
+            className="stats-metric-card flex min-w-0 items-start gap-3 rounded-lg border border-outline-variant/30 bg-surface-container p-4 shadow-xl"
           >
-            <div className="flex items-start gap-3">
-              <span
-                className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${index === 0 ? "bg-amber-500/15 text-amber-400" : index === 2 ? "bg-emerald-500/15 text-emerald-400" : index === 3 ? "bg-violet-500/15 text-violet-400" : "bg-blue-500/15 text-blue-400"}`}
-              >
-                {icon}
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+              {icon}
+            </span>
+            <div className="min-w-0">
+              <span className="block text-[11px] text-on-surface-variant">
+                {label}
               </span>
-              <div className="min-w-0">
-                <span className="block truncate text-[11px] text-slate-400">
-                  {label}
-                </span>
-                <span className="mt-1 block text-2xl font-semibold leading-none tracking-tight text-slate-100">
-                  {value}
-                </span>
-                <span className="mt-1 block truncate text-[10px] text-slate-500">
-                  {detail}
-                </span>
-              </div>
+              <span className="mt-1 block text-2xl font-semibold leading-none text-on-surface">
+                {value}
+              </span>
+              <span className="mt-1 block text-[10px] text-on-surface-variant">
+                {detail}
+              </span>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="stats-breakdown-grid grid grid-cols-1 gap-4 xl:grid-cols-[1.15fr_.85fr]">
+      <div className="stats-breakdown-grid grid grid-cols-1 gap-4 xl:grid-cols-2">
         <section className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-4">
           <h2 className="font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
-            Practice Focus / Breakdown
+            Peak vs Average BPM
           </h2>
-          {areaRows.length ? (
-            areaRows.map(([name, value], index) => (
-              <div
-                key={name}
-                className="grid grid-cols-[125px_1fr_42px_30px] items-center gap-3 text-xs font-mono"
-              >
-                <span className="flex items-center gap-2 text-slate-300">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: colors[index % colors.length] }}
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-on-surface-variant">
+            <span className="inline-flex items-center gap-2">
+              <i className="h-2 w-2 rounded-full bg-[#f59e0b]" /> Peak BPM
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <i className="h-2 w-2 rounded-full bg-[#60a5fa]" /> Average BPM
+            </span>
+          </div>
+          <div className="h-64 min-w-0">
+            {dailyBpmData.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={dailyBpmData} margin={{ top: 12 }}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="var(--color-outline-variant)"
+                    opacity={0.4}
                   />
-                  {name}
-                </span>
-                <div className="h-2 overflow-hidden rounded-full bg-[#28303a]">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${Math.max(0, (value.seconds / Math.max(1, totalSeconds)) * 100)}%`,
-                      backgroundColor: colors[index % colors.length],
-                    }}
+                  <XAxis dataKey="date" fontSize={11} />
+                  <YAxis unit=" BPM" fontSize={11} />
+                  <Tooltip />
+                  <Line
+                    dataKey="peakBpm"
+                    name="Peak BPM"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    type="monotone"
                   />
-                </div>
-                <span className="text-right text-slate-400">
-                  {Math.round(
-                    (value.seconds / Math.max(1, totalSeconds)) * 100,
-                  )}
-                  %
-                </span>
-              </div>
-            ))
-          ) : (
-            <p className="text-xs font-mono text-on-surface-variant">
-              No timed focus data yet.
-            </p>
-          )}
+                  <Line
+                    dataKey="averageBpm"
+                    name="Average BPM"
+                    stroke="#60a5fa"
+                    strokeWidth={2}
+                    type="monotone"
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-xs font-mono text-on-surface-variant">
+                No BPM data for this period.
+              </p>
+            )}
+          </div>
         </section>
-        <section className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-4">
+        <section className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-4 flex flex-col">
           <h2 className="font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
             Practice Sources
           </h2>
-          <div className="stats-source-content">
+          <div className="stats-source-content flex-1">
             <div className="stats-source-chart">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -803,7 +1094,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                   <Pie
                     data={sourceChart}
                     dataKey="seconds"
-                    nameKey="name"
+                    nameKey="label"
                     cx="50%"
                     cy="50%"
                     innerRadius={58}
@@ -825,14 +1116,16 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                 <span>Total Practice</span>
               </div>
             </div>
-            <div className="stats-source-legend">
+            <div className="stats-source-legend max-h-72 min-w-0 overflow-x-hidden overflow-y-auto pr-2">
               {sourceChart.map((entry, index) => (
                 <div key={entry.name} className="stats-source-row">
                   <span className="stats-source-name">
                     <i
                       style={{ backgroundColor: colors[index % colors.length] }}
                     />
-                    {entry.name}
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
+                      {renderAreaName(entry.name)}
+                    </span>
                   </span>
                   <span>{entry.percentage}%</span>
                   <span>{formatDuration(entry.seconds)}</span>
@@ -840,7 +1133,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
               ))}
             </div>
           </div>
-          <p className="text-[10px] font-mono text-on-surface-variant">
+          <p className="text-[10px] font-mono text-on-surface-variant mt-auto">
             Breakdown shows how much time was spent on each practice source.
           </p>
         </section>
@@ -884,34 +1177,12 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
       </section>
 
       <div className="stats-ranking-grid grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <section className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-4">
+        <section className="stats-ranking-panel flex min-h-0 flex-col bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-4">
           <h2 className="font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
             Most Practiced
           </h2>
-          {areaRows.slice(0, 6).map(([name, value], index) => (
-            <div
-              key={name}
-              className="stats-rank-row flex items-center gap-2 text-xs font-mono"
-            >
-              <span className="stats-rank-number">{index + 1}</span>
-              <span
-                className="stats-rank-dot"
-                style={{ backgroundColor: colors[index % colors.length] }}
-              />
-              <span className="flex-1 truncate text-on-surface">{name}</span>
-              <span className="whitespace-nowrap text-on-surface-variant">
-                {formatDuration(value.seconds)} · {value.days.size} session
-                {value.days.size === 1 ? "" : "s"}
-              </span>
-            </div>
-          ))}
-        </section>
-        <section className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-4">
-          <h2 className="font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
-            Least Practiced
-          </h2>
-          {neglected.length ? (
-            neglected.map(([name, value], index) => (
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            {areaRows.slice(0, 6).map(([name, value], index) => (
               <div
                 key={name}
                 className="stats-rank-row flex items-center gap-2 text-xs font-mono"
@@ -921,28 +1192,59 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                   className="stats-rank-dot"
                   style={{ backgroundColor: colors[index % colors.length] }}
                 />
-                <span className="flex-1 truncate text-on-surface">{name}</span>
-                <span className="text-on-surface-variant">
-                  {formatDuration(value.seconds)} · {daysSince(value.last)}d ago
+                <span className="min-w-0 flex-1 text-on-surface [overflow-wrap:anywhere]">
+                  {renderAreaName(name)}
+                </span>
+                <span className="whitespace-nowrap text-on-surface-variant">
+                  {formatDuration(value.seconds)} · {value.days.size} session
+                  {value.days.size === 1 ? "" : "s"}
                 </span>
               </div>
-            ))
-          ) : (
-            <p className="text-xs font-mono text-on-surface-variant">
-              No gaps recorded yet.
-            </p>
-          )}
-          <div className="border-t border-outline-variant/30 pt-3 text-xs font-mono text-on-surface-variant">
+            ))}
+          </div>
+        </section>
+        <section className="stats-ranking-panel flex min-h-0 flex-col bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-4">
+          <h2 className="font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
+            Least Practiced
+          </h2>
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            {neglected.length ? (
+              neglected.map(([name, value], index) => (
+                <div
+                  key={name}
+                  className="stats-rank-row flex items-center gap-2 text-xs font-mono"
+                >
+                  <span className="stats-rank-number">{index + 1}</span>
+                  <span
+                    className="stats-rank-dot"
+                    style={{ backgroundColor: colors[index % colors.length] }}
+                  />
+                  <span className="min-w-0 flex-1 text-on-surface [overflow-wrap:anywhere]">
+                    {renderAreaName(name)}
+                  </span>
+                  <span className="text-on-surface-variant">
+                    {formatDuration(value.seconds)} · {daysSince(value.last)}d
+                    ago
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs font-mono text-on-surface-variant">
+                No gaps recorded yet.
+              </p>
+            )}
+          </div>
+          <div className="mt-auto border-t border-outline-variant/30 pt-3 text-xs font-mono text-on-surface-variant">
             Most active day:{" "}
             <span className="text-on-surface">{activeDay}</span> · Longest gap:{" "}
             <span className="text-on-surface">{longestGap} days</span>
           </div>
         </section>
-        <section className="stats-completion-card bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl">
+        <section className="stats-ranking-panel flex min-h-0 flex-col bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl">
           <h2 className="font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
             Task Completion
           </h2>
-          <div className="mt-4 space-y-4 text-xs font-mono">
+          <div className="mt-4 min-h-0 flex-1 overflow-y-auto space-y-4 text-xs font-mono">
             <div className="flex items-center gap-5">
               <div className="stats-completion-ring">
                 <div>
@@ -1013,29 +1315,62 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
       </div>
 
       <section className="stats-custom-card stats-analytics-panel bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl">
-        <h2 className="stats-analytics-heading font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
-          <span className="stats-analytics-heading-icon">
-            <BarChart3 size={15} />
-          </span>
-          Custom Activities and Individual Task Analytics
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="stats-analytics-heading font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
+            <span className="stats-analytics-heading-icon">
+              <BarChart3 size={15} />
+            </span>
+            Custom Activities and Individual Task Analytics
+          </h2>
+          {customAnalyticsPageCount > 1 && (
+            <div className="flex items-center gap-2 font-mono text-xs text-on-surface-variant">
+              <button
+                type="button"
+                className="stats-log-page-button"
+                onClick={() =>
+                  setCustomAnalyticsPage((page) => Math.max(1, page - 1))
+                }
+                disabled={visibleCustomAnalyticsPage === 1}
+                aria-label="Previous custom analytics page"
+              >
+                <ChevronLeft size={15} />
+              </button>
+              <span>
+                Page {visibleCustomAnalyticsPage} of {customAnalyticsPageCount}
+              </span>
+              <button
+                type="button"
+                className="stats-log-page-button"
+                onClick={() =>
+                  setCustomAnalyticsPage((page) =>
+                    Math.min(customAnalyticsPageCount, page + 1),
+                  )
+                }
+                disabled={
+                  visibleCustomAnalyticsPage === customAnalyticsPageCount
+                }
+                aria-label="Next custom analytics page"
+              >
+                <ChevronRight size={15} />
+              </button>
+            </div>
+          )}
+        </div>
         <div className="stats-analytics-grid grid grid-cols-1 lg:grid-cols-2 gap-6 mt-5">
           <div className="stats-analytics-column">
             {customRows.length ? (
-              customRows.map(([name, value]) => (
+              visibleCustomRows.map(([name, value]) => (
                 <div key={name} className="stats-analytics-row font-mono">
                   <span className="stats-analytics-row-icon stats-analytics-row-icon-custom">
                     <BarChart3 size={15} />
                   </span>
                   <span className="stats-analytics-row-copy">
-                    <span className="stats-analytics-row-title">{name}</span>
+                    <span className="stats-analytics-row-title">
+                      {tagLabel(name)}
+                    </span>
                     <span className="stats-analytics-row-meta">
-                      For{" "}
-                      {activities.find(
-                        (activity) =>
-                          (activity.subject || activity.task) === name,
-                      )?.area || "Custom practice"}{" "}
-                      · {value.sessions} session
+                      {value.days.size} day{value.days.size === 1 ? "" : "s"} ·{" "}
+                      {value.sessions} session
                       {value.sessions === 1 ? "" : "s"}
                     </span>
                   </span>
@@ -1052,7 +1387,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
           </div>
           <div className="stats-analytics-column">
             {taskRows.length ? (
-              taskRows.slice(0, 8).map(([name, value]) => (
+              visibleTaskRows.map(([name, value]) => (
                 <button
                   key={name}
                   onClick={() =>

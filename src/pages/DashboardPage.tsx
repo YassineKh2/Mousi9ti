@@ -13,6 +13,7 @@ import {
   DashboardRow,
   PracticeTask,
   UserTimerPreferences,
+  RandomNoteSettings,
   TimeSignature,
 } from "../types";
 import { Metronome } from "../components/Metronome";
@@ -60,11 +61,11 @@ import {
 const DEFAULT_WIDGET_LAYOUT: DashboardWidgetLayout[] = [
   { id: "metronome", title: "Metronome" },
   { id: "timer", title: "Practice Timer" },
-  { id: "random-drill", title: "Random Note Drill" },
-  { id: "session", title: "Practice Streak" },
+  { id: "session", title: "Practice Tracker" },
+  { id: "instruments", title: "Scale Overlay / Instrument" },
   { id: "practice-tasks", title: "Daily Practice Goals" },
-  { id: "instruments", title: "Instruments" },
-  { id: "chord-selector", title: "Chord Selector" },
+  { id: "random-drill", title: "Random Note Drill" },
+  { id: "chord-selector", title: "Chords" },
 ];
 
 // Strips @mentions (e.g. "@bpm(120)") from task text for cleaner toast display.
@@ -290,6 +291,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   // Active Random Note state
   const [activeRandomNote, setActiveRandomNote] = useState<string>("F#");
   const [showTargetNote, setShowTargetNote] = useState<boolean>(false);
+  const [randomNoteSettings, setRandomNoteSettings] =
+    useState<RandomNoteSettings>({
+      accidentalMode: "both",
+      autoAdvance: false,
+      interval: "5s",
+    });
 
   // Automatic Task Setup: feedback banner shown briefly after a task activation configures the dashboard
   const [autoConfigToast, setAutoConfigToast] = useState<{
@@ -326,6 +333,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
     if (!decision.shouldApply || !activeTaskId) return;
     if (!activeTask || !config || !hasRecognizedConfiguration(config)) return;
+
+    if (config.randomNote) setRandomNoteSettings(config.randomNote);
 
     if (config.scale) {
       const scaleDef = SCALES_DATABASE.find(
@@ -641,9 +650,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const resetWidgetLayout = () => {
     setLayout({
       rows: [
-        { id: "row-1", widgets: DEFAULT_WIDGET_LAYOUT.slice(0, 4) },
-        { id: "row-2", widgets: [DEFAULT_WIDGET_LAYOUT[4]] },
-        { id: "row-3", widgets: [DEFAULT_WIDGET_LAYOUT[5]] },
+        { id: "row-1", widgets: DEFAULT_WIDGET_LAYOUT.slice(0, 3) },
+        { id: "row-2", widgets: [DEFAULT_WIDGET_LAYOUT[3]] },
+        { id: "row-3", widgets: DEFAULT_WIDGET_LAYOUT.slice(4, 6) },
         { id: "row-4", widgets: [DEFAULT_WIDGET_LAYOUT[6]] },
       ],
       hiddenWidgets: [],
@@ -695,6 +704,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             instrumentView={instrumentView}
             showHighlight={showTargetNote}
             onToggleHighlight={() => setShowTargetNote(!showTargetNote)}
+            randomNoteSettings={randomNoteSettings}
           />
         );
       case "session":

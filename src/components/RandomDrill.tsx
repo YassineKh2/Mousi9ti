@@ -2,6 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, ArrowRight, Shuffle, Volume2 } from "lucide-react";
 import { CHROMATIC_FLATS, CHROMATIC_SHARPS } from "../data/musicTheory";
 import { audioEngine } from "../lib/audio";
+import {
+  RandomNoteAccidentalMode,
+  RandomNoteInterval,
+  RandomNoteSettings,
+} from "../types";
 
 interface RandomDrillProps {
   currentNote: string;
@@ -10,9 +15,14 @@ interface RandomDrillProps {
   instrumentView?: "guitar" | "piano" | "both";
   showHighlight?: boolean;
   onToggleHighlight?: () => void;
+  randomNoteSettings?: RandomNoteSettings;
 }
 
-type AccidentalMode = "both" | "sharps" | "flats" | "naturals";
+const DEFAULT_RANDOM_NOTE_SETTINGS: RandomNoteSettings = {
+  accidentalMode: "both",
+  autoAdvance: false,
+  interval: "5s",
+};
 
 export const RandomDrill: React.FC<RandomDrillProps> = ({
   currentNote,
@@ -21,17 +31,47 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
   instrumentView = "guitar",
   showHighlight = true,
   onToggleHighlight,
+  randomNoteSettings = DEFAULT_RANDOM_NOTE_SETTINGS,
 }) => {
-  const [accidentalMode, setAccidentalMode] = useState<AccidentalMode>("both");
-  const [autoAdvance, setAutoAdvance] = useState<boolean>(false);
-  const [intervalType, setIntervalType] = useState<
-    "1s" | "2s" | "5s" | "10s" | "15s"
-  >("5s");
+  const [accidentalMode, setAccidentalMode] = useState(
+    randomNoteSettings.accidentalMode,
+  );
+  const [autoAdvance, setAutoAdvance] = useState(
+    randomNoteSettings.autoAdvance,
+  );
+  const [intervalType, setIntervalType] = useState(randomNoteSettings.interval);
   const [progress, setProgress] = useState<number>(0);
 
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(Date.now());
   const durationRef = useRef<number>(4000);
+  const autoAdvanceBeforePauseRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    setAccidentalMode(randomNoteSettings.accidentalMode);
+    setAutoAdvance(randomNoteSettings.autoAdvance);
+    setIntervalType(randomNoteSettings.interval);
+  }, [randomNoteSettings]);
+
+  useEffect(() => {
+    const handlePause = () => {
+      autoAdvanceBeforePauseRef.current = autoAdvance;
+      setAutoAdvance(false);
+    };
+    const handleResume = () => {
+      if (autoAdvanceBeforePauseRef.current !== null) {
+        setAutoAdvance(autoAdvanceBeforePauseRef.current);
+        autoAdvanceBeforePauseRef.current = null;
+      }
+    };
+
+    window.addEventListener("random-drill-pause", handlePause);
+    window.addEventListener("random-drill-resume", handleResume);
+    return () => {
+      window.removeEventListener("random-drill-pause", handlePause);
+      window.removeEventListener("random-drill-resume", handleResume);
+    };
+  }, [autoAdvance]);
 
   const pickNextRandomNote = useCallback(() => {
     let pool: string[] = [];
@@ -61,7 +101,10 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
     else if (intervalType === "2s") durationRef.current = 2000;
     else if (intervalType === "5s") durationRef.current = 5000;
     else if (intervalType === "10s") durationRef.current = 10000;
-    else durationRef.current = 15000;
+    else if (intervalType === "15s") durationRef.current = 15000;
+    else if (intervalType === "20s") durationRef.current = 20000;
+    else if (intervalType === "30s") durationRef.current = 30000;
+    else durationRef.current = 60000;
   }, [intervalType, metronomeBpm]);
 
   // Auto-advance loop
@@ -115,7 +158,9 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
         {/* Accidental Filter */}
         <select
           value={accidentalMode}
-          onChange={(e) => setAccidentalMode(e.target.value as AccidentalMode)}
+          onChange={(e) =>
+            setAccidentalMode(e.target.value as RandomNoteAccidentalMode)
+          }
           className="min-h-10 bg-surface-container-low border border-outline-variant/30 rounded px-2 py-1 text-[11px] font-mono text-on-surface focus:outline-none focus:border-primary/50 cursor-pointer md:min-h-0"
         >
           <option value="both">All (# / b)</option>
@@ -187,11 +232,10 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
 
             <select
               value={intervalType}
-              onChange={(e) =>
-                setIntervalType(
-                  e.target.value as "1s" | "2s" | "5s" | "10s" | "15s",
-                )
-              }
+              onChange={(e) => {
+                setIntervalType(e.target.value as RandomNoteInterval);
+                setAutoAdvance(true);
+              }}
               className="min-h-10 bg-surface-container-low border border-outline-variant/30 rounded px-2 py-1.5 text-[10px] font-mono text-on-surface focus:outline-none cursor-pointer md:min-h-0"
             >
               <option value="1s">1 Sec</option>
@@ -199,6 +243,9 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
               <option value="5s">5 Sec</option>
               <option value="10s">10 Sec</option>
               <option value="15s">15 Sec</option>
+              <option value="20s">20 Sec</option>
+              <option value="30s">30 Sec</option>
+              <option value="60s">60 Sec</option>
             </select>
           </div>
 
