@@ -443,7 +443,10 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
   return (
     <div className="space-y-4 sm:space-y-6 pb-8 sm:pb-12">
       {/* Selected Scale Detail Card (Formula, Degrees, CAGED boxes) */}
-      <div data-tour="scales-panel" className="bg-surface-container border border-outline-variant/30 rounded-lg p-3 sm:p-6 shadow-xl space-y-4">
+      <div
+        data-tour="scales-panel"
+        className="bg-surface-container border border-outline-variant/30 rounded-lg p-3 sm:p-6 shadow-xl space-y-4"
+      >
         <div className="flex flex-col items-stretch gap-3 pb-3 border-b border-outline-variant/30 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="flex min-w-0 items-center gap-2 sm:flex-1 sm:gap-3">
             {/* Interactive Root Note Badge Selector */}
@@ -578,12 +581,12 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                   </div>
 
                   {/* Category Pills inside Popover */}
-                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-2 mb-2 border-b border-outline-variant/10">
+                  <div className="scale-category-scroll mb-2 flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-x-auto overscroll-x-contain border-b border-outline-variant/10 pb-2 touch-pan-x">
                     {["All", ...scaleCategories].map((cat) => (
                       <button
                         key={cat}
                         onClick={() => setScaleMenuCategory(cat)}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-mono whitespace-nowrap transition-all ${
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-mono whitespace-nowrap transition-all ${
                           scaleMenuCategory === cat
                             ? "bg-primary text-on-primary font-bold"
                             : "bg-surface-container text-on-surface-variant hover:text-on-surface border border-outline-variant/20"
@@ -983,34 +986,34 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
 
       {/* Fretboard Visualization */}
       <div data-tour="scales-fretboard">
-      {(instrumentView === "guitar" || instrumentView === "both") && (
-        <Fretboard
-          tuning={currentTuning}
-          onTuningChange={setCurrentTuning}
-          fretCount={fretCount}
-          onFretCountChange={setFretCount}
-          selectedRoot={selectedRoot}
-          selectedScale={selectedScale}
-          activePlayingNote={activePlayingNote}
-          activePlayingString={activePlayingString}
-          activePlayingFret={activePlayingFret}
-          displayMode={displayMode}
-          onDisplayModeChange={setDisplayMode}
-          activeCagedBox={activeCagedBox}
-        />
-      )}
+        {(instrumentView === "guitar" || instrumentView === "both") && (
+          <Fretboard
+            tuning={currentTuning}
+            onTuningChange={setCurrentTuning}
+            fretCount={fretCount}
+            onFretCountChange={setFretCount}
+            selectedRoot={selectedRoot}
+            selectedScale={selectedScale}
+            activePlayingNote={activePlayingNote}
+            activePlayingString={activePlayingString}
+            activePlayingFret={activePlayingFret}
+            displayMode={displayMode}
+            onDisplayModeChange={setDisplayMode}
+            activeCagedBox={activeCagedBox}
+          />
+        )}
 
-      {/* Piano Visualizer Sync */}
-      {(instrumentView === "piano" || instrumentView === "both") && (
-        <PianoKeyboard
-          selectedRoot={selectedRoot}
-          selectedScale={selectedScale}
-          activePlayingNote={activePlayingNote}
-          activePlayingOctave={activePlayingOctave}
-          displayMode={displayMode}
-          focusRange={pianoFocusRangeObj}
-        />
-      )}
+        {/* Piano Visualizer Sync */}
+        {(instrumentView === "piano" || instrumentView === "both") && (
+          <PianoKeyboard
+            selectedRoot={selectedRoot}
+            selectedScale={selectedScale}
+            activePlayingNote={activePlayingNote}
+            activePlayingOctave={activePlayingOctave}
+            displayMode={displayMode}
+            focusRange={pianoFocusRangeObj}
+          />
+        )}
       </div>
     </div>
   );

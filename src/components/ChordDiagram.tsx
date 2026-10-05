@@ -32,18 +32,30 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
 }) => {
   const settings = useSettingsContext();
   const theme = settings.fretboardTheme;
-  const isLarge = ["large", "xlarge"].includes(settings.fretboardNoteSize || "medium");
+  const noteSize = settings.fretboardNoteSize || "medium";
+  const isLarge = ["large", "xlarge"].includes(noteSize);
   const isMinimal = settings.fretboardMinimalDetails;
 
-  const strokeColor = theme === "high-contrast" ? "white" : "var(--color-outline-variant)";
-  const onSurfaceColor = theme === "high-contrast" ? "white" : "var(--color-on-surface)";
-  const dotColor = theme === "high-contrast" ? "white" : "var(--color-on-surface)";
-  const textInDotColor = theme === "high-contrast" ? "black" : "var(--color-background)";
-  
+  const strokeColor =
+    theme === "high-contrast" ? "white" : "var(--color-outline-variant)";
+  const onSurfaceColor =
+    theme === "high-contrast" ? "white" : "var(--color-on-surface)";
+  const dotColor =
+    theme === "high-contrast" ? "white" : "var(--color-on-surface)";
+  const textInDotColor =
+    theme === "high-contrast" ? "black" : "var(--color-background)";
+
   const lineThickness = isMinimal ? 0.5 : isLarge ? 1.5 : 1;
   const nutThickness = isLarge ? 6 : 4;
-  const dotRadius = isLarge ? 13 : 10;
-  const textSize = isLarge ? "12" : "10";
+  const dotRadiusBySize = { small: 8, medium: 10, large: 13, xlarge: 17 };
+  const textSizeBySize = {
+    small: "8",
+    medium: "10",
+    large: "12",
+    xlarge: "14",
+  };
+  const dotRadius = dotRadiusBySize[noteSize];
+  const textSize = textSizeBySize[noteSize];
 
   // SVG Dimensions & Layout
   const svgWidth = 240;
@@ -219,29 +231,57 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
           const fromX = margin.left + barre.fromString * stringSpacing;
           const toX = margin.left + barre.toString * stringSpacing;
           const y = margin.top + (relFret - 0.5) * fretSpacing;
+          const endpointStrings = [
+            ...new Set([barre.fromString, barre.toString]),
+          ];
+          const barreHeight = dotRadius * 1.6;
 
           return (
             <g key={`barre-${barre.fret}-${index}`}>
               <rect
-                x={Math.min(fromX, toX) - 5}
-                y={y - 8}
-                width={Math.abs(toX - fromX) + 10}
-                height={16}
-                rx={8}
+                x={Math.min(fromX, toX) - dotRadius / 2}
+                y={y - barreHeight / 2}
+                width={Math.abs(toX - fromX) + dotRadius}
+                height={barreHeight}
+                rx={barreHeight / 2}
                 fill="var(--color-on-surface-variant)"
                 opacity={0.4}
               />
-              <text
-                x={Math.min(fromX, toX) - 16}
-                y={y + 3.5}
-                fill={onSurfaceColor}
-                fontSize={textSize}
-                fontFamily="sans-serif"
-                textAnchor="middle"
-                fontWeight="bold"
-              >
-                {barre.finger}
-              </text>
+              {endpointStrings.map((stringIdx) => {
+                const openSemi = NOTE_SEMITONES[tuning.strings[stringIdx]];
+                const isRoot =
+                  (openSemi + barre.fret) % 12 === NOTE_SEMITONES[root];
+                const endpointX = margin.left + stringIdx * stringSpacing;
+
+                return (
+                  <circle
+                    key={`barre-end-${stringIdx}`}
+                    cx={endpointX}
+                    cy={y}
+                    r={dotRadius}
+                    fill={isRoot ? "var(--color-secondary)" : dotColor}
+                  />
+                );
+              })}
+              {(() => {
+                const openSemi = NOTE_SEMITONES[tuning.strings[barre.fromString]];
+                const isRoot =
+                  (openSemi + barre.fret) % 12 === NOTE_SEMITONES[root];
+
+                return (
+                  <text
+                    x={fromX}
+                    y={y + 3.5}
+                    fill={isRoot ? "var(--color-on-secondary)" : textInDotColor}
+                    fontSize={textSize}
+                    fontFamily="sans-serif"
+                    textAnchor="middle"
+                    fontWeight="bold"
+                  >
+                    {barre.finger}
+                  </text>
+                );
+              })()}
             </g>
           );
         })}
@@ -328,9 +368,7 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
               ? voicing.fingers[stringIdx]
               : null;
 
-            const dotFill = isRoot
-              ? "var(--color-secondary)"
-              : dotColor;
+            const dotFill = isRoot ? "var(--color-secondary)" : dotColor;
             const textFill = isRoot
               ? "var(--color-on-secondary)"
               : textInDotColor;

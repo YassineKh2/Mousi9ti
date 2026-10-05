@@ -273,6 +273,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       SCALES_DATABASE[1] ??
       null,
   );
+  const [activeCagedBox, setActiveCagedBox] = useState<string | null>(null);
   const [displayMode, setDisplayMode] = useState<NoteDisplayMode>("name");
   const [currentTuning, setCurrentTuning] = useState<Tuning>(defaultTuning);
   const [fretCount, setFretCount] = useState<number>(settings.fretCount);
@@ -343,6 +344,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       if (scaleDef) {
         setSelectedRoot(config.scale.root);
         setSelectedScale(scaleDef);
+        setActiveCagedBox(null);
       }
     }
     if (config.tuning) {
@@ -756,6 +758,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 onFretCountChange={setFretCount}
                 selectedRoot={selectedRoot}
                 selectedScale={selectedScale}
+                activeCagedBox={activeCagedBox}
                 activeRandomNote={showTargetNote ? activeRandomNote : null}
                 displayMode={displayMode}
                 onDisplayModeChange={setDisplayMode}
@@ -963,6 +966,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 >
                   <span className="truncate">
                     {selectedScale?.name || "None (Show All Notes)"}
+                    {activeCagedBox && ` · ${activeCagedBox}`}
                   </span>
                   <ChevronDown
                     size={15}
@@ -971,7 +975,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 </button>
 
                 {isScaleMenuOpen && (
-                  <div className="absolute left-1/2 top-full z-50 mt-2 w-[calc(100vw-1rem)] max-w-[320px] -translate-x-1/2 rounded-xl border border-outline-variant/40 bg-surface p-3 shadow-2xl animate-in fade-in zoom-in-95 duration-150 md:left-0 md:w-105 md:max-w-none md:translate-x-0">
+                  <div className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[320px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-outline-variant/40 bg-surface p-3 shadow-2xl animate-in fade-in zoom-in-95 duration-150 md:absolute md:left-0 md:top-full md:mt-2 md:max-h-none md:w-105 md:max-w-none md:translate-x-0 md:translate-y-0 md:overflow-visible">
                     <div className="flex items-center justify-between pb-2 mb-2 border-b border-outline-variant/20">
                       <span className="text-[11px] font-mono font-bold text-on-surface uppercase tracking-wider">
                         Select Scale or Mode
@@ -1009,24 +1013,78 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       )}
                     </div>
 
-                    <div className="no-scrollbar mb-2 flex items-center gap-1 overflow-x-auto border-b border-outline-variant/10 pb-2">
+                    <div className="scale-category-scroll mb-2 flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-x-auto overscroll-x-contain border-b border-outline-variant/10 pb-2 touch-pan-x">
                       {["All", ...scaleCategories].map((category) => (
                         <button
                           key={category}
                           type="button"
                           onClick={() => setScaleMenuCategory(category)}
-                          className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-mono transition-all ${scaleMenuCategory === category ? "bg-primary text-on-primary font-bold" : "border border-outline-variant/20 bg-surface-container text-on-surface-variant hover:text-on-surface"}`}
+                          className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-mono transition-all ${scaleMenuCategory === category ? "bg-primary text-on-primary font-bold" : "border border-outline-variant/20 bg-surface-container text-on-surface-variant hover:text-on-surface"}`}
                         >
                           {category}
                         </button>
                       ))}
                     </div>
 
+                    {selectedScale?.cagedBoxes && (
+                      <div className="mb-2.5 border-b border-outline-variant/10 pb-3">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+                            Fretboard Position
+                          </span>
+                          <span className="truncate font-mono text-[10px] text-primary">
+                            {activeCagedBox
+                              ? `Position ${Object.keys(selectedScale.cagedBoxes).indexOf(activeCagedBox) + 1}`
+                              : "All positions"}
+                          </span>
+                        </div>
+                        <div className="flex w-full items-center gap-0.5 rounded-lg bg-surface-container-low p-1">
+                          <button
+                            type="button"
+                            title="Full fretboard"
+                            aria-label="Full fretboard"
+                            aria-pressed={activeCagedBox === null}
+                            onClick={() => setActiveCagedBox(null)}
+                            className={`flex h-10 min-w-0 flex-1 flex-col items-center justify-center rounded-md font-mono transition-colors ${activeCagedBox === null ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"}`}
+                          >
+                            <span className="text-[9px] font-bold uppercase leading-none">
+                              All
+                            </span>
+                            <span className="mt-1 text-[8px] leading-none">
+                              NECK
+                            </span>
+                          </button>
+                          {Object.keys(selectedScale.cagedBoxes).map(
+                            (boxKey, index) => {
+                              const isSelected = activeCagedBox === boxKey;
+                              const positionNumber = index + 1;
+                              return (
+                                <button
+                                  key={boxKey}
+                                  type="button"
+                                  title={`Position ${positionNumber}`}
+                                  aria-label={`Position ${positionNumber}`}
+                                  aria-pressed={isSelected}
+                                  onClick={() => setActiveCagedBox(boxKey)}
+                                  className={`flex h-10 min-w-0 flex-1 flex-col items-center justify-center rounded-md font-mono transition-colors ${isSelected ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"}`}
+                                >
+                                  <span className="text-sm font-bold leading-none">
+                                    {positionNumber}
+                                  </span>
+                                </button>
+                              );
+                            },
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="max-h-60 space-y-1 overflow-y-auto pr-1">
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedScale(null);
+                          setActiveCagedBox(null);
                           setIsScaleMenuOpen(false);
                         }}
                         className={`flex w-full items-center justify-between rounded-lg p-2 text-left transition-all ${selectedScale === null ? "border border-primary/40 bg-primary/15 text-primary font-bold" : "text-on-surface hover:bg-surface-container-high"}`}
@@ -1044,7 +1102,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                           type="button"
                           onClick={() => {
                             setSelectedScale(scale);
-                            setIsScaleMenuOpen(false);
+                            setActiveCagedBox(null);
                           }}
                           className={`flex w-full items-center justify-between rounded-lg p-2 text-left transition-all ${selectedScale?.id === scale.id ? "border border-primary/40 bg-primary/15 text-primary font-bold" : "text-on-surface hover:bg-surface-container-high"}`}
                         >
@@ -1084,11 +1142,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                           : "text-on-surface-variant hover:bg-outline-variant/10 hover:text-on-surface"
                       }`}
                     >
-                      {mode === "name"
-                        ? "Note Name"
-                        : mode === "degree"
-                          ? "Degrees (1 3 5)"
-                          : "Intervals (R M3)"}
+                      {mode === "name" ? (
+                        "Note Name"
+                      ) : mode === "degree" ? (
+                        <>
+                          Degrees{" "}
+                          <span className="hidden md:inline">(1 3 5)</span>
+                        </>
+                      ) : (
+                        <>
+                          Intervals{" "}
+                          <span className="hidden md:inline">(R M3)</span>
+                        </>
+                      )}
                     </button>
                   ),
                 )}

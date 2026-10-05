@@ -26,8 +26,11 @@ import {
   Hash,
   Edit2,
   Activity,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { NoteName, PracticeTask } from "../types";
+import { NoteName, PracticeTask, TaskActivity } from "../types";
 import {
   ALL_ROOT_NOTES,
   SCALES_DATABASE,
@@ -60,8 +63,8 @@ import {
 import { useTimer } from "../lib/useTimer";
 import {
   getSavedSessions,
-  purgeTaskActivities,
-  setTaskCompletion,
+  getSavedTaskActivities,
+  recordTaskActivity,
 } from "../lib/storage";
 import { clampDurationMinutes } from "../lib/taskAutoConfig";
 import { SessionWidget } from "../components/SessionWidget";
@@ -381,6 +384,23 @@ const DEFAULT_WEEKLY_SCHEDULE: DayBlueprint[] = [
 
 const DAY_CODES = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const getTodayCode = () => DAY_CODES[new Date().getDay()];
+const getWeekStart = (date: Date) => {
+  const weekStart = new Date(date);
+  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  return weekStart;
+};
+const getMonthWeeks = (month: Date) => {
+  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+  const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+  const weeks = [];
+  const weekStart = getWeekStart(firstDay);
+  while (weekStart <= lastDay) {
+    weeks.push(new Date(weekStart));
+    weekStart.setDate(weekStart.getDate() + 7);
+  }
+  return weeks;
+};
 
 interface RoutinePageProps {
   timer?: ReturnType<typeof useTimer>;
@@ -405,6 +425,53 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 }) => {
   const internalTimer = useTimer();
   const timer = propTimer || internalTimer;
+  const [taskHistory, setTaskHistory] = useState<TaskActivity[]>(
+    getSavedTaskActivities,
+  );
+  const [isCompletionPickerOpen, setIsCompletionPickerOpen] = useState(false);
+  const [historyMonth, setHistoryMonth] = useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
+  const [historyWeekStart, setHistoryWeekStart] = useState(() =>
+    getWeekStart(new Date()),
+  );
+  const historyWeeks = getMonthWeeks(historyMonth);
+  const historyWeekEnd = new Date(historyWeekStart);
+  historyWeekEnd.setDate(historyWeekEnd.getDate() + 7);
+  const completedHistory = taskHistory.filter((activity) => {
+    const activityTime = new Date(`${activity.date}T00:00:00`).getTime();
+    return (
+      activity.kind === "completed" &&
+      activityTime >= historyWeekStart.getTime() &&
+      activityTime < historyWeekEnd.getTime()
+    );
+  });
+  const getHistoryDateForDay = (dayCode: string) => {
+    const date = new Date(historyWeekStart);
+    date.setDate(date.getDate() + DAY_CODES.indexOf(dayCode));
+    return date;
+  };
+  const getCompletedTasksForDay = (dayCode: string) => {
+    const date = getHistoryDateForDay(dayCode);
+    const dateKey = [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0"),
+    ].join("-");
+    return completedHistory.filter((activity) => activity.date === dateKey);
+  };
+  const formatHistoryDate = (date: Date) =>
+    date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const changeHistoryMonth = (offset: number) => {
+    const nextMonth = new Date(
+      historyMonth.getFullYear(),
+      historyMonth.getMonth() + offset,
+      1,
+    );
+    setHistoryMonth(nextMonth);
+    setHistoryWeekStart(getMonthWeeks(nextMonth)[0]);
+  };
 
   const [streakData, setStreakData] = useState<StreakData>(
     propStreak || {
@@ -601,7 +668,11 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 
   const toggleTaskCompleted = (taskId: string) => {
     const task = activeDay.tasks.find((item) => item.id === taskId);
-    if (task) setTaskCompletion(task, !task.completed);
+    if (task && !task.completed) {
+      recordTaskActivity(task, "started");
+      recordTaskActivity(task, "completed");
+      setTaskHistory(getSavedTaskActivities());
+    }
     setWeeklySchedule((prev) =>
       prev.map((d) => {
         if (d.day === activeDayCode) {
@@ -638,7 +709,6 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   };
 
   const removeTask = (taskId: string) => {
-    purgeTaskActivities(taskId);
     setWeeklySchedule((prev) =>
       prev.map((d) => {
         if (d.day === activeDayCode) {
@@ -805,7 +875,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-12 relative">
+    <div className="routine-page space-y-6 pb-12 relative">
       {/* Top Banner: Weekly Schedule & Cadence */}
       <div className="bg-surface-container border border-outline-variant/30 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-md">
         <div>
@@ -819,18 +889,112 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-6 font-mono text-xs">
+        <div className="flex flex-wrap items-center gap-6 font-mono text-xs">
           <div className="text-on-surface-variant">
             Total Week Target:{" "}
             <strong className="text-on-surface font-bold">
               {formatHoursMins(totalWeekTargetMins)}
             </strong>
           </div>
-          <div className="text-on-surface-variant">
+          <div className="flex flex-wrap items-center gap-3 text-on-surface-variant">
             Completed:{" "}
             <strong className="text-primary font-bold">
               {formatHoursMins(completedMins)} ({completionPercent}%)
             </strong>
+            <div className="routine-history-picker">
+              <button
+                type="button"
+                className="routine-history-trigger"
+                onClick={() => setIsCompletionPickerOpen((isOpen) => !isOpen)}
+                aria-expanded={isCompletionPickerOpen}
+                aria-label="Choose a week to view completed tasks"
+              >
+                <Calendar size={14} />
+                <span>
+                  {formatHistoryDate(historyWeekStart)} –{" "}
+                  {formatHistoryDate(
+                    new Date(historyWeekEnd.getTime() - 86400000),
+                  )}
+                </span>
+                <ChevronDown size={13} />
+              </button>
+              {isCompletionPickerOpen && (
+                <div className="routine-history-popover">
+                  <div className="routine-history-month">
+                    <button
+                      type="button"
+                      onClick={() => changeHistoryMonth(-1)}
+                      aria-label="Previous month"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <strong>
+                      {historyMonth.toLocaleDateString("en-US", {
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </strong>
+                    <button
+                      type="button"
+                      onClick={() => changeHistoryMonth(1)}
+                      aria-label="Next month"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                  <label
+                    className="routine-history-week-label"
+                    htmlFor="routine-history-week"
+                  >
+                    WEEK
+                  </label>
+                  <div className="routine-history-select-wrap">
+                    <select
+                      id="routine-history-week"
+                      value={historyWeekStart.getTime()}
+                      onChange={(event) =>
+                        setHistoryWeekStart(
+                          new Date(Number(event.target.value)),
+                        )
+                      }
+                    >
+                      {historyWeeks.map((weekStart, index) => {
+                        const weekEnd = new Date(weekStart);
+                        weekEnd.setDate(weekEnd.getDate() + 6);
+                        return (
+                          <option
+                            key={weekStart.getTime()}
+                            value={weekStart.getTime()}
+                          >
+                            Week {index + 1} · {formatHistoryDate(weekStart)} –{" "}
+                            {formatHistoryDate(weekEnd)}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <ChevronDown size={14} />
+                  </div>
+                  <div className="routine-history-results">
+                    <div className="routine-history-results-heading">
+                      <span>Completed tasks</span>
+                      <span>{completedHistory.length}</span>
+                    </div>
+                    {completedHistory.length ? (
+                      completedHistory.map((activity) => (
+                        <div className="routine-history-task" key={activity.id}>
+                          <CheckCircle2 size={14} />
+                          <span>{activity.taskText}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="routine-history-empty">
+                        No completed tasks this week.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -840,11 +1004,15 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
         {weeklySchedule.map((day) => {
           const completedCount = day.tasks.filter((t) => t.completed).length;
           const totalCount = day.tasks.length;
+          const dayHistory = getCompletedTasksForDay(day.day);
+          const historyDate = getHistoryDateForDay(day.day);
           const pct =
             totalCount > 0
               ? Math.round((completedCount / totalCount) * 100)
               : 0;
-          const isToday = day.day === getTodayCode();
+          const isToday =
+            day.day === getTodayCode() &&
+            getWeekStart(new Date()).getTime() === historyWeekStart.getTime();
           const isSelected = day.day === activeDayCode;
 
           return (
@@ -872,6 +1040,9 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                   />
                 )}
               </div>
+              <p className="-mt-2 text-[10px] font-mono text-on-surface-variant">
+                {formatHistoryDate(historyDate)} · {dayHistory.length} done
+              </p>
 
               <div>
                 <div className="font-mono text-sm font-bold text-on-surface">
@@ -926,6 +1097,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
             </div>
           </div>
 
+          {/* Tasks List */}
           {/* Tasks List */}
           <div className="flex flex-col gap-2.5 min-h-[300px] overflow-y-auto max-h-[360px] custom-scrollbar pr-1">
             {activeDay.tasks.length === 0 ? (

@@ -113,8 +113,7 @@ export const SessionWidget: React.FC<SessionWidgetProps> = ({
             renderFocusTitle(activeTaskTitle)
           ) : (
             <span className="text-primary">{currentScaleName}</span>
-          )}{" "}
-          (Peak {highestBpmSession} BPM)
+          )}
         </span>
       </div>
 
