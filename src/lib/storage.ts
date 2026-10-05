@@ -29,6 +29,8 @@ const STORAGE_KEYS = {
 export const DEFAULT_TIMER_PREFERENCES: UserTimerPreferences = {
   autoStartTimerWithDailyTasks: true,
   autoActivateFirstTask: true,
+  autoAdvanceTimedTasks: false,
+  autoAdvanceDelaySeconds: 5,
   completionBehavior: "ask",
   hasSeenDailyTasksOnboarding: false,
   hasSeenTaskTimerOnboarding: false,

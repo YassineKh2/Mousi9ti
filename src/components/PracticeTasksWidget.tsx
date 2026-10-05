@@ -1178,6 +1178,13 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
         gifPlaceholder: "Task details updating dashboard controls",
         control: "automatic-setup",
       },
+      {
+        title: "Auto-advance timed tasks",
+        description:
+          "Turn this on in Settings under Tasks to move to the next task 5 seconds after a timer ends. The toast shows what is next and lets you go sooner.",
+        icon: <Clock size={20} />,
+        gifPlaceholder: "Auto-advancing to the next timed task",
+      },
     ];
     const currentStep = steps[onboardingStep ?? -1];
 
@@ -1710,17 +1717,30 @@ export const DropdownEditor: React.FC<{
 
   // Custom text state
   const [customText, setCustomText] = useState(active.params || "");
-  const [savedCustomTags, setSavedCustomTags] = useState(() =>
-    getSavedCustomTags().slice(0, 7),
+  const [savedCustomTags, setSavedCustomTags] = useState(getSavedCustomTags);
+  const matchingCustomTags = savedCustomTags.filter((tag) =>
+    tag.toLowerCase().includes(customText.trim().toLowerCase()),
   );
+  const canCreateCustomTag =
+    customText.trim().length > 0 &&
+    !savedCustomTags.some(
+      (tag) => tag.toLowerCase() === customText.trim().toLowerCase(),
+    );
 
   useEffect(() => {
-    const refreshTags = () =>
-      setSavedCustomTags(getSavedCustomTags().slice(0, 7));
+    const refreshTags = () => setSavedCustomTags(getSavedCustomTags());
     window.addEventListener(CUSTOM_TASK_TAGS_CHANGED_EVENT, refreshTags);
     return () =>
       window.removeEventListener(CUSTOM_TASK_TAGS_CHANGED_EVENT, refreshTags);
   }, []);
+
+  const createCustomTag = () => {
+    const name = customText.trim();
+    if (!name) return;
+    setSavedCustomTags(rememberCustomTags(`@custom(${name})`));
+    setCustomText(name);
+    onSave(name, true);
+  };
 
   // Tuning search
   const [tuningQuery, setTuningQuery] = useState("");
@@ -1786,13 +1806,18 @@ export const DropdownEditor: React.FC<{
     }
   };
 
-  const DROPDOWN_WIDTH = 260;
+  const DROPDOWN_WIDTH = 320;
 
   // Dynamic position tracking to anchor dropdown firmly to the clicked element and prevent moving up/down
   const [coords, setCoords] = useState<{ top: number; left: number }>(() => {
     const left = Math.min(
       Math.max(8, active.rect.left),
-      window.innerWidth - DROPDOWN_WIDTH - 8,
+      Math.max(
+        8,
+        window.innerWidth -
+          Math.min(DROPDOWN_WIDTH, window.innerWidth - 16) -
+          8,
+      ),
     );
     const top = active.rect.bottom + 4;
     return { top, left };
@@ -1825,7 +1850,7 @@ export const DropdownEditor: React.FC<{
 
     const estimatedHeight = dropdownRef.current
       ? dropdownRef.current.offsetHeight
-      : 280;
+      : 340;
     const spaceBelow = window.innerHeight - rect.bottom;
     const showAbove =
       spaceBelow < estimatedHeight && rect.top > estimatedHeight;
@@ -1835,7 +1860,12 @@ export const DropdownEditor: React.FC<{
       : rect.bottom + 4;
     const left = Math.min(
       Math.max(8, rect.left),
-      window.innerWidth - DROPDOWN_WIDTH - 8,
+      Math.max(
+        8,
+        window.innerWidth -
+          Math.min(DROPDOWN_WIDTH, window.innerWidth - 16) -
+          8,
+      ),
     );
 
     setCoords({ top, left });
@@ -1870,14 +1900,10 @@ export const DropdownEditor: React.FC<{
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-[90]"
-        onClick={onClose}
-        onWheel={onClose}
-      />
+      <div className="fixed inset-0 z-90" onClick={onClose} onWheel={onClose} />
       <div
         ref={dropdownRef}
-        className="fixed z-[100] w-[260px] bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-2xl p-3 flex flex-col gap-3 animate-in fade-in zoom-in-95 overscroll-contain"
+        className="fixed z-100 w-[min(320px,calc(100vw-16px))] bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-2xl p-4 flex flex-col gap-3 animate-in fade-in zoom-in-95 overscroll-contain"
         style={{ top: coords.top, left: coords.left }}
         onWheel={(e) => e.stopPropagation()}
       >
@@ -1899,41 +1925,55 @@ export const DropdownEditor: React.FC<{
         <div className="flex flex-col gap-2">
           {/* Custom text mention editor */}
           {active.tool === "custom" && (
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">
-                Custom Text
+            <div className="flex flex-col gap-3 font-mono">
+              <label
+                className="text-xs font-semibold text-on-surface"
+                htmlFor="custom-tag-search"
+              >
+                Find or create a tag
               </label>
-              <input
-                type="text"
-                value={customText}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setCustomText(val);
-                  onSave(val, false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    if (customText.trim()) {
-                      setSavedCustomTags(
-                        rememberCustomTags(
-                          `@custom(${customText.trim()})`,
-                        ).slice(0, 7),
-                      );
+              <div className="flex gap-2">
+                <input
+                  id="custom-tag-search"
+                  type="text"
+                  value={customText}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCustomText(val);
+                    onSave(val, false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (canCreateCustomTag) createCustomTag();
+                      else if (customText.trim())
+                        onSave(customText.trim(), true);
                     }
-                    onSave(customText.trim() || "Custom", true);
-                  }
-                }}
-                placeholder="Type whatever you want..."
-                className="bg-surface-container-lowest px-2.5 py-1.5 rounded text-xs text-on-surface border border-outline-variant/50 focus:border-primary outline-none font-mono"
-                autoFocus
-              />
-              <div className="flex flex-col gap-1">
-                <span className="text-[9px] text-on-surface-variant uppercase font-mono font-bold tracking-wider">
-                  Quick Presets:
+                  }}
+                  placeholder="Search or type a new tag"
+                  className="min-w-0 flex-1 rounded-md border border-outline-variant/50 bg-surface-container-lowest px-3 py-2 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary/40"
+                  autoFocus
+                />
+                {canCreateCustomTag && (
+                  <button
+                    type="button"
+                    onClick={createCustomTag}
+                    className="flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-on-primary transition-colors hover:bg-primary-container"
+                  >
+                    <Plus size={14} />
+                    Add
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-semibold uppercase text-on-surface-variant">
+                  Saved tags{" "}
+                  <span className="font-normal">
+                    ({savedCustomTags.length})
+                  </span>
                 </span>
-                <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto custom-scrollbar p-0.5">
-                  {savedCustomTags.map((preset) => (
+                <div className="flex max-h-48 flex-col gap-1 overflow-y-auto custom-scrollbar">
+                  {matchingCustomTags.map((preset) => (
                     <button
                       key={preset}
                       type="button"
@@ -1941,11 +1981,19 @@ export const DropdownEditor: React.FC<{
                         setCustomText(preset);
                         onSave(preset, true);
                       }}
-                      className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface-container-highest text-on-surface hover:bg-primary/20 hover:text-primary transition-colors text-left"
+                      className="flex w-full items-center justify-between gap-3 rounded-md border border-outline-variant/20 bg-surface-container-low px-3 py-2 text-left text-sm text-on-surface transition-colors hover:border-primary/50 hover:bg-primary/10"
                     >
-                      {preset}
+                      <span className="min-w-0 truncate">{preset}</span>
+                      <span className="shrink-0 text-[10px] text-on-surface-variant">
+                        Select
+                      </span>
                     </button>
                   ))}
+                  {matchingCustomTags.length === 0 && !canCreateCustomTag && (
+                    <p className="rounded-md border border-dashed border-outline-variant/30 px-3 py-4 text-center text-xs text-on-surface-variant">
+                      No saved tags yet. Type a name above to add one.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

@@ -211,6 +211,7 @@ interface DashboardPageProps {
   onUpdateTimerPreferences: (
     preferences: Partial<UserTimerPreferences>,
   ) => void;
+  onTaskTimerStarted: (taskId: string) => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -245,6 +246,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onPracticeTasksChange,
   onSetTaskManualDuration,
   onUpdateTimerPreferences,
+  onTaskTimerStarted,
 }) => {
   const [metronomeTimeSignature, setMetronomeTimeSignature] =
     useState<TimeSignature>(
@@ -371,6 +373,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       setMetronomeTimeSignature(config.timeSignature);
     }
     if (config.durationMinutes !== undefined && timer.status === "idle") {
+      onTaskTimerStarted(activeTaskId);
       timer.start(config.durationMinutes * 60);
     }
     if (
@@ -817,31 +820,35 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
-      {autoConfigToast && (
-        <div className="flex items-start gap-2.5 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-xs text-on-surface animate-in fade-in slide-in-from-top-1 duration-200">
-          <Sparkles size={15} className="mt-0.5 shrink-0 text-primary" />
-          <div className="min-w-0 flex-1">
-            <p className="font-mono">
-              Dashboard configured from "
-              <span className="font-semibold">{autoConfigToast.taskText}</span>
-              ."
-            </p>
-            {autoConfigToast.parts.length > 0 && (
-              <p className="mt-0.5 font-mono text-on-surface-variant">
-                {autoConfigToast.parts.join(" · ")}
+      {autoConfigToast &&
+        createPortal(
+          <div className="fixed bottom-20 right-4 z-[60] flex w-[calc(100vw-2rem)] max-w-lg items-start gap-2.5 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-xs text-on-surface shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-bottom-1 duration-200 lg:bottom-6 lg:right-6">
+            <Sparkles size={15} className="mt-0.5 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="font-mono">
+                Dashboard configured from "
+                <span className="font-semibold">
+                  {autoConfigToast.taskText}
+                </span>
+                ."
               </p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setAutoConfigToast(null)}
-            className="shrink-0 rounded p-1 text-on-surface-variant hover:text-on-surface"
-            aria-label="Dismiss"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
+              {autoConfigToast.parts.length > 0 && (
+                <p className="mt-0.5 font-mono text-on-surface-variant">
+                  {autoConfigToast.parts.join(" · ")}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setAutoConfigToast(null)}
+              className="shrink-0 rounded p-1 text-on-surface-variant hover:text-on-surface"
+              aria-label="Dismiss"
+            >
+              <X size={14} />
+            </button>
+          </div>,
+          document.body,
+        )}
       <div
         data-tour="dashboard-customize"
         className="flex flex-wrap items-center justify-between gap-3"

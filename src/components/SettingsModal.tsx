@@ -15,6 +15,7 @@ import {
   Upload,
   FileUp,
   Github,
+  Plus,
 } from "lucide-react";
 import { AppSettings, TaskCompletionBehavior } from "../types";
 import { GUITAR_TUNINGS } from "../data/musicTheory";
@@ -23,8 +24,10 @@ import {
   CUSTOM_TASK_TAGS_CHANGED_EVENT,
   CUSTOM_TAG_CATEGORIES,
   getSavedCustomTagEntries,
+  rememberCustomTags,
   removeSavedCustomTag,
   setSavedCustomTagCategory,
+  CustomTagCategory,
 } from "../lib/customTaskTags";
 import {
   AppBackup,
@@ -52,6 +55,10 @@ interface SettingsModalProps {
   onRestartTour: () => void;
   completionBehavior: TaskCompletionBehavior;
   onUpdateCompletionBehavior: (behavior: TaskCompletionBehavior) => void;
+  autoAdvanceTimedTasks: boolean;
+  onToggleAutoAdvanceTimedTasks: (enabled: boolean) => void;
+  autoAdvanceDelaySeconds: number;
+  onChangeAutoAdvanceDelaySeconds: (seconds: number) => void;
   autoConfigureDashboardFromTask: boolean;
   onToggleAutoConfigureDashboardFromTask: (enabled: boolean) => void;
 }
@@ -70,11 +77,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onRestartTour,
   completionBehavior,
   onUpdateCompletionBehavior,
+  autoAdvanceTimedTasks,
+  onToggleAutoAdvanceTimedTasks,
+  autoAdvanceDelaySeconds,
+  onChangeAutoAdvanceDelaySeconds,
   autoConfigureDashboardFromTask,
   onToggleAutoConfigureDashboardFromTask,
 }) => {
   const [activeTab, setActiveTab] = useState("general");
   const [customTags, setCustomTags] = useState(getSavedCustomTagEntries);
+  const [newCustomTag, setNewCustomTag] = useState("");
+  const [newCustomTagCategory, setNewCustomTagCategory] =
+    useState<CustomTagCategory>("general");
   const [showSelectiveImport, setShowSelectiveImport] = useState(false);
   const [selectedImportCategories, setSelectedImportCategories] = useState<
     BackupCategory[]
@@ -90,6 +104,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     return () =>
       window.removeEventListener(CUSTOM_TASK_TAGS_CHANGED_EVENT, refreshTags);
   }, []);
+
+  const createCustomTag = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const name = newCustomTag.trim();
+    if (!name) return;
+    rememberCustomTags(`@custom(${name})`);
+    setCustomTags(setSavedCustomTagCategory(name, newCustomTagCategory));
+    setNewCustomTag("");
+  };
 
   const chooseImportFile = (mode: "full" | "selected") => {
     setImportError("");
@@ -308,6 +331,65 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </select>
           </div>
 
+          <div
+            className={
+              activeTab === "tasks"
+                ? "space-y-3 border-t border-outline-variant/20 pt-4"
+                : "hidden"
+            }
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <span className="font-mono text-xs font-semibold text-on-surface block">
+                  Auto-advance Timed Tasks
+                </span>
+                <span className="text-[11px] text-on-surface-variant">
+                  Start the next task automatically when its timer ends.
+                </span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={autoAdvanceTimedTasks}
+                aria-label="Auto-advance Timed Tasks"
+                onClick={() =>
+                  onToggleAutoAdvanceTimedTasks(!autoAdvanceTimedTasks)
+                }
+                className={`relative h-6 w-11 shrink-0 rounded-full border p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-primary ${
+                  autoAdvanceTimedTasks
+                    ? "border-primary bg-primary"
+                    : "border-outline-variant/40 bg-surface-container-high"
+                }`}
+              >
+                <span
+                  className={`block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                    autoAdvanceTimedTasks ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+            <label className="flex items-center justify-between gap-3">
+              <span className="font-mono text-xs text-on-surface-variant">
+                Wait before next task
+              </span>
+              <select
+                value={autoAdvanceDelaySeconds}
+                onChange={(event) =>
+                  onChangeAutoAdvanceDelaySeconds(Number(event.target.value))
+                }
+                aria-label="Delay before advancing to the next task"
+                className="rounded-md border border-outline-variant/40 bg-surface-container-high px-3 py-2 font-mono text-xs text-on-surface outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/40"
+              >
+                <option value={0}>Immediately</option>
+                <option value={3}>3 seconds</option>
+                <option value={5}>5 seconds</option>
+                <option value={10}>10 seconds</option>
+                <option value={15}>15 seconds</option>
+                <option value={30}>30 seconds</option>
+              </select>
+            </label>
+          </div>
+
           {/* Automatic Task Setup */}
           <div
             className={
@@ -398,56 +480,117 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <details
             aria-labelledby="custom-task-tags-heading"
+            open
             className={
               activeTab === "tasks"
-                ? "space-y-3 border-t border-outline-variant/20 pt-4"
+                ? "space-y-4 border-t border-outline-variant/20 pt-4"
                 : "hidden"
             }
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-              <span className="font-mono text-xs font-semibold text-on-surface">
+              <span className="font-mono text-sm font-semibold text-on-surface">
                 <span id="custom-task-tags-heading">Custom Tags</span>
                 <span className="ml-2 font-normal text-on-surface-variant">
                   ({customTags.length})
                 </span>
               </span>
-              <span className="text-[10px] text-on-surface-variant">+</span>
+              <span className="text-xs text-on-surface-variant">Manage</span>
             </summary>
-            <p className="text-[11px] text-on-surface-variant">
-              Remove a tag from saved suggestions. Existing tasks that use it
-              will stay unchanged.
+            <p className="text-xs text-on-surface-variant">
+              Create tags for your practice tasks, organize them, or remove them
+              from suggestions.
             </p>
+            <form
+              onSubmit={createCustomTag}
+              className="rounded-lg border border-outline-variant/30 bg-surface-container-low p-3 font-mono"
+            >
+              <label
+                htmlFor="new-custom-task-tag"
+                className="mb-2 block text-xs font-semibold text-on-surface"
+              >
+                New tag
+              </label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  id="new-custom-task-tag"
+                  value={newCustomTag}
+                  onChange={(event) => setNewCustomTag(event.target.value)}
+                  placeholder="e.g. Sight reading"
+                  maxLength={48}
+                  className="min-w-0 flex-1 rounded-md border border-outline-variant/40 bg-surface-container-lowest px-3 py-2 text-sm text-on-surface outline-none placeholder:text-on-surface-variant/70 focus:border-primary focus:ring-1 focus:ring-primary/40"
+                />
+                <button
+                  type="submit"
+                  disabled={!newCustomTag.trim()}
+                  className="flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-on-primary transition-colors hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <Plus size={14} />
+                  Add tag
+                </button>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                <span className="mr-1 text-[10px] font-semibold uppercase text-on-surface-variant">
+                  Category
+                </span>
+                {CUSTOM_TAG_CATEGORIES.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    aria-pressed={newCustomTagCategory === category}
+                    onClick={() => setNewCustomTagCategory(category)}
+                    className={`rounded-md border px-2.5 py-1 text-xs capitalize transition-colors ${
+                      newCustomTagCategory === category
+                        ? "border-primary/50 bg-primary/15 font-semibold text-primary"
+                        : "border-outline-variant/30 text-on-surface-variant hover:border-outline-variant hover:text-on-surface"
+                    }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            </form>
             {customTags.length > 0 ? (
-              <ul className="space-y-2" aria-label="Saved custom tags">
+              <ul
+                className="space-y-2 font-mono"
+                aria-label="Saved custom tags"
+              >
                 {customTags.map((tag) => (
                   <li
                     key={tag.name}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded border border-outline-variant/25 bg-surface-container-low px-2.5 py-2"
+                    className="flex flex-col gap-3 rounded-lg border border-outline-variant/25 bg-surface-container-low px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <span className="min-w-0 break-all font-mono text-[11px] text-teal-300">
+                    <span
+                      className={`min-w-0 wrap-break-word font-medium ${
+                        tag.category === "exercise"
+                          ? "text-tertiary"
+                          : tag.category === "technique"
+                            ? "text-primary"
+                            : "text-on-surface"
+                      }`}
+                    >
                       {tag.name}
                     </span>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <select
-                        value={tag.category}
-                        aria-label={`Category for ${tag.name}`}
-                        onChange={(event) =>
-                          setCustomTags(
-                            setSavedCustomTagCategory(
-                              tag.name,
-                              event.target
-                                .value as (typeof CUSTOM_TAG_CATEGORIES)[number],
-                            ),
-                          )
-                        }
-                        className="rounded border border-outline-variant/40 bg-surface-container-high px-2 py-1 font-mono text-[10px] text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                      >
-                        {CUSTOM_TAG_CATEGORIES.map((category) => (
-                          <option key={category} value={category}>
-                            {category[0].toUpperCase() + category.slice(1)}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {CUSTOM_TAG_CATEGORIES.map((category) => (
+                        <button
+                          key={category}
+                          type="button"
+                          aria-label={`${category} category for ${tag.name}`}
+                          aria-pressed={tag.category === category}
+                          onClick={() =>
+                            setCustomTags(
+                              setSavedCustomTagCategory(tag.name, category),
+                            )
+                          }
+                          className={`rounded-md border px-2 py-1 text-[10px] capitalize transition-colors ${
+                            tag.category === category
+                              ? "border-primary/50 bg-primary/15 font-semibold text-primary"
+                              : "border-outline-variant/25 text-on-surface-variant hover:border-outline-variant hover:text-on-surface"
+                          }`}
+                        >
+                          {category}
+                        </button>
+                      ))}
                       <button
                         type="button"
                         onClick={() => {
@@ -456,9 +599,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         }}
                         aria-label={`Remove ${tag.name} from saved task tags`}
                         title={`Remove ${tag.name}`}
-                        className="flex h-5 w-5 items-center justify-center rounded text-teal-300/70 transition-colors hover:bg-error/15 hover:text-error"
+                        className="ml-1 flex h-8 w-8 items-center justify-center rounded-md text-on-surface-variant transition-colors hover:bg-error/15 hover:text-error"
                       >
-                        <X size={12} />
+                        <X size={15} />
                       </button>
                     </div>
                   </li>

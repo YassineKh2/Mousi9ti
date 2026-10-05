@@ -249,6 +249,8 @@ export type TaskCompletionBehavior = "stop" | "continue" | "ask";
 export interface UserTimerPreferences {
   autoStartTimerWithDailyTasks: boolean;
   autoActivateFirstTask: boolean;
+  autoAdvanceTimedTasks: boolean;
+  autoAdvanceDelaySeconds: number;
   completionBehavior: TaskCompletionBehavior;
   hasSeenDailyTasksOnboarding: boolean;
   hasSeenTaskTimerOnboarding: boolean;

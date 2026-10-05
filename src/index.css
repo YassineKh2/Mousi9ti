@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@keyframes timed-task-advance-drain {
+  to {
+    transform: scaleX(0);
+  }
+}
+
 @theme {
   --color-surface: #131313;
   --color-surface-dim: #131313;

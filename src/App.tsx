@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import confetti from "canvas-confetti";
+import { SkipForward } from "lucide-react";
 import {
   AppSettings,
   Exercise,
@@ -137,12 +138,24 @@ export function App() {
       return [];
     }
   });
+  const practiceTasksRef = useRef(practiceTasks);
+  practiceTasksRef.current = practiceTasks;
   const [activeTaskId, setActiveTaskId] = useState<string | null>(() =>
     localStorage.getItem("Mousi9ti_active_task_id"),
   );
+  const activeTaskIdRef = useRef(activeTaskId);
+  activeTaskIdRef.current = activeTaskId;
   const [isDailyRoutineActive, setIsDailyRoutineActive] = useState(false);
   const [timerPreferences, setTimerPreferences] =
     useState<UserTimerPreferences>(() => getSavedTimerPreferences());
+  const autoAdvanceTimedTasksRef = useRef(
+    timerPreferences.autoAdvanceTimedTasks,
+  );
+  autoAdvanceTimedTasksRef.current = timerPreferences.autoAdvanceTimedTasks;
+  const [timedTaskAdvanceToast, setTimedTaskAdvanceToast] = useState<{
+    taskId: string;
+    nextTaskName: string;
+  } | null>(null);
   const [sessionReview, setSessionReview] = useState<{
     practiceSessionId: string;
     globalDurationSeconds: number;
@@ -192,6 +205,8 @@ export function App() {
     startedAt: number;
     sessionId: string;
   } | null>(null);
+  const timedTaskIdRef = useRef<string | null>(null);
+  const timedTaskAdvanceTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     localStorage.setItem("mous9iti_tasks", JSON.stringify(practiceTasks));
@@ -311,6 +326,14 @@ export function App() {
   };
 
   const makeTaskActive = (taskId: string | null) => {
+    if (taskId !== timedTaskIdRef.current) {
+      if (timedTaskAdvanceTimeoutRef.current !== null) {
+        window.clearTimeout(timedTaskAdvanceTimeoutRef.current);
+        timedTaskAdvanceTimeoutRef.current = null;
+      }
+      setTimedTaskAdvanceToast(null);
+      timedTaskIdRef.current = null;
+    }
     const task = practiceTasks.find((item) => item.id === taskId);
     if (task?.completed) return;
     if (task) recordTaskActivity(task, "started");
@@ -342,6 +365,28 @@ export function App() {
         }
       }
     }
+  };
+  const togglePracticeTaskRef = useRef(togglePracticeTask);
+  togglePracticeTaskRef.current = togglePracticeTask;
+
+  const finishTimedTask = (taskId: string) => {
+    if (timedTaskAdvanceTimeoutRef.current !== null) {
+      window.clearTimeout(timedTaskAdvanceTimeoutRef.current);
+      timedTaskAdvanceTimeoutRef.current = null;
+    }
+    setTimedTaskAdvanceToast(null);
+    const timedTask = practiceTasksRef.current.find(
+      (task) => task.id === taskId,
+    );
+    if (
+      activeTaskIdRef.current !== taskId ||
+      !timedTask ||
+      timedTask.completed
+    ) {
+      return;
+    }
+    timer.reset();
+    togglePracticeTaskRef.current(taskId);
   };
 
   const handleTaskCompletionChoice = (
@@ -444,6 +489,26 @@ export function App() {
   useEffect(() => {
     timer.setOnComplete(() => {
       const durationSeconds = timer.duration;
+      const timedTaskId = timedTaskIdRef.current;
+      timedTaskIdRef.current = null;
+      if (
+        timerPreferences.autoAdvanceTimedTasks &&
+        timedTaskId &&
+        timedTaskId === activeTaskId
+      ) {
+        const nextTask = practiceTasksRef.current.find(
+          (task) => task.id !== timedTaskId && !task.completed,
+        );
+        const advanceDelaySeconds = timerPreferences.autoAdvanceDelaySeconds;
+        setTimedTaskAdvanceToast(
+          nextTask && advanceDelaySeconds > 0
+            ? { taskId: timedTaskId, nextTaskName: nextTask.text }
+            : null,
+        );
+        timedTaskAdvanceTimeoutRef.current = window.setTimeout(() => {
+          if (autoAdvanceTimedTasksRef.current) finishTimedTask(timedTaskId);
+        }, advanceDelaySeconds * 1000);
+      }
       flushTaskAttribution(Date.now());
       if (durationSeconds > 0) {
         recordPracticeActivity({
@@ -480,10 +545,27 @@ export function App() {
     });
   }, [
     flushTaskAttribution,
+    activeTaskId,
+    practiceTasks,
     settings.stopMetronomeOnTimerEnd,
     settings.timerNotificationsEnabled,
+    timerPreferences.autoAdvanceTimedTasks,
+    timerPreferences.autoAdvanceDelaySeconds,
     timer,
+    togglePracticeTask,
   ]);
+
+  useEffect(() => {
+    if (
+      (timer.status !== "finished" ||
+        !timerPreferences.autoAdvanceTimedTasks) &&
+      timedTaskAdvanceTimeoutRef.current !== null
+    ) {
+      window.clearTimeout(timedTaskAdvanceTimeoutRef.current);
+      timedTaskAdvanceTimeoutRef.current = null;
+      setTimedTaskAdvanceToast(null);
+    }
+  }, [timer.status, timerPreferences.autoAdvanceTimedTasks]);
 
   useEffect(() => {
     const unsubscribe = audioEngine.onMetronomeStateChange(
@@ -1132,6 +1214,9 @@ export function App() {
               onPracticeTasksChange={setPracticeTasks}
               onSetTaskManualDuration={setTaskManualDuration}
               onUpdateTimerPreferences={updateTimerPreferences}
+              onTaskTimerStarted={(taskId) => {
+                timedTaskIdRef.current = taskId;
+              }}
             />
           )}
 
@@ -1194,6 +1279,43 @@ export function App() {
           )}
         </main>
 
+        {timedTaskAdvanceToast && (
+          <div
+            key={timedTaskAdvanceToast.taskId}
+            role="status"
+            aria-live="polite"
+            className="fixed bottom-20 right-4 z-[105] w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-lg border border-primary/35 bg-surface-container px-4 pb-4 pt-3 text-on-surface shadow-xl animate-in fade-in slide-in-from-bottom-1 duration-200 lg:bottom-6 lg:right-6"
+          >
+            <div className="flex items-center gap-3">
+              <div className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                <SkipForward size={16} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold">Auto-passing to</p>
+                <p className="break-words text-sm text-on-surface-variant">
+                  {timedTaskAdvanceToast.nextTaskName}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => finishTimedTask(timedTaskAdvanceToast.taskId)}
+                className="flex shrink-0 items-center gap-1.5 rounded border border-primary/40 px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+              >
+                <SkipForward size={14} />
+                Go now
+              </button>
+            </div>
+            <div className="absolute inset-x-0 bottom-0 h-1 bg-surface-container-highest">
+              <div
+                className="h-full origin-left bg-primary"
+                style={{
+                  animation: `timed-task-advance-drain ${timerPreferences.autoAdvanceDelaySeconds}s linear forwards`,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Settings Modal */}
         <SettingsModal
           isOpen={isSettingsOpen}
@@ -1210,6 +1332,14 @@ export function App() {
           completionBehavior={timerPreferences.completionBehavior}
           onUpdateCompletionBehavior={(behavior) =>
             updateTimerPreferences({ completionBehavior: behavior })
+          }
+          autoAdvanceTimedTasks={timerPreferences.autoAdvanceTimedTasks}
+          onToggleAutoAdvanceTimedTasks={(enabled) =>
+            updateTimerPreferences({ autoAdvanceTimedTasks: enabled })
+          }
+          autoAdvanceDelaySeconds={timerPreferences.autoAdvanceDelaySeconds}
+          onChangeAutoAdvanceDelaySeconds={(seconds) =>
+            updateTimerPreferences({ autoAdvanceDelaySeconds: seconds })
           }
           autoConfigureDashboardFromTask={
             timerPreferences.autoConfigureDashboardFromTask
