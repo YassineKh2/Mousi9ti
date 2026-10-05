@@ -39,6 +39,7 @@ import {
   COMMON_PRACTICE_KEYS,
   COMMON_TECHNIQUES,
   COMMON_EXERCISES,
+  getMentionSuggestions as getCategorizedMentionSuggestions,
 } from "../utils/taskMentions";
 import {
   PracticeTask,
@@ -51,8 +52,10 @@ import {
   setTaskCompletion,
 } from "../lib/storage";
 import { useSettingsContext } from "../contexts/SettingsContext";
+import { ToggleSwitchIndicator } from "./ToggleSwitch";
 import {
   CUSTOM_TASK_TAGS_CHANGED_EVENT,
+  getSavedCustomTagEntries,
   getSavedCustomTags,
   rememberCustomTags,
 } from "../lib/customTaskTags";
@@ -254,9 +257,9 @@ const getMentionContext = (
 
 const getMentionSuggestions = (
   ctx: MentionContext | null,
-  customTags: string[] = getSavedCustomTags(),
 ): { label: string; value: string; subLabel?: string }[] => {
   if (!ctx) return [];
+  const savedCustomTags = getSavedCustomTagEntries();
   if (ctx.type === "tool") {
     const tools = [
       {
@@ -300,11 +303,16 @@ const getMentionSuggestions = (
       .map((t) => ({ label: t.label, value: t.name, subLabel: t.subLabel }));
   } else if (ctx.type === "param" && ctx.tool) {
     if (ctx.tool === "custom") {
+      const generalTags = savedCustomTags
+        .filter((tag) => tag.category === "general")
+        .map((tag) => tag.name);
       const list: { label: string; value: string; subLabel?: string }[] = [];
       const query = ctx.query.trim();
       if (
         query &&
-        !customTags.some((tag) => tag.toLowerCase() === query.toLowerCase())
+        !savedCustomTags.some(
+          (tag) => tag.name.toLowerCase() === query.toLowerCase(),
+        )
       ) {
         list.push({
           label: `"${query}"`,
@@ -312,7 +320,7 @@ const getMentionSuggestions = (
           subLabel: "New custom tag",
         });
       }
-      customTags
+      generalTags
         .filter(
           (tag) => !query || tag.toLowerCase().includes(query.toLowerCase()),
         )
@@ -346,11 +354,22 @@ const getMentionSuggestions = (
         .map((k) => ({ label: k, value: k, subLabel: "Key" }))
         .slice(0, 7);
     } else if (ctx.tool === "technique") {
+      const recommendations = [
+        ...savedCustomTags
+          .filter((tag) => tag.category === "technique")
+          .map((tag) => tag.name),
+        ...COMMON_TECHNIQUES,
+      ].filter(
+        (tag, index, tags) =>
+          tags.findIndex(
+            (candidate) => candidate.toLowerCase() === tag.toLowerCase(),
+          ) === index,
+      );
       const list: { label: string; value: string; subLabel?: string }[] = [];
       if (
         ctx.query.trim() &&
-        !COMMON_TECHNIQUES.some(
-          (t) => t.toLowerCase() === ctx.query.toLowerCase(),
+        !recommendations.some(
+          (tag) => tag.toLowerCase() === ctx.query.toLowerCase(),
         )
       ) {
         list.push({
@@ -359,7 +378,7 @@ const getMentionSuggestions = (
           subLabel: "Custom technique",
         });
       }
-      COMMON_TECHNIQUES.filter(
+      recommendations.filter(
         (t) => !ctx.query || t.toLowerCase().includes(ctx.query.toLowerCase()),
       ).forEach((t) =>
         list.push({ label: t, value: t, subLabel: "Technique" }),
@@ -382,11 +401,22 @@ const getMentionSuggestions = (
         .map((b) => ({ label: `${b} BPM`, value: b, subLabel: "Tempo" }))
         .slice(0, 7);
     } else if (ctx.tool === "exercise") {
+      const recommendations = [
+        ...savedCustomTags
+          .filter((tag) => tag.category === "exercise")
+          .map((tag) => tag.name),
+        ...COMMON_EXERCISES,
+      ].filter(
+        (tag, index, tags) =>
+          tags.findIndex(
+            (candidate) => candidate.toLowerCase() === tag.toLowerCase(),
+          ) === index,
+      );
       const list: { label: string; value: string; subLabel?: string }[] = [];
       if (
         ctx.query.trim() &&
-        !COMMON_EXERCISES.some(
-          (e) => e.toLowerCase() === ctx.query.toLowerCase(),
+        !recommendations.some(
+          (tag) => tag.toLowerCase() === ctx.query.toLowerCase(),
         )
       ) {
         list.push({
@@ -395,7 +425,7 @@ const getMentionSuggestions = (
           subLabel: "Custom drill",
         });
       }
-      COMMON_EXERCISES.filter(
+      recommendations.filter(
         (e) => !ctx.query || e.toLowerCase().includes(ctx.query.toLowerCase()),
       ).forEach((e) => list.push({ label: e, value: e, subLabel: "Exercise" }));
       return list.slice(0, 7);
@@ -495,6 +525,16 @@ const getMentionSuggestions = (
     }
   }
   return [];
+};
+
+const getDashboardMentionSuggestions = (ctx: MentionContext | null) => {
+  if (
+    ctx?.type === "param" &&
+    ["custom", "exercise", "technique"].includes(ctx.tool || "")
+  ) {
+    return getCategorizedMentionSuggestions(ctx);
+  }
+  return getMentionSuggestions(ctx);
 };
 
 const applyMentionSuggestion = (
@@ -629,7 +669,7 @@ export const InlineTaskRowEditor: React.FC<InlineTaskRowEditorProps> = ({
   }, [text, cursor]);
 
   const ctx = getMentionContext(text, cursor);
-  const suggestions = getMentionSuggestions(ctx, customTags);
+  const suggestions = getDashboardMentionSuggestions(ctx);
   const safeSuggestionIndex = Math.max(
     0,
     Math.min(suggestionIndex, suggestions.length - 1),
@@ -939,7 +979,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   };
 
   const ctx = getMentionContext(newTaskText, cursor);
-  const suggestions = getMentionSuggestions(ctx, customTags);
+  const suggestions = getDashboardMentionSuggestions(ctx);
   const safeSuggestionIndex = Math.max(
     0,
     Math.min(suggestionIndex, suggestions.length - 1),
@@ -1357,14 +1397,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                           Update dashboard controls from the active task
                         </span>
                       </span>
-                      <span
-                        aria-hidden="true"
-                        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${onboardingAutoTaskSetup ? "bg-primary" : "bg-surface-container-highest"}`}
-                      >
-                        <span
-                          className={`absolute top-1 h-4 w-4 rounded-full bg-surface transition-transform ${onboardingAutoTaskSetup ? "left-6" : "left-1"}`}
-                        />
-                      </span>
+                      <ToggleSwitchIndicator checked={onboardingAutoTaskSetup} />
                     </button>
                   )}
                 </div>
@@ -1717,7 +1750,30 @@ export const DropdownEditor: React.FC<{
 
   // Custom text state
   const [customText, setCustomText] = useState(active.params || "");
-  const [savedCustomTags, setSavedCustomTags] = useState(getSavedCustomTags);
+  const [savedCustomTagEntries, setSavedCustomTagEntries] = useState(
+    getSavedCustomTagEntries,
+  );
+  const savedCustomTags = savedCustomTagEntries
+    .filter((tag) => tag.category === "general")
+    .map((tag) => tag.name);
+  const exerciseRecommendations = [
+    ...savedCustomTagEntries
+      .filter((tag) => tag.category === "exercise")
+      .map((tag) => tag.name),
+    ...COMMON_EXERCISES,
+  ].filter(
+    (tag, index, tags) =>
+      tags.findIndex((candidate) => candidate.toLowerCase() === tag.toLowerCase()) === index,
+  );
+  const techniqueRecommendations = [
+    ...savedCustomTagEntries
+      .filter((tag) => tag.category === "technique")
+      .map((tag) => tag.name),
+    ...COMMON_TECHNIQUES,
+  ].filter(
+    (tag, index, tags) =>
+      tags.findIndex((candidate) => candidate.toLowerCase() === tag.toLowerCase()) === index,
+  );
   const matchingCustomTags = savedCustomTags.filter((tag) =>
     tag.toLowerCase().includes(customText.trim().toLowerCase()),
   );
@@ -1728,7 +1784,8 @@ export const DropdownEditor: React.FC<{
     );
 
   useEffect(() => {
-    const refreshTags = () => setSavedCustomTags(getSavedCustomTags());
+    const refreshTags = () =>
+      setSavedCustomTagEntries(getSavedCustomTagEntries());
     window.addEventListener(CUSTOM_TASK_TAGS_CHANGED_EVENT, refreshTags);
     return () =>
       window.removeEventListener(CUSTOM_TASK_TAGS_CHANGED_EVENT, refreshTags);
@@ -1737,7 +1794,8 @@ export const DropdownEditor: React.FC<{
   const createCustomTag = () => {
     const name = customText.trim();
     if (!name) return;
-    setSavedCustomTags(rememberCustomTags(`@custom(${name})`));
+    rememberCustomTags(`@custom(${name})`);
+    setSavedCustomTagEntries(getSavedCustomTagEntries());
     setCustomText(name);
     onSave(name, true);
   };
@@ -2148,7 +2206,7 @@ export const DropdownEditor: React.FC<{
                 className="flex flex-col gap-1 max-h-[140px] overflow-y-auto border border-outline-variant/20 rounded p-1 bg-surface-container-lowest overscroll-contain custom-scrollbar"
                 onWheel={(e) => e.stopPropagation()}
               >
-                {COMMON_TECHNIQUES.map((tech) => {
+                {techniqueRecommendations.map((tech) => {
                   const isSelected =
                     techniqueText.toLowerCase() === tech.toLowerCase();
                   return (
@@ -2348,7 +2406,7 @@ export const DropdownEditor: React.FC<{
                 className="flex flex-col gap-1 max-h-[140px] overflow-y-auto border border-outline-variant/20 rounded p-1 bg-surface-container-lowest overscroll-contain custom-scrollbar"
                 onWheel={(e) => e.stopPropagation()}
               >
-                {COMMON_EXERCISES.map((ex) => {
+                {exerciseRecommendations.map((ex) => {
                   const isSelected =
                     exerciseText.toLowerCase() === ex.toLowerCase();
                   return (

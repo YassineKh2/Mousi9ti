@@ -10,6 +10,8 @@ import {
   parseChordInput,
   parseScaleInput,
 } from "../utils/musicSearch";
+
+import { getSavedCustomTagEntries } from "../lib/customTaskTags";
 export const COMMON_PRACTICE_KEYS = [
   "C Major",
   "A Minor",
@@ -224,6 +226,7 @@ export const getMentionSuggestions = (
   ctx: MentionContext | null,
 ): { label: string; value: string; subLabel?: string }[] => {
   if (!ctx) return [];
+  const savedCustomTags = getSavedCustomTagEntries();
   if (ctx.type === "tool") {
     const tools = [
       {
@@ -280,22 +283,44 @@ export const getMentionSuggestions = (
         "Fingerstyle",
         "Bending",
       ];
+      const generalTags = savedCustomTags
+        .filter((tag) => tag.category === "general")
+        .map((tag) => tag.name);
+      const recommendations = [...generalTags, ...presets].filter(
+        (tag, index, tags) =>
+          tags.findIndex(
+            (candidate) => candidate.toLowerCase() === tag.toLowerCase(),
+          ) === index,
+      );
       const list: { label: string; value: string; subLabel?: string }[] = [];
-      if (ctx.query.trim()) {
+      if (
+        ctx.query.trim() &&
+        !recommendations.some(
+          (tag) => tag.toLowerCase() === ctx.query.trim().toLowerCase(),
+        )
+      ) {
         list.push({
           label: `"${ctx.query.trim()}"`,
           value: ctx.query.trim(),
           subLabel: "Custom note",
         });
       }
-      presets
+      recommendations
         .filter(
           (p) =>
             !ctx.query || p.toLowerCase().includes(ctx.query.toLowerCase()),
         )
         .forEach((p) => {
           if (p.toLowerCase() !== ctx.query.toLowerCase()) {
-            list.push({ label: p, value: p, subLabel: "Quick tag" });
+            list.push({
+              label: p,
+              value: p,
+              subLabel: generalTags.some(
+                (tag) => tag.toLowerCase() === p.toLowerCase(),
+              )
+                ? "Saved tag"
+                : "Quick tag",
+            });
           }
         });
       return list.slice(0, 7);
@@ -319,11 +344,23 @@ export const getMentionSuggestions = (
         .map((k) => ({ label: k, value: k, subLabel: "Key" }))
         .slice(0, 7);
     } else if (ctx.tool === "technique") {
+      const customTechniques = savedCustomTags
+        .filter((tag) => tag.category === "technique")
+        .map((tag) => tag.name);
+      const recommendations = [
+        ...customTechniques,
+        ...COMMON_TECHNIQUES,
+      ].filter(
+        (tag, index, tags) =>
+          tags.findIndex(
+            (candidate) => candidate.toLowerCase() === tag.toLowerCase(),
+          ) === index,
+      );
       const list: { label: string; value: string; subLabel?: string }[] = [];
       if (
         ctx.query.trim() &&
-        !COMMON_TECHNIQUES.some(
-          (t) => t.toLowerCase() === ctx.query.toLowerCase(),
+        !recommendations.some(
+          (tag) => tag.toLowerCase() === ctx.query.toLowerCase(),
         )
       ) {
         list.push({
@@ -332,11 +369,14 @@ export const getMentionSuggestions = (
           subLabel: "Custom technique",
         });
       }
-      COMMON_TECHNIQUES.filter(
-        (t) => !ctx.query || t.toLowerCase().includes(ctx.query.toLowerCase()),
-      ).forEach((t) =>
-        list.push({ label: t, value: t, subLabel: "Technique" }),
-      );
+      recommendations
+        .filter(
+          (t) =>
+            !ctx.query || t.toLowerCase().includes(ctx.query.toLowerCase()),
+        )
+        .forEach((t) =>
+          list.push({ label: t, value: t, subLabel: "Technique" }),
+        );
       return list.slice(0, 7);
     } else if (ctx.tool === "bpm") {
       const baseList = [
@@ -365,11 +405,20 @@ export const getMentionSuggestions = (
         .map((b) => ({ label: `${b} BPM`, value: b, subLabel: "Tempo" }))
         .slice(0, 7);
     } else if (ctx.tool === "exercise") {
+      const customExercises = savedCustomTags
+        .filter((tag) => tag.category === "exercise")
+        .map((tag) => tag.name);
+      const recommendations = [...customExercises, ...COMMON_EXERCISES].filter(
+        (tag, index, tags) =>
+          tags.findIndex(
+            (candidate) => candidate.toLowerCase() === tag.toLowerCase(),
+          ) === index,
+      );
       const list: { label: string; value: string; subLabel?: string }[] = [];
       if (
         ctx.query.trim() &&
-        !COMMON_EXERCISES.some(
-          (e) => e.toLowerCase() === ctx.query.toLowerCase(),
+        !recommendations.some(
+          (tag) => tag.toLowerCase() === ctx.query.toLowerCase(),
         )
       ) {
         list.push({
@@ -378,9 +427,14 @@ export const getMentionSuggestions = (
           subLabel: "Custom drill",
         });
       }
-      COMMON_EXERCISES.filter(
-        (e) => !ctx.query || e.toLowerCase().includes(ctx.query.toLowerCase()),
-      ).forEach((e) => list.push({ label: e, value: e, subLabel: "Exercise" }));
+      recommendations
+        .filter(
+          (e) =>
+            !ctx.query || e.toLowerCase().includes(ctx.query.toLowerCase()),
+        )
+        .forEach((e) =>
+          list.push({ label: e, value: e, subLabel: "Exercise" }),
+        );
       return list.slice(0, 7);
     } else if (ctx.tool === "scale") {
       const results = searchScales(ctx.query, 6);

@@ -37,6 +37,7 @@ import {
   BackupCategory,
   readAppBackupFile,
 } from "../lib/appBackup";
+import { ToggleSwitch } from "./ToggleSwitch";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -347,26 +348,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   Start the next task automatically when its timer ends.
                 </span>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={autoAdvanceTimedTasks}
-                aria-label="Auto-advance Timed Tasks"
-                onClick={() =>
-                  onToggleAutoAdvanceTimedTasks(!autoAdvanceTimedTasks)
-                }
-                className={`relative h-6 w-11 shrink-0 rounded-full border p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-primary ${
-                  autoAdvanceTimedTasks
-                    ? "border-primary bg-primary"
-                    : "border-outline-variant/40 bg-surface-container-high"
-                }`}
-              >
-                <span
-                  className={`block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                    autoAdvanceTimedTasks ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
+              <ToggleSwitch
+                checked={autoAdvanceTimedTasks}
+                label="Auto-advance Timed Tasks"
+                onChange={onToggleAutoAdvanceTimedTasks}
+              />
             </div>
             <label className="flex items-center justify-between gap-3">
               <span className="font-mono text-xs text-on-surface-variant">
@@ -559,15 +545,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     key={tag.name}
                     className="flex flex-col gap-3 rounded-lg border border-outline-variant/25 bg-surface-container-low px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <span
-                      className={`min-w-0 wrap-break-word font-medium ${
-                        tag.category === "exercise"
-                          ? "text-tertiary"
-                          : tag.category === "technique"
-                            ? "text-primary"
-                            : "text-on-surface"
-                      }`}
-                    >
+                    <span className="min-w-0 wrap-break-word font-medium text-on-surface">
                       {tag.name}
                     </span>
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -891,30 +869,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   Stop playback automatically when a timed practice finishes.
                 </span>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={settings.stopMetronomeOnTimerEnd}
-                aria-label="Stop metronome when timer ends"
-                onClick={() =>
-                  onUpdateSettings({
-                    stopMetronomeOnTimerEnd: !settings.stopMetronomeOnTimerEnd,
-                  })
+              <ToggleSwitch
+                checked={settings.stopMetronomeOnTimerEnd}
+                label="Stop metronome when timer ends"
+                onChange={(checked) =>
+                  onUpdateSettings({ stopMetronomeOnTimerEnd: checked })
                 }
-                className={`relative h-6 w-11 shrink-0 rounded-full border p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-primary ${
-                  settings.stopMetronomeOnTimerEnd
-                    ? "border-primary bg-primary"
-                    : "border-outline-variant/40 bg-surface-container-high"
-                }`}
-              >
-                <span
-                  className={`block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                    settings.stopMetronomeOnTimerEnd
-                      ? "translate-x-5"
-                      : "translate-x-0"
-                  }`}
-                />
-              </button>
+              />
             </div>
 
             <div className="flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-4">
@@ -935,26 +896,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </span>
                 )}
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={settings.timerNotificationsEnabled}
-                aria-label="Enable desktop timer notifications"
-                onClick={toggleTimerNotifications}
-                className={`relative h-6 w-11 shrink-0 rounded-full border p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-primary ${
-                  settings.timerNotificationsEnabled
-                    ? "border-primary bg-primary"
-                    : "border-outline-variant/40 bg-surface-container-high"
-                }`}
-              >
-                <span
-                  className={`block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                    settings.timerNotificationsEnabled
-                      ? "translate-x-5"
-                      : "translate-x-0"
-                  }`}
-                />
-              </button>
+              <ToggleSwitch
+                checked={settings.timerNotificationsEnabled}
+                label="Enable desktop timer notifications"
+                onChange={() => void toggleTimerNotifications()}
+              />
             </div>
           </section>
 
@@ -1136,34 +1082,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   Give each of the 12 pitches its own color on the fretboard
                 </span>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={settings.fretboardNotesColored}
-                aria-label="Color every guitar note"
-                onClick={() =>
-                  onUpdateSettings({
-                    fretboardNotesColored: !settings.fretboardNotesColored,
-                  })
+              <ToggleSwitch
+                checked={settings.fretboardNotesColored}
+                label="Color every guitar note"
+                onChange={(checked) =>
+                  onUpdateSettings({ fretboardNotesColored: checked })
                 }
-                className={`relative h-6 w-11 shrink-0 rounded-full border p-0.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
-                  settings.fretboardNotesColored
-                    ? "border-primary bg-primary"
-                    : "border-outline-variant/40 bg-surface-container-high"
-                }`}
-              >
-                <span
-                  className={`block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                    settings.fretboardNotesColored
-                      ? "translate-x-5"
-                      : "translate-x-0"
-                  }`}
-                />
-              </button>
+              />
             </div>
 
             <div className="mt-4 flex flex-col gap-3">
-              <label className="flex items-center justify-between cursor-pointer group">
+              <div className="flex items-center justify-between group">
                 <div>
                   <span className="font-mono text-xs font-semibold text-on-surface block group-hover:text-primary transition-colors">
                     Minimal Details
@@ -1172,20 +1101,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     Hide fret inlays, clean background, thinner lines
                   </span>
                 </div>
-                <div
-                  className={`w-10 h-5 rounded-full p-0.5 transition-colors ${settings.fretboardMinimalDetails ? "bg-primary" : "bg-surface-container-high border border-outline-variant/30"}`}
-                  onClick={() =>
-                    onUpdateSettings({
-                      fretboardMinimalDetails:
-                        !settings.fretboardMinimalDetails,
-                    })
+                <ToggleSwitch
+                  checked={settings.fretboardMinimalDetails}
+                  label="Minimal Details"
+                  onChange={(checked) =>
+                    onUpdateSettings({ fretboardMinimalDetails: checked })
                   }
-                >
-                  <div
-                    className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${settings.fretboardMinimalDetails ? "translate-x-5" : "translate-x-0"}`}
-                  />
-                </div>
-              </label>
+                />
+              </div>
             </div>
           </div>
           {/* Backup and Import */}
