@@ -53,7 +53,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   fretboardNotesColored: false,
   fretboardMarkerShape: "round",
   fretboardMinimalDetails: false,
-  taskTagsColored: true,
+  taskTagsColored: false,
   autoSaveSession: true,
   timerPresets: [3, 5, 10, 30],
   stopMetronomeOnTimerEnd: false,

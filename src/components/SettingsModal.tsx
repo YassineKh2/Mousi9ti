@@ -270,8 +270,57 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             General
           </span>
 
+          {/* Theme Toggle */}
+          <div
+            className={
+              activeTab === "general"
+                ? "flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-outline-variant/20"
+                : "hidden"
+            }
+          >
+            <div>
+              <span className="font-mono text-xs font-semibold text-on-surface block">
+                App Theme
+              </span>
+              <span className="text-[11px] text-on-surface-variant">
+                Switch between dark and light mode
+              </span>
+            </div>
+
+            <div className="flex items-center self-start sm:self-auto gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant/30 shrink-0">
+              <button
+                onClick={() => onUpdateSettings({ theme: "dark" })}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all ${
+                  settings.theme === "dark"
+                    ? "bg-primary text-on-primary font-bold"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <Moon size={13} />
+                <span>Dark</span>
+              </button>
+              <button
+                onClick={() => onUpdateSettings({ theme: "light" })}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all ${
+                  settings.theme === "light"
+                    ? "bg-primary text-on-primary font-bold"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <Sun size={13} />
+                <span>Light</span>
+              </button>
+            </div>
+          </div>
+
           {/* Master Volume */}
-          <div className={activeTab === "general" ? "space-y-2" : "hidden"}>
+          <div
+            className={
+              activeTab === "general"
+                ? "space-y-2 border-t border-outline-variant/20 pt-4"
+                : "hidden"
+            }
+          >
             <div className="flex items-center justify-between text-xs font-mono">
               <span className="text-on-surface-variant font-bold flex items-center gap-2">
                 <Volume2 size={14} className="text-primary" />
@@ -592,76 +641,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
           </details>
 
-          {/* Theme Toggle */}
-          <div
-            className={
-              activeTab === "general"
-                ? "flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-outline-variant/20"
-                : "hidden"
-            }
-          >
-            <div>
-              <span className="font-mono text-xs font-semibold text-on-surface block">
-                App Theme
-              </span>
-              <span className="text-[11px] text-on-surface-variant">
-                Switch between dark and light mode
-              </span>
-            </div>
-
-            <div className="flex items-center self-start sm:self-auto gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant/30 shrink-0">
-              <button
-                onClick={() => onUpdateSettings({ theme: "dark" })}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all ${
-                  settings.theme === "dark"
-                    ? "bg-primary text-on-primary font-bold"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                <Moon size={13} />
-                <span>Dark</span>
-              </button>
-              <button
-                onClick={() => onUpdateSettings({ theme: "light" })}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all ${
-                  settings.theme === "light"
-                    ? "bg-primary text-on-primary font-bold"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                <Sun size={13} />
-                <span>Light</span>
-              </button>
-            </div>
-          </div>
-
-          <div
-            className={
-              activeTab === "general"
-                ? "flex flex-col gap-3 border-t border-outline-variant/20 pt-4 sm:flex-row sm:items-center sm:justify-between"
-                : "hidden"
-            }
-          >
-            <div>
-              <span className="font-mono text-xs font-semibold text-on-surface block">
-                Restart Tour
-              </span>
-              <span className="text-[11px] text-on-surface-variant">
-                Start the introductory walkthrough again.
-              </span>
-            </div>
-            <button
-              onClick={() => {
-                onClose();
-                onRestartTour();
-              }}
-              className="flex shrink-0 items-center gap-1.5 rounded border border-outline-variant/30 bg-surface-container px-3.5 py-2 font-mono text-xs text-on-surface transition-colors hover:bg-surface-container-high"
-            >
-              <RotateCcw size={14} />
-              Restart Tour
-            </button>
-          </div>
-
           <span
             className={
               activeTab === "instrument"
@@ -901,6 +880,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 label="Enable desktop timer notifications"
                 onChange={() => void toggleTimerNotifications()}
               />
+            </div>
+
+            <div
+              className={
+                activeTab === "general"
+                  ? "flex flex-col gap-3 border-t border-outline-variant/20 pt-4 sm:flex-row sm:items-center sm:justify-between"
+                  : "hidden"
+              }
+            >
+              <div>
+                <span className="font-mono text-xs font-semibold text-on-surface block">
+                  Restart Tour
+                </span>
+                <span className="text-[11px] text-on-surface-variant">
+                  Start the introductory walkthrough again.
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  onClose();
+                  onRestartTour();
+                }}
+                className="flex shrink-0 items-center gap-1.5 rounded border border-outline-variant/30 bg-surface-container px-3.5 py-2 font-mono text-xs text-on-surface transition-colors hover:bg-surface-container-high"
+              >
+                <RotateCcw size={14} />
+                Restart Tour
+              </button>
             </div>
           </section>
 
@@ -1398,7 +1404,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             Mousi9ti
           </span>
           <a
-            href="https://github.com/YassineKh2/Mous9iti"
+            href="https://github.com/YassineKh2/Mousi9ti"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 font-mono text-[10px] text-on-surface-variant transition-colors hover:text-primary"

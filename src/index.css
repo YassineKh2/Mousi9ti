@@ -669,6 +669,13 @@
   box-shadow: 0 16px 35px rgb(0 0 0 / 35%);
 }
 
+.stats-calendar-popover.task-calendar-inline {
+  position: static;
+  width: min(19rem, 100%);
+  margin-top: 0.5rem;
+  box-shadow: none;
+}
+
 .stats-calendar-header,
 .stats-calendar-weekdays,
 .stats-calendar-grid {
@@ -748,10 +755,15 @@
 .stats-source-total {
   position: absolute;
   inset: 0;
+  z-index: 1;
   display: grid;
   place-content: center;
   text-align: center;
   pointer-events: none;
+}
+
+.stats-source-chart .recharts-tooltip-wrapper {
+  z-index: 2;
 }
 
 .stats-source-total b {
@@ -956,11 +968,11 @@
 }
 
 .stats-page .text-on-surface {
-  color: #e2e8f0;
+  color: var(--color-on-surface);
 }
 
 .stats-page .text-on-surface-variant {
-  color: #64748b;
+  color: var(--color-on-surface-variant);
 }
 
 .stats-page .text-primary {
@@ -1061,8 +1073,7 @@
 .light .stats-page .stats-source-row,
 .light .stats-page .stats-source-total span,
 .light .stats-page .stats-calendar-weekdays,
-.light .stats-page .stats-completion-ring span,
-.light .stats-page > div:first-child p {
+.light .stats-page .stats-completion-ring span {
   color: var(--color-on-surface-variant);
 }
 
@@ -1079,12 +1090,40 @@
   box-shadow: 0 8px 25px rgb(31 41 55 / 10%);
 }
 
+.light .routine-page .stats-calendar-popover {
+  border-color: var(--stats-border);
+  background: var(--color-surface-container-low);
+  color: var(--color-on-surface);
+  box-shadow: 0 8px 25px rgb(31 41 55 / 10%);
+}
+
 .light .stats-page .stats-date-control > svg:first-child,
 .light .stats-page .stats-date-control select,
 .light .stats-page .stats-date-control select option,
 .light .stats-page .stats-calendar-header,
 .light .stats-page .stats-calendar-grid button {
   color: var(--color-on-surface);
+}
+
+.light .routine-page .stats-calendar-header,
+.light .routine-page .stats-calendar-grid button {
+  color: var(--color-on-surface);
+}
+
+.light .routine-page .stats-calendar-weekdays {
+  color: var(--color-on-surface-variant);
+}
+
+.light .routine-page .stats-calendar-header button {
+  color: var(--color-on-surface-variant);
+}
+
+.light .routine-page .stats-calendar-grid button.is-selected {
+  color: white;
+}
+
+.light .routine-page .stats-calendar-grid button.is-muted {
+  color: var(--color-on-surface-variant);
 }
 
 .light .stats-page .stats-date-control > svg:nth-of-type(2),
@@ -1284,6 +1323,10 @@
 }
 
 @media (max-width: 640px) {
+  .stats-page > [data-tour="stats-metrics"] > .stats-metric-card:last-child {
+    grid-column: 1 / -1;
+  }
+
   .stats-page .stats-ranking-grid {
     grid-template-columns: 1fr;
   }

@@ -68,7 +68,148 @@ import {
 } from "../lib/storage";
 import { clampDurationMinutes } from "../lib/taskAutoConfig";
 import { SessionWidget } from "../components/SessionWidget";
+import {
+  CalendarDateRange,
+  CalendarRangePicker,
+} from "../components/CalendarRangePicker";
 import { StreakData } from "../types";
+
+type TaskDurationPeriod = "forever" | "week" | "month" | "year" | "custom";
+
+interface RoutineTask {
+  id: string;
+  text: string;
+  completed: boolean;
+  duration?: TaskDurationPeriod;
+  startsAt?: number;
+  expiresAt?: number;
+}
+
+const getTaskExpiration = (period: TaskDurationPeriod): number | undefined => {
+  if (period === "forever") return undefined;
+  if (period === "custom") return undefined;
+
+  const expiration = new Date();
+  expiration.setHours(0, 0, 0, 0);
+  if (period === "week") {
+    expiration.setDate(
+      expiration.getDate() + ((7 - expiration.getDay()) % 7 || 7),
+    );
+  } else if (period === "month") {
+    expiration.setMonth(expiration.getMonth() + 1, 1);
+  } else {
+    expiration.setFullYear(expiration.getFullYear() + 1, 0, 1);
+  }
+  return expiration.getTime();
+};
+
+const isExpiredTask = (task: RoutineTask | PracticeTask) => {
+  const expiresAt = "expiresAt" in task ? task.expiresAt : undefined;
+  return Number.isFinite(expiresAt) && expiresAt! <= Date.now();
+};
+
+const taskRange = (task: RoutineTask): CalendarDateRange | null =>
+  task.startsAt !== undefined && task.expiresAt !== undefined
+    ? { start: task.startsAt, end: task.expiresAt }
+    : null;
+
+const getStartOfDay = (timestamp: number) => {
+  const date = new Date(timestamp);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  ).getTime();
+};
+
+const getEndOfDay = (timestamp: number) => {
+  const date = new Date(timestamp);
+  date.setHours(23, 59, 59, 999);
+  return date.getTime();
+};
+
+const getTaskDurationLabel = (task: RoutineTask) => {
+  if (task.duration === "custom") return "Custom dates";
+  if (task.duration === "week") return "This week";
+  if (task.duration === "month") return "This month";
+  if (task.duration === "year") return "This year";
+  return "No limit";
+};
+
+const TASK_DURATION_OPTIONS: { value: TaskDurationPeriod; label: string }[] = [
+  { value: "forever", label: "No limit" },
+  { value: "week", label: "This week" },
+  { value: "month", label: "This month" },
+  { value: "year", label: "This year" },
+  { value: "custom", label: "Custom dates" },
+];
+
+const TaskDurationMenu: React.FC<{
+  value: TaskDurationPeriod;
+  onChange: (value: TaskDurationPeriod) => void;
+  className?: string;
+}> = ({ value, onChange, className = "" }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const selectedLabel =
+    TASK_DURATION_OPTIONS.find((option) => option.value === value)?.label ??
+    "No limit";
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setIsOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
+  return (
+    <div
+      ref={menuRef}
+      className={`relative inline-flex flex-col items-start ${isOpen ? "z-50" : ""} ${className}`}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <button
+        type="button"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((open) => !open)}
+        className="inline-flex min-h-9 items-center gap-2 rounded-md border border-outline-variant/40 bg-surface-container-lowest px-2.5 text-xs font-mono text-on-surface transition-colors hover:border-primary/60 hover:bg-surface-container-high"
+      >
+        <Calendar size={14} className="text-primary" />
+        <span>{selectedLabel}</span>
+        <ChevronDown size={13} className="text-on-surface-variant" />
+      </button>
+      {isOpen && (
+        <div className="absolute left-0 top-full z-50 mt-2 w-48 rounded-xl border border-outline-variant/40 bg-surface p-2 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+          {TASK_DURATION_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-current={value === option.value ? "true" : undefined}
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+              className={`block w-full rounded px-3 py-2 text-left text-xs font-mono transition-colors hover:bg-surface-container-high ${
+                value === option.value ? "text-primary" : "text-on-surface"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface DayBlueprint {
   day: string;
@@ -82,7 +223,7 @@ interface DayBlueprint {
     durationMin: number;
     completed: boolean;
   }[];
-  tasks: { id: string; text: string; completed: boolean }[];
+  tasks: RoutineTask[];
 }
 
 const DEFAULT_WEEKLY_SCHEDULE: DayBlueprint[] = [
@@ -437,30 +578,22 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
     getWeekStart(new Date()),
   );
   const historyWeeks = getMonthWeeks(historyMonth);
-  const historyWeekEnd = new Date(historyWeekStart);
-  historyWeekEnd.setDate(historyWeekEnd.getDate() + 7);
-  const completedHistory = taskHistory.filter((activity) => {
-    const activityTime = new Date(`${activity.date}T00:00:00`).getTime();
-    return (
-      activity.kind === "completed" &&
-      activityTime >= historyWeekStart.getTime() &&
-      activityTime < historyWeekEnd.getTime()
-    );
-  });
   const getHistoryDateForDay = (dayCode: string) => {
     const date = new Date(historyWeekStart);
     date.setDate(date.getDate() + DAY_CODES.indexOf(dayCode));
     return date;
   };
-  const getCompletedTasksForDay = (dayCode: string) => {
+  const getTaskHistoryForDay = (dayCode: string) => {
     const date = getHistoryDateForDay(dayCode);
     const dateKey = [
       date.getFullYear(),
       String(date.getMonth() + 1).padStart(2, "0"),
       String(date.getDate()).padStart(2, "0"),
     ].join("-");
-    return completedHistory.filter((activity) => activity.date === dateKey);
+    return taskHistory.filter((activity) => activity.date === dateKey);
   };
+  const isCurrentWeek =
+    historyWeekStart.getTime() === getWeekStart(new Date()).getTime();
   const formatHistoryDate = (date: Date) =>
     date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const changeHistoryMonth = (offset: number) => {
@@ -516,9 +649,15 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       } catch (e) {}
     }
 
+    schedule = schedule.map((day) => ({
+      ...day,
+      tasks: day.tasks.filter((task) => !isExpiredTask(task)),
+    }));
+
     if (practiceTasks) {
+      const currentTasks = practiceTasks.filter((task) => !isExpiredTask(task));
       return schedule.map((day) =>
-        day.day === getTodayCode() ? { ...day, tasks: practiceTasks } : day,
+        day.day === getTodayCode() ? { ...day, tasks: currentTasks } : day,
       );
     }
 
@@ -528,12 +667,20 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       const parsedTasks = JSON.parse(savedDailyTasks);
       if (!Array.isArray(parsedTasks)) return schedule;
       return schedule.map((day) =>
-        day.day === getTodayCode() ? { ...day, tasks: parsedTasks } : day,
+        day.day === getTodayCode()
+          ? {
+              ...day,
+              tasks: parsedTasks.filter((task) => !isExpiredTask(task)),
+            }
+          : day,
       );
     } catch (e) {
       return schedule;
     }
   });
+  const daysInWeek = DAY_CODES.map((dayCode) =>
+    weeklySchedule.find((day) => day.day === dayCode),
+  ).filter((day): day is DayBlueprint => Boolean(day));
 
   const [activeDayCode, setActiveDayCode] = useState<string>(getTodayCode);
   const activeDay =
@@ -565,6 +712,29 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   }, [weeklySchedule, activeDayCode]);
 
   useEffect(() => {
+    const nextExpiration = weeklySchedule
+      .flatMap((day) => day.tasks)
+      .map((task) => task.expiresAt)
+      .filter((expiresAt): expiresAt is number => Number.isFinite(expiresAt))
+      .reduce((earliest, expiresAt) => Math.min(earliest, expiresAt), Infinity);
+    if (!Number.isFinite(nextExpiration)) return;
+
+    const timeout = window.setTimeout(
+      () => {
+        setWeeklySchedule((current) =>
+          current.map((day) => ({
+            ...day,
+            tasks: day.tasks.filter((task) => !isExpiredTask(task)),
+          })),
+        );
+      },
+      Math.min(Math.max(0, nextExpiration - Date.now()), 2_147_483_647),
+    );
+
+    return () => window.clearTimeout(timeout);
+  }, [weeklySchedule]);
+
+  useEffect(() => {
     if (activeDay?.day === getTodayCode()) {
       onPracticeTasksChange?.(activeDay.tasks);
     }
@@ -592,6 +762,15 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 
   // New task input state & Autocomplete
   const [newTaskInput, setNewTaskInput] = useState("");
+  const [newTaskDuration, setNewTaskDuration] =
+    useState<TaskDurationPeriod>("forever");
+  const [newTaskRange, setNewTaskRange] = useState<CalendarDateRange | null>(
+    null,
+  );
+  const [isNewTaskCalendarOpen, setIsNewTaskCalendarOpen] = useState(false);
+  const [editingDurationTaskId, setEditingDurationTaskId] = useState<
+    string | null
+  >(null);
   const [cursor, setCursor] = useState(0);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [activeDropdown, setActiveDropdown] = useState<ActiveDropdown | null>(
@@ -668,6 +847,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 
   const toggleTaskCompleted = (taskId: string) => {
     const task = activeDay.tasks.find((item) => item.id === taskId);
+    if (task?.startsAt && task.startsAt > Date.now()) return;
     if (task && !task.completed) {
       recordTaskActivity(task, "started");
       recordTaskActivity(task, "completed");
@@ -690,11 +870,21 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 
   const addTask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTaskInput.trim()) return;
+    if (!newTaskInput.trim() || (newTaskDuration === "custom" && !newTaskRange))
+      return;
     const newTask = {
       id: `t-${Date.now()}`,
       text: newTaskInput.trim(),
       completed: false,
+      duration: newTaskDuration,
+      startsAt:
+        newTaskDuration === "custom" && newTaskRange
+          ? getStartOfDay(newTaskRange.start)
+          : undefined,
+      expiresAt:
+        newTaskDuration === "custom" && newTaskRange
+          ? getEndOfDay(newTaskRange.end)
+          : getTaskExpiration(newTaskDuration),
     };
     setWeeklySchedule((prev) =>
       prev.map((d) => {
@@ -705,7 +895,62 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       }),
     );
     setNewTaskInput("");
+    setNewTaskDuration("forever");
+    setNewTaskRange(null);
+    setIsNewTaskCalendarOpen(false);
     setCursor(0);
+  };
+
+  const updateTaskDuration = (taskId: string, duration: TaskDurationPeriod) => {
+    setWeeklySchedule((prev) =>
+      prev.map((day) =>
+        day.day === activeDayCode
+          ? {
+              ...day,
+              tasks: day.tasks.map((task) =>
+                task.id === taskId
+                  ? {
+                      ...task,
+                      duration,
+                      startsAt:
+                        duration === "custom" && task.duration === "custom"
+                          ? task.startsAt
+                          : undefined,
+                      expiresAt:
+                        duration === "custom"
+                          ? task.duration === "custom"
+                            ? task.expiresAt
+                            : undefined
+                          : getTaskExpiration(duration),
+                    }
+                  : task,
+              ),
+            }
+          : day,
+      ),
+    );
+  };
+
+  const updateTaskRange = (taskId: string, range: CalendarDateRange) => {
+    setWeeklySchedule((prev) =>
+      prev.map((day) =>
+        day.day === activeDayCode
+          ? {
+              ...day,
+              tasks: day.tasks.map((task) =>
+                task.id === taskId
+                  ? {
+                      ...task,
+                      duration: "custom",
+                      startsAt: getStartOfDay(range.start),
+                      expiresAt: getEndOfDay(range.end),
+                    }
+                  : task,
+              ),
+            }
+          : day,
+      ),
+    );
   };
 
   const removeTask = (taskId: string) => {
@@ -913,7 +1158,11 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                 <span>
                   {formatHistoryDate(historyWeekStart)} –{" "}
                   {formatHistoryDate(
-                    new Date(historyWeekEnd.getTime() - 86400000),
+                    new Date(
+                      historyWeekStart.getFullYear(),
+                      historyWeekStart.getMonth(),
+                      historyWeekStart.getDate() + 6,
+                    ),
                   )}
                 </span>
                 <ChevronDown size={13} />
@@ -974,24 +1223,6 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                     </select>
                     <ChevronDown size={14} />
                   </div>
-                  <div className="routine-history-results">
-                    <div className="routine-history-results-heading">
-                      <span>Completed tasks</span>
-                      <span>{completedHistory.length}</span>
-                    </div>
-                    {completedHistory.length ? (
-                      completedHistory.map((activity) => (
-                        <div className="routine-history-task" key={activity.id}>
-                          <CheckCircle2 size={14} />
-                          <span>{activity.taskText}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="routine-history-empty">
-                        No completed tasks this week.
-                      </p>
-                    )}
-                  </div>
                 </div>
               )}
             </div>
@@ -1001,10 +1232,27 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 
       {/* 7 Day Cards Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        {weeklySchedule.map((day) => {
-          const completedCount = day.tasks.filter((t) => t.completed).length;
-          const totalCount = day.tasks.length;
-          const dayHistory = getCompletedTasksForDay(day.day);
+        {daysInWeek.map((day) => {
+          const dayHistory = getTaskHistoryForDay(day.day);
+          const loggedTasks = new Map<
+            string,
+            { id: string; text: string; completed: boolean }
+          >();
+          dayHistory.forEach((activity) => {
+            const loggedTask = loggedTasks.get(activity.taskId);
+            loggedTasks.set(activity.taskId, {
+              id: activity.taskId,
+              text: loggedTask?.text || activity.taskText,
+              completed: loggedTask?.completed || activity.kind === "completed",
+            });
+          });
+          const dayTasks = isCurrentWeek
+            ? day.tasks
+            : [...loggedTasks.values()];
+          const completedCount = dayTasks.filter(
+            (task) => task.completed,
+          ).length;
+          const totalCount = dayTasks.length;
           const historyDate = getHistoryDateForDay(day.day);
           const pct =
             totalCount > 0
@@ -1051,9 +1299,29 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                     goals
                   </span>
                 </div>
-                <p className="text-[11px] text-on-surface-variant truncate mt-0.5 font-sans">
-                  {day.focusTheme}
-                </p>
+                <div className="mt-1 flex flex-col gap-0.5">
+                  {dayTasks.length ? (
+                    <>
+                      {dayTasks.slice(0, 2).map((task) => (
+                        <p
+                          key={task.id}
+                          className="truncate text-[10px] text-on-surface-variant font-sans"
+                        >
+                          {task.text}
+                        </p>
+                      ))}
+                      {dayTasks.length > 2 && (
+                        <p className="text-[10px] text-on-surface-variant font-mono">
+                          +{dayTasks.length - 2} more
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-[10px] text-on-surface-variant font-sans">
+                      No tasks logged
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="w-full flex flex-col gap-1">
@@ -1158,10 +1426,63 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                         <Circle size={18} />
                       )}
                     </button>
-                    <div
-                      className={`flex-1 text-sm font-mono leading-relaxed ${task.completed ? "line-through text-on-surface-variant" : "text-on-surface"}`}
-                    >
-                      {renderTaskText(task)}
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className={`text-sm font-mono leading-relaxed ${task.completed ? "line-through text-on-surface-variant" : "text-on-surface"}`}
+                      >
+                        {renderTaskText(task)}
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+                        <TaskDurationMenu
+                          value={task.duration ?? "forever"}
+                          onChange={(duration) => {
+                            if (duration === "custom") {
+                              setEditingDurationTaskId(task.id);
+                              return;
+                            }
+                            updateTaskDuration(task.id, duration);
+                            setEditingDurationTaskId(null);
+                          }}
+                        />
+                        {task.startsAt !== undefined &&
+                          task.expiresAt !== undefined && (
+                            <span className="text-[10px] font-mono text-on-surface-variant">
+                              {new Date(task.startsAt).toLocaleDateString(
+                                undefined,
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                },
+                              )}
+                              {" - "}
+                              {new Date(task.expiresAt).toLocaleDateString(
+                                undefined,
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                },
+                              )}
+                            </span>
+                          )}
+                      </div>
+                      {editingDurationTaskId === task.id && (
+                        <div className="mt-2">
+                          <p className="mb-2 text-[10px] font-mono text-on-surface-variant">
+                            Select active dates
+                          </p>
+                          <CalendarRangePicker
+                            range={taskRange(task)}
+                            minDate={Date.now()}
+                            inline
+                            onChange={(range) =>
+                              updateTaskRange(task.id, range)
+                            }
+                            onComplete={() => setEditingDurationTaskId(null)}
+                          />
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
@@ -1267,12 +1588,67 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
               </div>
               <button
                 type="submit"
-                disabled={!newTaskInput.trim() || suggestions.length > 0}
+                disabled={
+                  !newTaskInput.trim() ||
+                  suggestions.length > 0 ||
+                  (newTaskDuration === "custom" && !newTaskRange)
+                }
                 className="bg-primary text-on-primary w-10 h-10 rounded-lg flex items-center justify-center font-bold hover:scale-105 active:scale-95 transition-all shadow-md shrink-0 cursor-pointer disabled:opacity-50"
               >
                 <Plus size={18} />
               </button>
             </div>
+            <div className="mt-3 flex flex-wrap items-start justify-between gap-2 border-t border-outline-variant/20 pt-3">
+              <div className="space-y-1">
+                <span className="block text-xs font-mono font-semibold text-on-surface">
+                  Task duration
+                </span>
+                <span className="block text-[10px] font-mono text-on-surface-variant">
+                  New tasks have no end date by default
+                </span>
+              </div>
+              <TaskDurationMenu
+                value={newTaskDuration}
+                onChange={(duration) => {
+                  setNewTaskDuration(duration);
+                  if (duration === "custom") {
+                    setIsNewTaskCalendarOpen(true);
+                  } else {
+                    setNewTaskRange(null);
+                    setIsNewTaskCalendarOpen(false);
+                  }
+                }}
+              />
+            </div>
+            {newTaskDuration === "custom" && isNewTaskCalendarOpen && (
+              <div className="mt-2">
+                <p className="mb-2 text-[10px] font-mono text-on-surface-variant">
+                  Drag across dates or select a start and end date
+                </p>
+                <CalendarRangePicker
+                  range={newTaskRange}
+                  minDate={Date.now()}
+                  inline
+                  onChange={setNewTaskRange}
+                  onComplete={() => setIsNewTaskCalendarOpen(false)}
+                />
+              </div>
+            )}
+            {newTaskDuration === "custom" && newTaskRange && (
+              <p className="mt-2 text-[10px] font-mono text-on-surface-variant">
+                {new Date(newTaskRange.start).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+                {" - "}
+                {new Date(newTaskRange.end).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
+            )}
           </form>
           <div className="text-[10px] text-on-surface-variant font-mono text-center">
             Type <strong className="text-primary">@</strong> for tags (custom,

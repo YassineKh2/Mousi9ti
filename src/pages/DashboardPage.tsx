@@ -1033,7 +1033,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       ))}
                     </div>
 
-                    {selectedScale?.cagedBoxes && (
+                    {instrumentView !== "piano" && selectedScale?.cagedBoxes && (
                       <div className="mb-2.5 border-b border-outline-variant/10 pb-3">
                         <div className="mb-2 flex items-center justify-between gap-2">
                           <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">

@@ -378,11 +378,14 @@ const getMentionSuggestions = (
           subLabel: "Custom technique",
         });
       }
-      recommendations.filter(
-        (t) => !ctx.query || t.toLowerCase().includes(ctx.query.toLowerCase()),
-      ).forEach((t) =>
-        list.push({ label: t, value: t, subLabel: "Technique" }),
-      );
+      recommendations
+        .filter(
+          (t) =>
+            !ctx.query || t.toLowerCase().includes(ctx.query.toLowerCase()),
+        )
+        .forEach((t) =>
+          list.push({ label: t, value: t, subLabel: "Technique" }),
+        );
       return list.slice(0, 7);
     } else if (ctx.tool === "bpm") {
       const baseList = [...BPM_PRESETS];
@@ -425,9 +428,14 @@ const getMentionSuggestions = (
           subLabel: "Custom drill",
         });
       }
-      recommendations.filter(
-        (e) => !ctx.query || e.toLowerCase().includes(ctx.query.toLowerCase()),
-      ).forEach((e) => list.push({ label: e, value: e, subLabel: "Exercise" }));
+      recommendations
+        .filter(
+          (e) =>
+            !ctx.query || e.toLowerCase().includes(ctx.query.toLowerCase()),
+        )
+        .forEach((e) =>
+          list.push({ label: e, value: e, subLabel: "Exercise" }),
+        );
       return list.slice(0, 7);
     } else if (ctx.tool === "scale") {
       const results = searchScales(ctx.query, 6);
@@ -1397,7 +1405,9 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                           Update dashboard controls from the active task
                         </span>
                       </span>
-                      <ToggleSwitchIndicator checked={onboardingAutoTaskSetup} />
+                      <ToggleSwitchIndicator
+                        checked={onboardingAutoTaskSetup}
+                      />
                     </button>
                   )}
                 </div>
@@ -1763,7 +1773,9 @@ export const DropdownEditor: React.FC<{
     ...COMMON_EXERCISES,
   ].filter(
     (tag, index, tags) =>
-      tags.findIndex((candidate) => candidate.toLowerCase() === tag.toLowerCase()) === index,
+      tags.findIndex(
+        (candidate) => candidate.toLowerCase() === tag.toLowerCase(),
+      ) === index,
   );
   const techniqueRecommendations = [
     ...savedCustomTagEntries
@@ -1772,7 +1784,9 @@ export const DropdownEditor: React.FC<{
     ...COMMON_TECHNIQUES,
   ].filter(
     (tag, index, tags) =>
-      tags.findIndex((candidate) => candidate.toLowerCase() === tag.toLowerCase()) === index,
+      tags.findIndex(
+        (candidate) => candidate.toLowerCase() === tag.toLowerCase(),
+      ) === index,
   );
   const matchingCustomTags = savedCustomTags.filter((tag) =>
     tag.toLowerCase().includes(customText.trim().toLowerCase()),

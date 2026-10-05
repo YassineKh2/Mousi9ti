@@ -14,6 +14,7 @@ import {
 } from "../lib/storage";
 import { getSavedCustomTags } from "../lib/customTaskTags";
 import { isPracticeDayComplete } from "../lib/practiceDays";
+import { CalendarRangePicker } from "../components/CalendarRangePicker";
 import {
   Bar,
   BarChart,
@@ -77,6 +78,27 @@ const colors = [
   "#06b6d4",
   "#ec4899",
 ];
+const monoFontFamily =
+  '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+const statsTooltipContentStyle = {
+  backgroundColor: "var(--color-surface-container-high)",
+  border: "1px solid var(--color-outline-variant)",
+  borderRadius: "8px",
+  boxShadow: "0 8px 24px rgb(0 0 0 / 0.28)",
+  fontFamily: monoFontFamily,
+  padding: "8px 12px",
+};
+const statsTooltipLabelStyle = {
+  color: "var(--color-on-surface-variant)",
+  fontFamily: monoFontFamily,
+  fontSize: "11px",
+  paddingBottom: "4px",
+};
+const statsTooltipItemStyle = {
+  color: "var(--color-on-surface)",
+  fontFamily: monoFontFamily,
+  fontSize: "12px",
+};
 const formatDuration = (seconds: number) => {
   const minutes = Math.round(seconds / 60);
   return minutes >= 60
@@ -156,13 +178,10 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const calendarPopoverRef = useRef<HTMLDivElement>(null);
   const calendarToggleRef = useRef<HTMLButtonElement>(null);
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [customRange, setCustomRange] = useState<{
     start: number;
     end: number;
   } | null>(null);
-  const [selectionStart, setSelectionStart] = useState<number | null>(null);
-  const [isDraggingRange, setIsDraggingRange] = useState(false);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [customAnalyticsPage, setCustomAnalyticsPage] = useState(1);
   const [practiceLogPage, setPracticeLogPage] = useState(1);
@@ -601,7 +620,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     );
   });
   const sourceChart = [...sourceTotals]
-    .filter(([name, seconds]) => seconds > 0 || savedTagLabels.includes(name))
+    .filter(([, seconds]) => Math.round(seconds / 60) > 0)
     .map(([name, seconds]) => ({
       name,
       label: tagLabel(name) || name,
@@ -696,7 +715,8 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
   const selectedTaskActivities = selectedTask
     ? allActivities.filter(
         (activity) =>
-          (activity.task === selectedTask || activity.subject === selectedTask) &&
+          (activity.task === selectedTask ||
+            activity.subject === selectedTask) &&
           customTagName(activity) !== undefined,
       )
     : [];
@@ -798,56 +818,6 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
       day: "numeric",
       year: "numeric",
     });
-  const calendarDays = useMemo(() => {
-    const firstDay = new Date(
-      calendarMonth.getFullYear(),
-      calendarMonth.getMonth(),
-      1,
-    );
-    const gridStart = new Date(firstDay);
-    gridStart.setDate(firstDay.getDate() - firstDay.getDay());
-    return Array.from({ length: 42 }, (_, index) => {
-      const day = new Date(gridStart);
-      day.setDate(gridStart.getDate() + index);
-      day.setHours(0, 0, 0, 0);
-      return day;
-    });
-  }, [calendarMonth]);
-  const dayTimestamp = (date: Date) =>
-    new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-  const chooseCalendarDay = (timestamp: number) => {
-    if (selectionStart === null) {
-      setSelectionStart(timestamp);
-      setCustomRange({ start: timestamp, end: timestamp });
-      setRange("custom");
-      return;
-    }
-    const start = Math.min(selectionStart, timestamp);
-    const end = Math.max(selectionStart, timestamp);
-    setCustomRange({ start, end });
-    setRange("custom");
-    setSelectionStart(null);
-    setIsDraggingRange(false);
-  };
-  const previewCalendarDay = (timestamp: number) => {
-    if (isDraggingRange && selectionStart !== null) {
-      setCustomRange({
-        start: Math.min(selectionStart, timestamp),
-        end: Math.max(selectionStart, timestamp),
-      });
-      setRange("custom");
-    }
-  };
-  const finishCalendarDrag = () => {
-    if (
-      selectionStart !== null &&
-      customRange &&
-      customRange.start !== customRange.end
-    )
-      setSelectionStart(null);
-    setIsDraggingRange(false);
-  };
-
   return (
     <div className="stats-page space-y-6 pb-12">
       <div className="flex flex-col gap-4 rounded-lg border border-outline-variant/30 bg-surface-container p-6 shadow-xl sm:flex-row sm:items-center sm:justify-between">
@@ -856,26 +826,29 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
             <BarChart3 size={18} className="text-primary" />
             Practice Analytics
           </h1>
-          <p className="text-xs font-mono text-on-surface-variant mt-1">
+          <p
+            className="text-xs font-mono text-on-surface mt-1"
+            style={{ color: "var(--color-on-surface)" }}
+          >
             One practice history across tasks, timer, metronome, and custom
             work.
           </p>
         </div>
         <div className="stats-date-picker">
           <div className="stats-date-control">
-            <Calendar size={16} />
             <div ref={rangePickerRef} className="relative">
               <button
                 type="button"
                 aria-label="Practice date range"
                 aria-expanded={isRangeOpen}
                 aria-haspopup="true"
-                className="flex items-center gap-1.5 rounded px-1 py-1 text-on-surface transition-colors hover:bg-surface-container-high focus-visible:outline-2 focus-visible:outline-primary"
                 onClick={() => {
                   setIsCalendarOpen(false);
                   setIsRangeOpen((open) => !open);
                 }}
+                className="flex cursor-pointer items-center gap-1.5 rounded px-2 py-1.5 text-on-surface focus-visible:outline-2 focus-visible:outline-primary"
               >
+                <Calendar size={16} className="text-on-surface-variant" />
                 {range === "all"
                   ? "All time"
                   : range === "custom"
@@ -904,7 +877,6 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                       className={`block w-full rounded px-3 py-2 text-left text-xs font-mono transition-colors hover:bg-surface-container-high focus-visible:outline-2 focus-visible:outline-primary ${range === value ? "bg-primary/10 text-primary" : "text-on-surface"}`}
                       onClick={() => {
                         if (value !== "custom") setCustomRange(null);
-                        setSelectionStart(null);
                         setRange(value);
                         setIsRangeOpen(false);
                       }}
@@ -934,74 +906,14 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
             <ChevronRight size={14} />
           </div>
           {isCalendarOpen && (
-            <div ref={calendarPopoverRef} className="stats-calendar-popover">
-              <div className="stats-calendar-header">
-                <button
-                  onClick={() =>
-                    setCalendarMonth(
-                      new Date(
-                        calendarMonth.getFullYear(),
-                        calendarMonth.getMonth() - 1,
-                        1,
-                      ),
-                    )
-                  }
-                >
-                  ‹
-                </button>
-                <b>
-                  {calendarMonth.toLocaleDateString("en-US", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </b>
-                <button
-                  onClick={() =>
-                    setCalendarMonth(
-                      new Date(
-                        calendarMonth.getFullYear(),
-                        calendarMonth.getMonth() + 1,
-                        1,
-                      ),
-                    )
-                  }
-                >
-                  ›
-                </button>
-              </div>
-              <div className="stats-calendar-weekdays">
-                {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-                  <span key={day}>{day}</span>
-                ))}
-              </div>
-              <div
-                className="stats-calendar-grid"
-                onMouseUp={finishCalendarDrag}
-              >
-                {calendarDays.map((day) => {
-                  const timestamp = dayTimestamp(day);
-                  const inMonth = day.getMonth() === calendarMonth.getMonth();
-                  const selected =
-                    customRange &&
-                    timestamp >= customRange.start &&
-                    timestamp <= customRange.end;
-                  return (
-                    <button
-                      key={timestamp}
-                      className={`${inMonth ? "" : "is-muted"} ${selected ? "is-selected" : ""}`}
-                      onMouseDown={(event) => {
-                        event.preventDefault();
-                        setIsDraggingRange(true);
-                        chooseCalendarDay(timestamp);
-                      }}
-                      onMouseEnter={() => previewCalendarDay(timestamp)}
-                    >
-                      {day.getDate()}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <CalendarRangePicker
+              range={customRange}
+              calendarRef={calendarPopoverRef}
+              onChange={(nextRange) => {
+                setCustomRange(nextRange);
+                setRange("custom");
+              }}
+            />
           )}
         </div>
       </div>
@@ -1021,7 +933,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
               <span className="block text-[11px] text-on-surface-variant">
                 {label}
               </span>
-              <span className="mt-1 block text-2xl font-semibold leading-none text-on-surface">
+              <span className="mt-1 block font-mono text-2xl font-semibold leading-none text-on-surface">
                 {value}
               </span>
               <span className="mt-1 block text-[10px] text-on-surface-variant">
@@ -1038,10 +950,10 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
             Peak vs Average BPM
           </h2>
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-on-surface-variant">
-            <span className="inline-flex items-center gap-2">
+            <span className="inline-flex items-center gap-2 font-mono">
               <i className="h-2 w-2 rounded-full bg-[#f59e0b]" /> Peak BPM
             </span>
-            <span className="inline-flex items-center gap-2">
+            <span className="inline-flex items-center gap-2 font-mono">
               <i className="h-2 w-2 rounded-full bg-[#60a5fa]" /> Average BPM
             </span>
           </div>
@@ -1056,7 +968,11 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                   />
                   <XAxis dataKey="date" fontSize={11} />
                   <YAxis unit=" BPM" fontSize={11} />
-                  <Tooltip />
+                  <Tooltip
+                    contentStyle={statsTooltipContentStyle}
+                    labelStyle={statsTooltipLabelStyle}
+                    itemStyle={statsTooltipItemStyle}
+                  />
                   <Line
                     dataKey="peakBpm"
                     name="Peak BPM"
@@ -1090,6 +1006,9 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                 <PieChart>
                   <Tooltip
                     formatter={(value: number) => formatDuration(value)}
+                    contentStyle={statsTooltipContentStyle}
+                    labelStyle={statsTooltipLabelStyle}
+                    itemStyle={statsTooltipItemStyle}
                   />
                   <Pie
                     data={sourceChart}
@@ -1154,7 +1073,11 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
               <XAxis dataKey="date" fontSize={11} />
               <YAxis yAxisId="time" unit="m" fontSize={11} />
               <YAxis yAxisId="count" orientation="right" fontSize={11} />
-              <Tooltip />
+              <Tooltip
+                contentStyle={statsTooltipContentStyle}
+                labelStyle={statsTooltipLabelStyle}
+                itemStyle={statsTooltipItemStyle}
+              />
               <Area
                 yAxisId="time"
                 dataKey="minutes"
@@ -1256,12 +1179,16 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                 <p>
                   <span className="mr-3 inline-block h-3 w-3 rounded-full bg-emerald-400" />
                   {taskCompletions.length}
-                  <span className="ml-4 text-slate-500">Completed</span>
+                  <span className="ml-4 text-on-surface-variant">
+                    Completed
+                  </span>
                 </p>
                 <p>
                   <span className="mr-3 inline-block h-3 w-3 rounded-full bg-blue-500" />
                   {Math.max(0, taskStarts.length - taskCompletions.length)}
-                  <span className="ml-4 text-slate-500">In progress</span>
+                  <span className="ml-4 text-on-surface-variant">
+                    In progress
+                  </span>
                 </p>
                 <p>
                   <span className="mr-3 inline-block h-3 w-3 rounded-full bg-slate-500" />
@@ -1270,7 +1197,9 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                     new Set(taskActivities.map((activity) => activity.taskId))
                       .size - taskStarts.length,
                   )}
-                  <span className="ml-4 text-slate-500">Not started</span>
+                  <span className="ml-4 text-on-surface-variant">
+                    Not started
+                  </span>
                 </p>
               </div>
             </div>
@@ -1285,14 +1214,14 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                       0,
                     ),
                   )}{" "}
-                  <b className="mx-3 text-slate-500">→</b>{" "}
+                  <b className="mx-3 text-on-surface-variant">→</b>{" "}
                   {formatDuration(taskSeconds)}
                 </span>
               </div>
               <div className="flex justify-between border-b border-white/[0.04] py-1">
                 <span>Metronome</span>
                 <span>
-                  0m <b className="mx-3 text-slate-500">→</b>{" "}
+                  0m <b className="mx-3 text-on-surface-variant">→</b>{" "}
                   {formatDuration(metronomeSeconds)}
                 </span>
               </div>
@@ -1305,7 +1234,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                       0,
                     ),
                   )}{" "}
-                  <b className="mx-3 text-slate-500">→</b>{" "}
+                  <b className="mx-3 text-on-surface-variant">→</b>{" "}
                   {formatDuration(totalSeconds)}
                 </span>
               </div>

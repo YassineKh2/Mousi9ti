@@ -7,7 +7,10 @@ import { Session, TaskTimeAttribution } from "../types";
 
 const durationSeconds = 600;
 
-function renderWithAttribution(source: TaskTimeAttribution["source"]) {
+function renderWithAttribution(
+  source: TaskTimeAttribution["source"],
+  attributedDurationSeconds = 240,
+) {
   const endTime = Date.now();
   const startTime = endTime - durationSeconds * 1000;
   const session: Session = {
@@ -28,7 +31,7 @@ function renderWithAttribution(source: TaskTimeAttribution["source"]) {
     sessionId: "task-session-1",
     ...(source === "manual" ? { practiceSessionId: session.id } : {}),
     taskId: "custom-task",
-    durationSeconds: 240,
+    durationSeconds: attributedDurationSeconds,
     startedAt: source === "manual" ? endTime + 1000 : startTime + 60000,
     endedAt: source === "manual" ? endTime + 1000 : startTime + 300000,
     source,
@@ -90,6 +93,16 @@ for (const source of ["automatic", "manual"] as const) {
     assert.match(html, />10m</);
   });
 }
+
+it("hides practice sources that round to zero minutes", () => {
+  const html = renderWithAttribution("automatic", 0);
+  const sources = html.slice(
+    html.indexOf("Practice Sources"),
+    html.indexOf("Trends"),
+  );
+
+  assert.doesNotMatch(sources, /Solo/);
+});
 
 it("paginates analytics and limits individual tasks to custom activities", () => {
   const timestamp = Date.now();
