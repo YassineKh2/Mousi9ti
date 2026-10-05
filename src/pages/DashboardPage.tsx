@@ -344,7 +344,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       if (scaleDef) {
         setSelectedRoot(config.scale.root);
         setSelectedScale(scaleDef);
-        setActiveCagedBox(null);
+        setActiveCagedBox(config.scale.boxKey ?? null);
       }
     }
     if (config.tuning) {

@@ -57,6 +57,13 @@ describe("parseTaskConfiguration", () => {
     assert.equal(config.timeSignature, "4/4");
   });
 
+  it("preserves the selected position from an @scale mention", () => {
+    const config = parseTaskConfiguration("Practice @scale(C major, pos 1)");
+    assert.equal(config.scale?.position, 1);
+    assert.equal(config.scale?.boxKey, "Pattern 1 (E-Shape)");
+    assert.equal(config.scale?.label, "C Major • Pos 1");
+  });
+
   it("parses random-note drill settings from an @random mention", () => {
     const config = parseTaskConfiguration(
       "Find notes with @random(naturals,2s)",

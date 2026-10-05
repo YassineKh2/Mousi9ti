@@ -20,7 +20,13 @@ export interface TaskConfiguration {
     autoAdvance: boolean;
     interval: RandomNoteInterval;
   };
-  scale?: { root: NoteName; scaleId: string; label: string };
+  scale?: {
+    root: NoteName;
+    scaleId: string;
+    label: string;
+    position?: number | null;
+    boxKey?: string | null;
+  };
   chord?: { root: NoteName; type: string; label: string };
   tuning?: string;
   bpm?: number;
@@ -85,6 +91,8 @@ function parseFromMentions(text: string): TaskConfiguration {
           root: parsed.root,
           scaleId: parsed.type,
           label: parsed.label || `${parsed.root} ${parsed.type}`,
+          position: parsed.position,
+          boxKey: parsed.boxKey,
         };
       }
     } else if (tool === "bpm" || tool === "metronome") {
