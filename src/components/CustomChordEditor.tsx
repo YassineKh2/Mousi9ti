@@ -9,6 +9,7 @@ import {
   Trash2,
   X,
   Info,
+  Wrench,
 } from "lucide-react";
 import { ChordDiagram } from "./ChordDiagram";
 import { KeyboardChordDiagram } from "./KeyboardChordDiagram";
@@ -485,9 +486,10 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
 
   return (
     <div className="custom-chord-editor flex w-full min-w-0 flex-col gap-6 pb-12 animate-fade-in">
-      <div className="custom-chord-editor-header flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center bg-surface-container border border-outline-variant/30 p-4 sm:p-6 rounded-lg shadow-sm">
+      <div className="custom-chord-editor-header flex w-full flex-col gap-4 sm:flex-row sm:justify-between sm:items-center bg-surface-container border border-outline-variant/30 p-4 sm:p-6 rounded-lg shadow-sm">
         <div>
-          <h1 className="text-2xl font-mono font-bold text-on-surface">
+          <h1 className="font-mono text-base font-bold tracking-[0.12em] text-on-surface uppercase flex items-center gap-2">
+            <Wrench size={16} className="text-primary" />
             Chord Editor
           </h1>
           <p className="font-mono text-sm text-on-surface-variant mt-1">

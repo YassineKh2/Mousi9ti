@@ -77,9 +77,9 @@ export const CircleOfFifths: React.FC<CircleOfFifthsProps> = ({
 
   return (
     <div className="circle-of-fifths w-full bg-surface-container border border-outline-variant/30 rounded-lg p-6 flex flex-col gap-6 shadow-xl">
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-outline-variant/10">
+      <div className="flex w-full flex-wrap items-center justify-between gap-4 pb-4 border-b border-outline-variant/10">
         <div>
-          <h2 className="font-mono text-sm font-bold tracking-[0.2em] text-[color:var(--circle-heading)] uppercase flex items-center gap-2">
+          <h2 className="font-mono text-base font-bold tracking-[0.12em] text-[color:var(--circle-heading)] uppercase flex items-center gap-2">
             <Sparkles size={16} className="text-primary" />
             Interactive Circle of Fifths
           </h2>

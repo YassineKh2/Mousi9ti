@@ -9,6 +9,7 @@ type BeatCallback = (
   beat: number,
   isAccent: boolean,
   isSubdivision: boolean,
+  isSilentBar: boolean,
 ) => void;
 
 class AudioEngine {
@@ -1094,6 +1095,9 @@ class AudioEngine {
         }
         this.setMuted(!this.metronomeBarCycleShouldSound);
       }
+      const isSilentBar =
+        this.metronomeBarCycleEnabled &&
+        !this.metronomeBarCycleShouldSound;
 
       this.scheduleMetronomeTick(this.nextNoteTime, isAccent, isSub);
 
@@ -1106,7 +1110,7 @@ class AudioEngine {
         );
         window.setTimeout(() => {
           if (this.isMetronomePlaying && this.onBeatCallback === callback) {
-            callback(beatNum, isAccent, isSub);
+            callback(beatNum, isAccent, isSub, isSilentBar);
           }
         }, timeDiff);
       }
@@ -1127,6 +1131,7 @@ class AudioEngine {
     subdivision: MetronomeSubdivision,
     sound: MetronomeSound,
     onBeat?: BeatCallback,
+    initialDelaySeconds = 0,
   ) {
     const ctx = this.getContext();
     this.bpm = bpm;
@@ -1146,7 +1151,8 @@ class AudioEngine {
     this.metronomeBarCycleShouldSound = true;
     this.metronomeBarCycleStarted = false;
     this.setMuted(false);
-    this.nextNoteTime = ctx.currentTime + 0.05;
+    this.nextNoteTime =
+      ctx.currentTime + Math.max(0.05, initialDelaySeconds);
     this.notifyMetronomeStateListeners();
 
     this.scheduler();

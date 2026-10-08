@@ -1423,32 +1423,40 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       <div className="bg-surface-container border border-outline-variant/30 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-md">
         <div>
           <div className="flex items-center gap-2">
-            <Calendar size={18} className="text-primary" />
-            <h1 className="text-base font-bold font-mono uppercase tracking-wider text-on-surface">
+            <h1 className="font-mono text-base font-bold tracking-[0.2em] text-on-surface uppercase flex items-center gap-2">
+              <Calendar size={18} className="text-primary" />
               Weekly Schedule & Cadence
             </h1>
-            <span className="text-xs text-on-surface-variant font-mono">
+            <span className="hidden sm:inline text-xs text-on-surface-variant font-mono">
               • Select day to inspect and define routine
             </span>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-6 font-mono text-xs">
-          <div className="text-on-surface-variant">
-            Total Week Target:{" "}
+        <div className="grid w-full grid-cols-2 gap-x-4 gap-y-3 font-mono text-xs lg:w-auto lg:flex lg:flex-wrap lg:items-center lg:gap-6">
+          <div className="min-w-0 text-on-surface-variant lg:inline">
+            <span className="block text-[10px] uppercase tracking-wider lg:inline lg:text-xs lg:normal-case lg:tracking-normal">
+              Week target
+            </span>{" "}
             <strong className="text-on-surface font-bold">
               {formatHoursMins(totalWeekTargetMins)}
             </strong>
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-on-surface-variant">
-            Completed:{" "}
+          <div className="flex min-w-0 flex-col items-start gap-1 text-on-surface-variant lg:flex-row lg:flex-wrap lg:items-center lg:gap-3">
+            <span className="text-[10px] uppercase tracking-wider lg:text-xs lg:normal-case lg:tracking-normal">
+              Completed
+            </span>
             <strong className="text-primary font-bold">
               {formatHoursMins(completedMins)} ({completionPercent}%)
             </strong>
-            <div ref={completionPickerRef} className="routine-history-picker">
+          </div>
+          <div
+            ref={completionPickerRef}
+            className="routine-history-picker col-span-2 w-full lg:col-span-1 lg:w-auto"
+          >
               <button
                 ref={completionPickerTriggerRef}
                 type="button"
-                className="routine-history-trigger"
+                className="routine-history-trigger w-full justify-between lg:w-auto"
                 onClick={() => setIsCompletionPickerOpen((isOpen) => !isOpen)}
                 aria-expanded={isCompletionPickerOpen}
                 aria-label="Choose a week to view completed tasks"
@@ -1527,7 +1535,6 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                   </div>
                 </div>
               )}
-            </div>
           </div>
         </div>
       </div>

@@ -1,0 +1,581 @@
+.precision-metro {
+  --pm-card: var(--color-surface-container, #201f1f);
+  --pm-panel: var(--color-surface-container-low, #1c1b1b);
+  --pm-panel-raised: var(--color-surface-container-high, #2a2a2a);
+  --pm-line: color-mix(
+    in srgb,
+    var(--color-outline-variant, #424754) 30%,
+    transparent
+  );
+  --pm-text: var(--color-on-surface, #e5e2e1);
+  --pm-muted: var(--color-on-surface-variant, #c2c6d6);
+  --pm-accent: var(--color-primary, #b4c5ff);
+  --pm-ink: var(--color-on-primary, #0f1f4d);
+  --pm-rod: #c9ccd6;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: clamp(16px, 3vw, 28px);
+  color: var(--pm-text);
+  background: var(--pm-card);
+  border: 1px solid var(--pm-line);
+  border-radius: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.light .precision-metro {
+  --pm-card: var(--color-surface-container, #f1f3f5);
+  --pm-rod: #4a4f5c;
+}
+
+.precision-metro *,
+.precision-metro *::before,
+.precision-metro *::after {
+  box-sizing: border-box;
+}
+
+.precision-metro button,
+.precision-metro select,
+.precision-metro input {
+  color: inherit;
+  font: inherit;
+}
+
+.precision-metro button {
+  cursor: pointer;
+}
+
+.precision-metro :focus-visible {
+  outline: 2px solid var(--pm-accent);
+  outline-offset: 2px;
+}
+
+.precision-metro__header {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--pm-line);
+}
+
+.precision-metro__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.precision-metro__title > svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--pm-accent);
+}
+
+.precision-metro__title small {
+  display: block;
+  color: var(--pm-accent);
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+}
+
+.precision-metro__title h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.precision-metro__selects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.precision-metro__select {
+  position: relative;
+  display: block;
+  min-width: 152px;
+  padding: 9px 12px;
+  border: 1px solid var(--pm-line);
+  border-radius: 10px;
+  background: var(--pm-panel);
+}
+
+.precision-metro__select > span {
+  display: block;
+  color: var(--pm-accent);
+  font-size: 10.5px;
+}
+
+.precision-metro__select select {
+  width: 100%;
+  padding: 3px 22px 0 0;
+  appearance: none;
+  border: 0;
+  background: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.precision-metro__select option {
+  color: var(--pm-text);
+  background: var(--pm-panel);
+}
+
+.precision-metro__select::after {
+  position: absolute;
+  right: 13px;
+  bottom: 16px;
+  width: 6px;
+  height: 6px;
+  border: solid var(--pm-muted);
+  border-width: 0 1.5px 1.5px 0;
+  content: "";
+  pointer-events: none;
+  transform: rotate(45deg);
+}
+
+.precision-metro__stage {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: clamp(16px, 4vw, 56px);
+  padding: 26px 0;
+}
+
+.precision-metro__pendulum {
+  width: min(100%, 430px);
+  margin: 0 auto;
+}
+
+.precision-metro__pendulum svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.precision-metro__body {
+  fill: var(--pm-panel);
+  stroke: var(--pm-line);
+  stroke-width: 1.5;
+}
+
+.precision-metro__arc {
+  fill: none;
+  stroke: var(--pm-line);
+  stroke-dasharray: 2 7;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.precision-metro__peg {
+  fill: var(--pm-panel-raised);
+  stroke: var(--pm-muted);
+  stroke-width: 1.2;
+}
+
+.precision-metro__lamp {
+  fill: var(--pm-accent);
+}
+
+.precision-metro__rod {
+  fill: var(--pm-rod);
+}
+
+.precision-metro__counterweight,
+.precision-metro__scale-label {
+  fill: var(--pm-muted);
+}
+
+.precision-metro__tick {
+  fill: none;
+  stroke: var(--pm-muted);
+  stroke-width: 1;
+}
+
+.precision-metro__scale-label {
+  font: 8.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.precision-metro__weight {
+  fill: var(--pm-accent);
+}
+
+.precision-metro__weight-line {
+  fill: var(--pm-ink);
+  opacity: 0.75;
+}
+
+.precision-metro__pivot {
+  fill: var(--pm-panel-raised);
+  stroke: var(--pm-muted);
+  stroke-width: 2;
+}
+
+.precision-metro__controls {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.precision-metro__beats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 420px;
+}
+
+.precision-metro__beat {
+  min-width: 54px;
+  padding: 12px 0;
+  border: 1px solid var(--pm-line);
+  border-radius: 8px;
+  background: var(--pm-panel);
+  color: var(--pm-muted);
+  font-weight: 700;
+  transition:
+    background 100ms,
+    color 100ms,
+    border-color 100ms,
+    transform 100ms;
+}
+
+.precision-metro__beat.is-current {
+  border-color: var(--pm-accent);
+  background: var(--pm-panel-raised);
+  color: var(--pm-accent);
+  transform: translateY(-2px);
+}
+
+.precision-metro__beat.is-current.is-accent {
+  background: var(--pm-accent);
+  color: var(--pm-ink);
+}
+
+.precision-metro__beat.is-current.is-muted {
+  opacity: 0.45;
+}
+
+.precision-metro__bpm-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 2vw, 18px);
+}
+
+.precision-metro__step {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--pm-line);
+  border-radius: 10px;
+  background: var(--pm-panel);
+  font-size: 22px !important;
+  line-height: 1;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.precision-metro__step:hover {
+  border-color: var(--pm-accent);
+}
+
+.precision-metro__bpm-display {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.precision-metro__bpm-display input {
+  width: 3.1ch;
+  padding: 0;
+  appearance: textfield;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font-size: clamp(64px, 11vw, 96px);
+  font-weight: 300;
+  line-height: 1;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.precision-metro__bpm-display input::-webkit-inner-spin-button,
+.precision-metro__bpm-display input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.precision-metro__bpm-display small {
+  padding-bottom: 12px;
+  color: var(--pm-accent);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+}
+
+.precision-metro__mark {
+  margin-top: -8px;
+  color: var(--pm-muted);
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
+}
+
+.precision-metro__start {
+  display: flex;
+  min-width: min(100%, 270px);
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 17px 26px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--pm-accent);
+  color: var(--pm-ink) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.16em;
+  transition: transform 100ms;
+}
+
+.precision-metro__start:active {
+  transform: scale(0.98);
+}
+
+.precision-metro__start svg {
+  width: 18px;
+  height: 18px;
+}
+
+.precision-metro__start.is-playing {
+  background: var(--pm-panel-raised);
+  color: var(--pm-accent) !important;
+  box-shadow: inset 0 0 0 1px var(--pm-accent);
+}
+
+.precision-metro__start i {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.3;
+}
+
+.precision-metro__status {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--pm-muted);
+  font-size: 11.5px;
+}
+
+.precision-metro__footer {
+  padding-top: 20px;
+  margin-top: 6px;
+  border-top: 1px solid var(--pm-line);
+}
+
+.precision-metro__label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  color: var(--pm-muted);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+.precision-metro__label b {
+  color: var(--pm-text);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.precision-metro__presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: 10px;
+}
+
+.precision-metro__preset {
+  min-width: 0;
+  padding: 10px 0;
+  border: 1px solid var(--pm-line);
+  border-radius: 8px;
+  background: var(--pm-panel);
+  text-align: center;
+}
+
+.precision-metro__preset:hover {
+  border-color: var(--pm-accent);
+}
+
+.precision-metro__preset.is-selected {
+  border-color: var(--pm-accent);
+  background: var(--pm-accent);
+  color: var(--pm-ink);
+  font-weight: 700;
+}
+
+.precision-metro__lower-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 22px 32px;
+  margin-top: 22px;
+}
+
+.precision-metro__fine {
+  min-width: 0;
+}
+
+.precision-metro__fine input[type="range"] {
+  width: 100%;
+  height: 24px;
+  padding: 0;
+  margin: 0;
+  appearance: none;
+  background: none;
+}
+
+.precision-metro__fine input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--pm-accent) var(--precision-progress, 0%),
+    var(--pm-panel-raised) var(--precision-progress, 0%)
+  );
+}
+
+.precision-metro__fine input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--pm-accent) var(--precision-progress, 0%),
+    var(--pm-panel-raised) var(--precision-progress, 0%)
+  );
+}
+
+.precision-metro__fine input[type="range"]::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  margin-top: -7px;
+  appearance: none;
+  border: 4px solid var(--pm-accent);
+  border-radius: 50%;
+  background: var(--pm-text);
+}
+
+.precision-metro__fine input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 4px solid var(--pm-accent);
+  border-radius: 50%;
+  background: var(--pm-text);
+}
+
+.precision-metro__range-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  color: var(--pm-muted);
+  font-size: 10px;
+}
+
+.precision-metro__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.precision-metro__segmented {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--pm-line);
+  border-radius: 10px;
+  background: var(--pm-panel);
+}
+
+.precision-metro__segmented button {
+  padding: 9px 13px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--pm-muted);
+}
+
+.precision-metro__segmented button.is-selected {
+  background: var(--pm-panel-raised);
+  color: var(--pm-accent);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--pm-accent);
+}
+
+.precision-metro__tool {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 9px;
+  padding: 0 16px;
+  border: 1px solid var(--pm-line);
+  border-radius: 10px;
+  background: var(--pm-panel);
+  white-space: nowrap;
+}
+
+.precision-metro__tool:hover {
+  border-color: var(--pm-accent);
+}
+
+.precision-metro__tool.is-pressed {
+  border-color: var(--pm-accent);
+  background: var(--pm-panel-raised);
+  color: var(--pm-accent);
+}
+
+.precision-metro__tool svg {
+  width: 17px;
+  height: 17px;
+}
+
+.precision-metro__tap {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 10px;
+}
+
+@media (max-width: 780px) {
+  .precision-metro__selects {
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .precision-metro__select {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .precision-metro__stage {
+    grid-template-columns: 1fr;
+  }
+
+  .precision-metro__pendulum {
+    width: min(100%, 340px);
+  }
+
+  .precision-metro__lower-controls {
+    grid-template-columns: 1fr;
+  }
+}

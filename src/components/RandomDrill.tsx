@@ -236,7 +236,7 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
                 setIntervalType(e.target.value as RandomNoteInterval);
                 setAutoAdvance(true);
               }}
-              className="min-h-10 bg-surface-container-low border border-outline-variant/30 rounded px-2 py-1.5 text-[10px] font-mono text-on-surface focus:outline-none cursor-pointer md:min-h-0"
+              className="h-10 md:h-[29px] bg-surface-container-low border border-outline-variant/30 rounded px-2 py-1.5 text-[10px] font-mono text-on-surface focus:outline-none cursor-pointer"
             >
               <option value="1s">1 Sec</option>
               <option value="2s">2 Sec</option>

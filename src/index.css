@@ -302,10 +302,6 @@
   color: #dce7f7;
 }
 
-.stats-page > div:first-child h1 {
-  letter-spacing: -0.02em;
-}
-
 .stats-page > div:first-child + [data-tour="stats-metrics"] {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.5rem;
@@ -1357,11 +1353,6 @@
 
 .stats-page > div:first-child {
   margin-bottom: 1.25rem;
-}
-
-.stats-page > div:first-child h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
 }
 
 .stats-page > div:first-child p {

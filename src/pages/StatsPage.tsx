@@ -930,13 +930,13 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
               {icon}
             </span>
             <div className="min-w-0">
-              <span className="block text-[11px] text-on-surface-variant">
+              <span className="block font-mono text-[11px] text-on-surface-variant">
                 {label}
               </span>
               <span className="mt-1 block font-mono text-2xl font-semibold leading-none text-on-surface">
                 {value}
               </span>
-              <span className="mt-1 block text-[10px] text-on-surface-variant">
+              <span className="mt-1 block font-mono text-[10px] text-on-surface-variant">
                 {detail}
               </span>
             </div>
@@ -970,7 +970,11 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                     stroke="var(--color-outline-variant)"
                     opacity={0.4}
                   />
-                  <XAxis dataKey="date" fontSize={11} />
+                  <XAxis
+                    dataKey="date"
+                    fontSize={11}
+                    padding={{ left: 8, right: 8 }}
+                  />
                   <YAxis unit=" BPM" fontSize={11} />
                   <Tooltip
                     contentStyle={statsTooltipContentStyle}

@@ -9,6 +9,7 @@ import {
   X,
   Edit2,
   Check,
+  Clock,
 } from "lucide-react";
 import { useTimer } from "../lib/useTimer";
 import { AppSettings } from "../types";
@@ -184,7 +185,8 @@ export const TimerView: React.FC<TimerViewProps> = ({
       {/* Practice Timer Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-outline-variant/10">
         <div>
-          <h2 className="font-mono text-base font-bold text-on-surface uppercase flex items-center gap-2">
+          <h2 className="font-mono text-base font-bold tracking-[0.12em] text-on-surface uppercase flex items-center gap-2">
+            <Clock size={16} className="text-primary" />
             Practice Timer
           </h2>
           <p className="text-xs text-on-surface-variant mt-1">

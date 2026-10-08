@@ -48,7 +48,7 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
 }) => {
   const [activeTool, setActiveTool] = useState<
     "timer" | "metronome" | "circle" | "tuner" | "ear" | "custom-chord"
-  >("circle");
+  >("timer");
   const [selectedTuning, setSelectedTuning] = useState(GUITAR_TUNINGS[0]);
   const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
   const toolMenuRef = useRef<HTMLDivElement>(null);
@@ -169,12 +169,12 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
                 <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-surface border border-outline-variant/40 rounded-xl p-2 shadow-2xl dropdown-menu-enter">
                   <div className="flex flex-col gap-1">
                     {[
-                      { id: "circle", label: "Circle of Fifths", desc: "Explore key signatures & harmony", icon: Compass },
                       { id: "timer", label: "Practice Timer", desc: "Track your daily practice sessions", icon: Clock },
                       { id: "metronome", label: "Metronome", desc: "Precision tempo and timing practice", icon: TimerReset },
+                      { id: "custom-chord", label: "Custom Chord Builder", desc: "Create & visualize chord shapes", icon: Wrench },
+                      { id: "circle", label: "Circle of Fifths", desc: "Explore key signatures & harmony", icon: Compass },
                       { id: "tuner", label: "Pitch Reference Tuner", desc: "Acoustic guitar pitch references", icon: Radio },
                       { id: "ear", label: "Interval Ear Trainer", desc: "Recognize musical intervals by ear", icon: Sparkles },
-                      { id: "custom-chord", label: "Custom Chord Builder", desc: "Create & visualize chord shapes", icon: Wrench },
                     ].map((tool) => {
                       const isSelected = activeTool === tool.id;
                       const Icon = tool.icon;
@@ -213,16 +213,6 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
             {/* Desktop Navigation Tabs */}
             <div className="hidden sm:flex items-center gap-1.5 bg-surface-container-low p-1 rounded-lg border border-outline-variant/30 flex-wrap">
               <button
-                onClick={() => setActiveTool("circle")}
-                className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
-                  activeTool === "circle"
-                    ? "bg-primary text-on-primary font-bold shadow"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                Circle of Fifths
-              </button>
-              <button
                 onClick={() => setActiveTool("timer")}
                 className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all flex items-center gap-1.5 ${
                   activeTool === "timer"
@@ -242,6 +232,26 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
                 }`}
               >
                 Metronome
+              </button>
+              <button
+                onClick={() => setActiveTool("custom-chord")}
+                className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
+                  activeTool === "custom-chord"
+                    ? "bg-primary text-on-primary font-bold shadow"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                Custom Chord Builder
+              </button>
+              <button
+                onClick={() => setActiveTool("circle")}
+                className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
+                  activeTool === "circle"
+                    ? "bg-primary text-on-primary font-bold shadow"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                Circle of Fifths
               </button>
               <button
                 onClick={() => setActiveTool("tuner")}
@@ -266,16 +276,6 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
               >
                 Interval Ear Trainer
               </button>
-              <button
-                onClick={() => setActiveTool("custom-chord")}
-                className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
-                  activeTool === "custom-chord"
-                    ? "bg-primary text-on-primary font-bold shadow"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                Custom Chord Builder
-              </button>
             </div>
           </div>
         </div>
@@ -292,45 +292,18 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
 
       {/* Metronome Tool */}
       {activeTool === "metronome" && (
-        <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-6">
-          <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-4 shadow-xl">
-            <div className="mb-3 flex items-center gap-2">
-              <TimerReset size={16} className="text-primary" />
-              <h2 className="font-mono text-base font-bold tracking-[0.15em] text-on-surface uppercase">
-                Precision Metronome
-              </h2>
-            </div>
-            <Metronome
-              bpm={metronomeBpm}
-              onBpmChange={onBpmChange}
-              onLogBpmToSession={onLogBpm}
-              settings={settings}
-              isPlaying={metronomeIsPlaying}
-              onIsPlayingChange={onMetronomePlayingChange}
-              barCycleMode={metronomeBarCycleMode}
-              onBarCycleModeChange={onBarCycleModeChange}
-            />
-          </div>
-
-          <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-4">
-            <h3 className="font-mono text-xs font-bold tracking-[0.2em] text-on-surface uppercase">
-              Practice Guide
-            </h3>
-            <div className="space-y-3 text-sm text-on-surface-variant">
-              <p>
-                Use this metronome to lock tempo before scale work, chord
-                changes, and speed drills.
-              </p>
-              <p>
-                Set the subdivision to match the pulse you want to feel in the
-                hands, then use tap tempo to find a natural starting speed.
-              </p>
-              <p>
-                For tempo training, start around 60-80 BPM and increase
-                gradually while keeping clean articulation.
-              </p>
-            </div>
-          </div>
+        <div className="grid grid-cols-1 gap-6">
+          <Metronome
+            bpm={metronomeBpm}
+            onBpmChange={onBpmChange}
+            onLogBpmToSession={onLogBpm}
+            settings={settings}
+            isPlaying={metronomeIsPlaying}
+            onIsPlayingChange={onMetronomePlayingChange}
+            barCycleMode={metronomeBarCycleMode}
+            onBarCycleModeChange={onBarCycleModeChange}
+            variant="precision"
+          />
         </div>
       )}
 
@@ -349,9 +322,9 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
       {/* Pitch Reference Tuner */}
       {activeTool === "tuner" && (
         <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-outline-variant/10">
+          <div className="flex w-full flex-wrap items-center justify-between gap-4 pb-4 border-b border-outline-variant/10">
             <div>
-              <h2 className="font-mono text-base font-bold text-on-surface uppercase flex items-center gap-2">
+              <h2 className="font-mono text-base font-bold tracking-[0.12em] text-on-surface uppercase flex items-center gap-2">
                 <Radio size={16} className="text-primary" />
                 Acoustic Guitar Pitch Reference
               </h2>
@@ -413,9 +386,9 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
       {/* Interval Ear Trainer */}
       {activeTool === "ear" && (
         <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-outline-variant/10">
+          <div className="flex w-full flex-wrap items-center justify-between gap-4 pb-4 border-b border-outline-variant/10">
             <div>
-              <h2 className="font-mono text-base font-bold text-on-surface uppercase flex items-center gap-2">
+              <h2 className="font-mono text-base font-bold tracking-[0.12em] text-on-surface uppercase flex items-center gap-2">
                 <Sparkles size={16} className="text-primary" />
                 Interval Recognition Quiz
               </h2>
