@@ -372,7 +372,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     if (config.timeSignature) {
       setMetronomeTimeSignature(config.timeSignature);
     }
-    if (config.durationMinutes !== undefined && timer.status === "idle") {
+    if (config.durationMinutes !== undefined) {
       onTaskTimerStarted(activeTaskId);
       timer.start(config.durationMinutes * 60);
     }
@@ -927,7 +927,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 </button>
 
                 {isRootMenuOpen && (
-                  <div className="absolute left-0 top-full z-50 mt-2 w-60 max-w-[calc(100vw-2rem)] rounded-xl border border-outline-variant/40 bg-surface p-3 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+                  <div className="absolute left-0 top-full z-50 mt-2 w-60 max-w-[calc(100vw-2rem)] rounded-xl border border-outline-variant/40 bg-surface p-3 shadow-2xl dropdown-menu-enter">
                     <div className="flex items-center justify-between pb-2 mb-2 border-b border-outline-variant/20">
                       <span className="text-[11px] font-mono font-bold text-on-surface uppercase tracking-wider">
                         Select Note
@@ -982,7 +982,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 </button>
 
                 {isScaleMenuOpen && (
-                  <div className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[320px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-outline-variant/40 bg-surface p-3 shadow-2xl animate-in fade-in zoom-in-95 duration-150 md:absolute md:left-0 md:top-full md:mt-2 md:max-h-none md:w-105 md:max-w-none md:translate-x-0 md:translate-y-0 md:overflow-visible">
+                  <div className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[320px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-outline-variant/40 bg-surface p-3 shadow-2xl dropdown-menu-enter md:absolute md:left-0 md:top-full md:mt-2 md:max-h-none md:w-105 md:max-w-none md:translate-x-0 md:translate-y-0 md:overflow-visible">
                     <div className="flex items-center justify-between pb-2 mb-2 border-b border-outline-variant/20">
                       <span className="text-[11px] font-mono font-bold text-on-surface uppercase tracking-wider">
                         Select Scale or Mode

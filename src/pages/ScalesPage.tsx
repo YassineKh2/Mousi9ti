@@ -468,7 +468,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
 
               {/* Root Note Popover Dropdown */}
               {isRootMenuOpen && (
-                <div className="absolute top-full left-0 mt-2 z-50 bg-surface border border-outline-variant/40 rounded-xl p-3 shadow-2xl w-60 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute top-full left-0 mt-2 z-50 bg-surface border border-outline-variant/40 rounded-xl p-3 shadow-2xl w-60 dropdown-menu-enter">
                   <div className="flex items-center justify-between pb-2 mb-2 border-b border-outline-variant/20">
                     <span className="text-[11px] font-mono font-bold text-on-surface uppercase tracking-wider">
                       Select Root Note
@@ -543,7 +543,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
 
               {/* Comprehensive Scale Picker Popover */}
               {isScaleMenuOpen && (
-                <div className="absolute top-full left-1/2 right-auto -translate-x-1/2 -ml-6 mt-2 z-50 bg-surface border border-outline-variant/40 rounded-xl p-3 shadow-2xl w-[calc(100vw-1rem)] max-w-[320px] sm:left-0 sm:right-auto sm:translate-x-0 sm:ml-0 sm:w-105 sm:max-w-none animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute top-full left-1/2 right-auto -translate-x-1/2 -ml-6 mt-2 z-50 bg-surface border border-outline-variant/40 rounded-xl p-3 shadow-2xl w-[calc(100vw-1rem)] max-w-[320px] sm:left-0 sm:right-auto sm:translate-x-0 sm:ml-0 sm:w-105 sm:max-w-none dropdown-menu-enter">
                   <div className="flex items-center justify-between pb-2 mb-2 border-b border-outline-variant/20">
                     <span className="text-[11px] font-mono font-bold text-on-surface uppercase tracking-wider">
                       Select Scale or Mode
@@ -767,7 +767,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
 
               {/* Playback Direction Dropdown Menu */}
               {isPlayMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 z-50 bg-surface border border-outline-variant/40 rounded-xl p-2 shadow-2xl w-60 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 top-full mt-2 z-50 bg-surface border border-outline-variant/40 rounded-xl p-2 shadow-2xl w-60 dropdown-menu-enter">
                   <div className="text-[10px] font-mono font-bold text-on-surface-variant uppercase px-2.5 py-1 border-b border-outline-variant/20 mb-1">
                     Select Playback Order
                   </div>

@@ -1,9 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Play,
@@ -57,6 +52,7 @@ import {
   getMentionSuggestions,
   applyMentionSuggestion,
   renderHighlights,
+  formatDurationLabel,
   ActiveDropdown,
   COMMON_PRACTICE_KEYS,
   COMMON_TECHNIQUES,
@@ -98,6 +94,30 @@ interface RoutineTask {
   expiresAt?: number;
 }
 
+const TASK_TAG_COLOR_CLASSES: Record<string, string> = {
+  scale:
+    "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20",
+  chord:
+    "bg-violet-500/20 text-violet-300 border border-violet-500/40 hover:bg-violet-500/25",
+  timer:
+    "bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/25",
+  time: "bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/25",
+  custom:
+    "bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-500/25",
+  tuning:
+    "bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/25",
+  key: "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/25",
+  technique:
+    "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25",
+  bpm: "bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/25",
+  exercise:
+    "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/25",
+  metronome:
+    "bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/25",
+  random:
+    "bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/25",
+};
+
 const getTaskExpiration = (period: TaskDurationPeriod): number | undefined => {
   if (period === "forever" || period === "default") return undefined;
   if (period === "custom") return undefined;
@@ -136,7 +156,10 @@ const addCalendarMonths = (date: Date, months: number) => {
   date.setDate(1);
   date.setMonth(date.getMonth() + months);
   date.setDate(
-    Math.min(day, new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()),
+    Math.min(
+      day,
+      new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate(),
+    ),
   );
 };
 
@@ -297,16 +320,12 @@ const TaskDurationMenu: React.FC<{
         viewportHeight - edgePadding * 2,
       );
       const maxHeight = Math.min(panelHeight, availableViewportHeight);
-      const spaceAbove = Math.max(
-        0,
-        buttonRect.top - gap - edgePadding,
-      );
+      const spaceAbove = Math.max(0, buttonRect.top - gap - edgePadding);
       const spaceBelow = Math.max(
         0,
         viewportHeight - buttonRect.bottom - gap - edgePadding,
       );
-      const openAbove =
-        panelHeight > spaceBelow && spaceAbove > spaceBelow;
+      const openAbove = panelHeight > spaceBelow && spaceAbove > spaceBelow;
       const left = iconOnly
         ? buttonRect.right - panelRect.width
         : buttonRect.left;
@@ -365,7 +384,7 @@ const TaskDurationMenu: React.FC<{
         className={`inline-flex items-center transition-colors ${
           iconOnly
             ? "p-1 text-on-surface-variant hover:text-primary"
-            : "min-h-9 gap-2 rounded-md border border-outline-variant/40 bg-surface-container-lowest px-2.5 text-xs font-mono text-on-surface hover:border-primary/60 hover:bg-surface-container-high"
+            : "min-h-9 gap-2 rounded-md border border-outline-variant/40 bg-surface-container-high px-2.5 text-xs font-mono text-on-surface hover:border-primary/60 hover:bg-surface-container-highest"
         }`}
       >
         <Calendar
@@ -379,7 +398,7 @@ const TaskDurationMenu: React.FC<{
           </>
         )}
       </button>
-      {isMounted && (
+      {isMounted &&
         createPortal(
           <div
             ref={menuPanelRef}
@@ -392,9 +411,7 @@ const TaskDurationMenu: React.FC<{
               }
             }
             className={`z-50 w-[21rem] max-w-[calc(100vw-2rem)] rounded-xl border border-outline-variant/40 bg-surface p-2 shadow-2xl ${
-              showingCustomCalendar
-                ? "task-duration-calendar-view pb-4"
-                : ""
+              showingCustomCalendar ? "task-duration-calendar-view pb-4" : ""
             } ${
               menuPosition
                 ? isOpen
@@ -449,8 +466,7 @@ const TaskDurationMenu: React.FC<{
             )}
           </div>,
           document.body,
-        )
-      )}
+        )}
     </div>
   );
 };
@@ -1160,18 +1176,16 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       text: newTaskInput.trim(),
       completed: false,
       duration: taskDuration,
-      startsAt:
-        usesDefaultDuration
-          ? customRange?.start
-          : newTaskDuration === "custom" && newTaskRange
+      startsAt: usesDefaultDuration
+        ? customRange?.start
+        : newTaskDuration === "custom" && newTaskRange
           ? getStartOfDay(newTaskRange.start)
           : undefined,
-      expiresAt:
-        usesDefaultDuration
-          ? configuredExpiration
-          : newTaskDuration === "custom" && newTaskRange
-            ? getEndOfDay(newTaskRange.end)
-            : getTaskExpiration(newTaskDuration),
+      expiresAt: usesDefaultDuration
+        ? configuredExpiration
+        : newTaskDuration === "custom" && newTaskRange
+          ? getEndOfDay(newTaskRange.end)
+          : getTaskExpiration(newTaskDuration),
     };
     setWeeklySchedule((prev) =>
       prev.map((d) => {
@@ -1317,12 +1331,13 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       const currentMatchIndex = match.index;
 
       let Icon = Activity;
-      let badgeClass =
-        "bg-surface-container-high text-on-surface border border-outline-variant/40 hover:bg-surface-container-highest";
+      const badgeClass = settings.taskTagsColored
+        ? TASK_TAG_COLOR_CLASSES[tool] || TASK_TAG_COLOR_CLASSES.custom
+        : "border border-outline-variant/40 bg-surface-container-high text-on-surface-variant";
 
       if (tool === "scale") Icon = Music;
       else if (tool === "chord") Icon = Hash;
-      else if (tool === "timer") Icon = Clock;
+      else if (tool === "timer" || tool === "time") Icon = Clock;
       else if (tool === "custom") Icon = Tag;
       else if (tool === "tuning") Icon = Sliders;
       else if (tool === "key") Icon = Compass;
@@ -1335,8 +1350,9 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       if (tool === "metronome") label = `${p.bpm} BPM · ${p.signature}`;
       else if (tool === "scale") label = p.label || `${p.root} ${p.type}`;
       else if (tool === "chord") label = p.label || `${p.root} ${p.type}`;
-      else if (tool === "timer") label = `${p.minutes}m`;
-      else if (tool === "custom") label = p.text || "Custom";
+      else if (tool === "timer" || tool === "time") {
+        label = formatDurationLabel(p.minutes);
+      } else if (tool === "custom") label = p.text || "Custom";
       else if (tool === "tuning") label = p.tuning || "Tuning";
       else if (tool === "key") label = p.key || "Key";
       else if (tool === "technique") label = p.technique || "Technique";
@@ -1359,11 +1375,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
               rect: e.currentTarget.getBoundingClientRect(),
             });
           }}
-          className={`inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-mono font-bold align-middle shadow-sm cursor-pointer transition-colors ${
-            task.completed
-              ? "bg-surface-container-high text-on-surface-variant hover:text-on-surface line-through opacity-70"
-              : badgeClass
-          }`}
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-mono font-bold align-middle shadow-sm cursor-pointer transition-colors ${badgeClass} ${task.completed ? "line-through" : ""}`}
           title="Click to edit badge settings"
         >
           <Icon size={12} />
@@ -1503,9 +1515,12 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                             Week {index + 1}
                           </span>
                           <span className="routine-history-week-range">
-                            {formatHistoryDate(weekStart)} – {formatHistoryDate(weekEnd)}
+                            {formatHistoryDate(weekStart)} –{" "}
+                            {formatHistoryDate(weekEnd)}
                           </span>
-                          {isSelected && <CheckCircle2 size={15} aria-hidden="true" />}
+                          {isSelected && (
+                            <CheckCircle2 size={15} aria-hidden="true" />
+                          )}
                         </button>
                       );
                     })}
@@ -1587,27 +1602,12 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                   </span>
                 </div>
                 <div className="mt-1 flex flex-col gap-0.5">
-                  {dayTasks.length ? (
-                    <>
-                      {dayTasks.slice(0, 2).map((task) => (
-                        <p
-                          key={task.id}
-                          className="truncate text-[10px] text-on-surface-variant font-sans"
-                        >
-                          {task.text}
-                        </p>
-                      ))}
-                      {dayTasks.length > 2 && (
-                        <p className="text-[10px] text-on-surface-variant font-mono">
-                          +{dayTasks.length - 2} more
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-[10px] text-on-surface-variant font-sans">
-                      No tasks logged
-                    </p>
-                  )}
+                  <p
+                    className="truncate text-[10px] text-on-surface-variant font-sans"
+                    title={day.focusTheme}
+                  >
+                    {day.focusTheme}
+                  </p>
                 </div>
               </div>
 
@@ -1849,7 +1849,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                   onKeyUp={handleInputSelect}
                   onMouseUp={handleInputSelect}
                   onKeyDown={handleKeyDown}
-                  placeholder="e.g. Practice @chord(G major) @scale(C major) @bpm(120) @timer(15m)..."
+                  placeholder="e.g. Practice @chord(G major) @scale(C major) @bpm(120) @timer(15m 30s)..."
                   className="w-full bg-transparent font-mono text-xs text-on-surface outline-none relative z-10"
                   autoComplete="off"
                   spellCheck="false"

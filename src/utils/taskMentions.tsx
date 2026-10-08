@@ -78,6 +78,55 @@ export const COMMON_EXERCISES = [
 export const MENTION_REGEX =
   /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time|random)(?:\(([^)]*)\))?)/gi;
 
+export const MAX_TIMER_DURATION_MINUTES = 180;
+
+export const parseDurationMinutes = (value: string): number | undefined => {
+  const durationPattern =
+    /(\d+(?:\.\d+)?)\s*(hours?|hrs?|hr|h|minutes?|mins?|min|m|seconds?|secs?|sec|s)\b/gi;
+  let totalSeconds = 0;
+  let matchedDuration = false;
+  const remainingText = value.replace(
+    durationPattern,
+    (_match, amount: string, unit: string) => {
+      const quantity = Number(amount);
+      const normalizedUnit = unit.toLowerCase();
+      totalSeconds +=
+        quantity *
+        (normalizedUnit.startsWith("h")
+          ? 3600
+          : normalizedUnit.startsWith("m")
+            ? 60
+            : 1);
+      matchedDuration = true;
+      return "";
+    },
+  );
+
+  if (!matchedDuration) {
+    const bareMinutes = value.trim().match(/^(\d+(?:\.\d+)?)$/);
+    if (!bareMinutes) return undefined;
+    totalSeconds = Number(bareMinutes[1]) * 60;
+  } else if (remainingText.replace(/\b(?:and)\b|[\s,;+]/gi, "")) {
+    return undefined;
+  }
+
+  return Number.isFinite(totalSeconds) && totalSeconds > 0
+    ? totalSeconds / 60
+    : undefined;
+};
+
+export const formatDurationLabel = (minutes: number): string => {
+  const totalSeconds = Math.round(minutes * 60);
+  const wholeMinutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return [
+    wholeMinutes ? `${wholeMinutes}m` : "",
+    seconds ? `${seconds}s` : "",
+  ]
+    .filter(Boolean)
+    .join(" ") || "0s";
+};
+
 export const parseParams = (tool: string, params: string) => {
   const parts = params ? params.split(",").map((p) => p.trim()) : [];
   if (tool === "metronome") {
@@ -100,11 +149,12 @@ export const parseParams = (tool: string, params: string) => {
     const parsed = parseChordInput(params);
     return { root: parsed.root, type: parsed.type, label: parsed.label };
   } else if (tool === "timer" || tool === "time") {
-    const rawMin = parts[0]
-      ? parts[0].replace(/(?:mins|min|minutes|m)/gi, "").trim()
-      : "";
-    const parsedMin = parseInt(rawMin, 10);
-    return { minutes: !isNaN(parsedMin) && parsedMin > 0 ? parsedMin : 5 };
+    return {
+      minutes: Math.min(
+        parseDurationMinutes(params) ?? 5,
+        MAX_TIMER_DURATION_MINUTES,
+      ),
+    };
   } else if (tool === "custom") {
     return { text: params?.trim() || "Custom" };
   } else if (tool === "tuning") {
@@ -262,7 +312,7 @@ export const getMentionSuggestions = (
         label: "@metronome",
         subLabel: "Metronome BPM & signature",
       },
-      { name: "timer", label: "@timer", subLabel: "Practice timer (minutes)" },
+      { name: "timer", label: "@timer", subLabel: "Practice timer (minutes and seconds)" },
       { name: "time", label: "@time", subLabel: "Planned task time (minutes)" },
       { name: "random", label: "@random", subLabel: "Random note settings" },
     ];

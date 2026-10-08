@@ -22,7 +22,7 @@ interface TimerWidgetProps {
 }
 
 const formatTime = (seconds: number) => {
-  const m = Math.floor((seconds % 3600) / 60);
+  const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 };
@@ -323,7 +323,7 @@ export const TimerWidget: React.FC<TimerWidgetProps> = ({
               onChange={handleMinChange}
               onBlur={() => setCustomMin((prev) => prev.padStart(2, "0"))}
               onFocus={(e) => e.target.select()}
-              className="bg-transparent text-right outline-none w-[1.15em] placeholder-on-surface/20 transition-colors hover:bg-on-surface/5 rounded-xl cursor-text"
+              className="bg-transparent text-center outline-none w-[1.15em] placeholder-on-surface/20 transition-colors hover:bg-on-surface/5 focus:bg-primary/20 selection:bg-transparent rounded-xl cursor-text"
               placeholder="00"
             />
             <span className="relative -top-0.5 opacity-80 mx-1 sm:mx-2 pointer-events-none shrink-0">
@@ -338,7 +338,7 @@ export const TimerWidget: React.FC<TimerWidgetProps> = ({
               onKeyDown={handleSecKeyDown}
               onBlur={() => setCustomSec((prev) => prev.padStart(2, "0"))}
               onFocus={(e) => e.target.select()}
-              className="bg-transparent text-left outline-none w-[1.15em] placeholder-on-surface/20 transition-colors hover:bg-on-surface/5 rounded-xl cursor-text"
+              className="bg-transparent text-center outline-none w-[1.15em] placeholder-on-surface/20 transition-colors hover:bg-on-surface/5 focus:bg-primary/20 selection:bg-transparent rounded-xl cursor-text"
               placeholder="00"
             />
             <button type="submit" className="hidden" />
@@ -355,10 +355,10 @@ export const TimerWidget: React.FC<TimerWidgetProps> = ({
                 </span>
               )}
               {status === "finished"
-                ? Math.floor((Math.abs(remaining) % 3600) / 60)
+                ? Math.floor(Math.abs(remaining) / 60)
                     .toString()
                     .padStart(2, "0")
-                : Math.floor((remaining % 3600) / 60)
+                : Math.floor(remaining / 60)
                     .toString()
                     .padStart(2, "0")}
             </div>
@@ -375,7 +375,7 @@ export const TimerWidget: React.FC<TimerWidgetProps> = ({
       </div>
 
       {/* Controls Overlay */}
-      <div className="mt-auto relative z-20 pb-3.5 px-3">
+      <div className="mt-auto relative z-20 pb-5 px-3">
         <AnimatePresence mode="wait">
           {status !== "finished" ? (
             <motion.div
@@ -383,7 +383,7 @@ export const TimerWidget: React.FC<TimerWidgetProps> = ({
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
-              className="flex flex-col items-center gap-1.5"
+              className="flex min-h-11 flex-col items-center justify-end gap-1.5"
             >
               <div className="flex flex-wrap justify-center gap-1.5 max-w-full">
                 {presets.map((mins) => (
@@ -417,7 +417,7 @@ export const TimerWidget: React.FC<TimerWidgetProps> = ({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="flex justify-center items-center gap-3"
+              className="flex min-h-11 justify-center items-center gap-3"
             >
               <button
                 onClick={reset}

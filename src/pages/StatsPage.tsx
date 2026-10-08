@@ -858,7 +858,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
               </button>
               {isRangeOpen && (
                 <div
-                  className="absolute left-0 top-[calc(100%+0.5rem)] z-30 min-w-32 rounded-lg border border-outline-variant/30 bg-surface-container p-1 shadow-xl"
+                  className="absolute left-0 top-[calc(100%+0.5rem)] z-30 min-w-32 rounded-lg border border-outline-variant/30 bg-surface-container p-1 shadow-xl dropdown-menu-enter"
                   aria-label="Practice date ranges"
                 >
                   {(

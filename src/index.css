@@ -28,6 +28,10 @@
   animation: task-duration-menu-enter 140ms ease-out both;
 }
 
+.dropdown-menu-enter {
+  animation: task-duration-menu-enter 140ms ease-out both;
+}
+
 .task-duration-menu-exit {
   animation: task-duration-menu-exit 120ms ease-in both;
 }

@@ -206,7 +206,7 @@ export const CalendarRangePicker: React.FC<CalendarRangePickerProps> = ({
   return (
     <div
       ref={calendarRef}
-      className={`stats-calendar-popover${inline ? " task-calendar-inline" : ""}`}
+      className={`stats-calendar-popover dropdown-menu-enter${inline ? " task-calendar-inline" : ""}`}
     >
       <div className="stats-calendar-header">
         <button

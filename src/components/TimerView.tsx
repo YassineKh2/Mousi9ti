@@ -20,7 +20,7 @@ interface TimerViewProps {
 }
 
 const formatTime = (seconds: number) => {
-  const m = Math.floor((seconds % 3600) / 60);
+  const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 };
@@ -300,7 +300,7 @@ export const TimerView: React.FC<TimerViewProps> = ({
               {status === "idle" ? (
                 <form
                   onSubmit={handleCustomStart}
-                  className="font-mono font-medium text-[clamp(2.75rem,13vw,12rem)] leading-none tracking-tighter text-on-surface drop-shadow-2xl flex flex-nowrap items-center justify-center z-30"
+                  className="font-mono font-medium text-[clamp(2.75rem,13vw,12rem)] leading-none tracking-tighter text-on-surface drop-shadow-2xl flex flex-nowrap items-center justify-center -translate-y-1 sm:-translate-y-4 z-30"
                   style={{ fontVariantNumeric: "tabular-nums" }}
                 >
                   <input
@@ -311,7 +311,7 @@ export const TimerView: React.FC<TimerViewProps> = ({
                     onChange={handleMinChange}
                     onBlur={() => setCustomMin((prev) => prev.padStart(2, "0"))}
                     onFocus={(e) => e.target.select()}
-                    className="bg-transparent text-right outline-none w-[1.15em] placeholder-on-surface/20 transition-colors hover:bg-on-surface/5 rounded-3xl cursor-text"
+                    className="bg-transparent text-center outline-none w-[1.15em] placeholder-on-surface/20 transition-colors hover:bg-on-surface/5 focus:bg-primary/20 selection:bg-transparent rounded-3xl cursor-text"
                     placeholder="00"
                   />
                   <span className="relative -top-0.5 opacity-80 pb-1 sm:pb-2 mx-1 sm:mx-3 pointer-events-none shrink-0">
@@ -326,7 +326,7 @@ export const TimerView: React.FC<TimerViewProps> = ({
                     onKeyDown={handleSecKeyDown}
                     onBlur={() => setCustomSec((prev) => prev.padStart(2, "0"))}
                     onFocus={(e) => e.target.select()}
-                    className="bg-transparent text-left outline-none w-[1.15em] placeholder-on-surface/20 transition-colors hover:bg-on-surface/5 rounded-3xl cursor-text"
+                    className="bg-transparent text-center outline-none w-[1.15em] placeholder-on-surface/20 transition-colors hover:bg-on-surface/5 focus:bg-primary/20 selection:bg-transparent rounded-3xl cursor-text"
                     placeholder="00"
                   />
                   <button type="submit" className="hidden" />
@@ -343,10 +343,10 @@ export const TimerView: React.FC<TimerViewProps> = ({
                       </span>
                     )}
                     {status === "finished"
-                      ? Math.floor((Math.abs(remaining) % 3600) / 60)
+                      ? Math.floor(Math.abs(remaining) / 60)
                           .toString()
                           .padStart(2, "0")
-                      : Math.floor((remaining % 3600) / 60)
+                      : Math.floor(remaining / 60)
                           .toString()
                           .padStart(2, "0")}
                   </div>

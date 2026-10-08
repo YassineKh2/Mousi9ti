@@ -157,7 +157,7 @@ export const SessionWidget: React.FC<SessionWidgetProps> = ({
       </div>
 
       {/* Session Controls */}
-      <div className="flex flex-wrap items-center justify-between pt-2 border-t border-outline-variant/10 mt-1 gap-2">
+      <div className="box-content mt-auto flex min-h-11 flex-wrap items-end justify-between pt-2 border-t border-outline-variant/10 gap-2">
         <button
           onClick={
             isSessionActive

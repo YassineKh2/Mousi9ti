@@ -16,6 +16,7 @@ import {
   FileUp,
   Github,
   Plus,
+  ChevronDown,
 } from "lucide-react";
 import { AppSettings, TaskCompletionBehavior } from "../types";
 import { GUITAR_TUNINGS } from "../data/musicTheory";
@@ -105,6 +106,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     return () =>
       window.removeEventListener(CUSTOM_TASK_TAGS_CHANGED_EVENT, refreshTags);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isOpen, onClose]);
 
   const createCustomTag = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -498,33 +510,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onChange={onToggleAutoAdvanceTimedTasks}
               />
             </div>
-            <label className="flex items-center justify-between gap-3">
-              <span className="font-mono text-xs text-on-surface-variant">
-                Wait before next task
-              </span>
-              <select
-                value={autoAdvanceDelaySeconds}
-                onChange={(event) =>
-                  onChangeAutoAdvanceDelaySeconds(Number(event.target.value))
-                }
-                aria-label="Delay before advancing to the next task"
-                className="rounded-md border border-outline-variant/40 bg-surface-container-high px-3 py-2 font-mono text-xs text-on-surface outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/40"
-              >
-                <option value={0}>Immediately</option>
-                <option value={3}>3 seconds</option>
-                <option value={5}>5 seconds</option>
-                <option value={10}>10 seconds</option>
-                <option value={15}>15 seconds</option>
-                <option value={30}>30 seconds</option>
-              </select>
-            </label>
+            {autoAdvanceTimedTasks && (
+              <label className="flex items-center justify-between gap-3">
+                <span className="font-mono text-xs text-on-surface-variant">
+                  Wait before next task
+                </span>
+                <select
+                  value={autoAdvanceDelaySeconds}
+                  onChange={(event) =>
+                    onChangeAutoAdvanceDelaySeconds(Number(event.target.value))
+                  }
+                  aria-label="Delay before advancing to the next task"
+                  className="rounded-md border border-outline-variant/40 bg-surface-container-high px-3 py-2 font-mono text-xs text-on-surface outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/40"
+                >
+                  <option value={0}>Immediately</option>
+                  <option value={3}>3 seconds</option>
+                  <option value={5}>5 seconds</option>
+                  <option value={10}>10 seconds</option>
+                  <option value={15}>15 seconds</option>
+                  <option value={30}>30 seconds</option>
+                </select>
+              </label>
+            )}
           </div>
 
           {/* Automatic Task Setup */}
           <div
             className={
               activeTab === "tasks"
-                ? "flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-outline-variant/20 pt-4"
+                ? "flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-4"
                 : "hidden"
             }
           >
@@ -537,28 +551,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 (scale, tempo, duration).
               </span>
             </div>
-            <div className="flex items-center self-start sm:self-auto gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant/30 shrink-0">
-              <button
-                onClick={() => onToggleAutoConfigureDashboardFromTask(false)}
-                className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
-                  !autoConfigureDashboardFromTask
-                    ? "bg-primary text-on-primary font-bold"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                Disabled
-              </button>
-              <button
-                onClick={() => onToggleAutoConfigureDashboardFromTask(true)}
-                className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
-                  autoConfigureDashboardFromTask
-                    ? "bg-primary text-on-primary font-bold"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                Enabled
-              </button>
-            </div>
+            <ToggleSwitch
+              checked={autoConfigureDashboardFromTask}
+              label="Automatic Task Setup"
+              onChange={onToggleAutoConfigureDashboardFromTask}
+            />
           </div>
 
           <section
@@ -610,10 +607,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <details
             aria-labelledby="custom-task-tags-heading"
-            open
             className={
               activeTab === "tasks"
-                ? "space-y-4 border-t border-outline-variant/20 pt-4"
+                ? "group space-y-4 border-t border-outline-variant/20 pt-4"
                 : "hidden"
             }
           >
@@ -624,7 +620,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   ({customTags.length})
                 </span>
               </span>
-              <span className="text-xs text-on-surface-variant">Manage</span>
+              <span className="flex items-center gap-1 font-mono text-xs text-on-surface-variant">
+                Manage
+                <ChevronDown
+                  size={14}
+                  aria-hidden="true"
+                  className="transition-transform group-open:rotate-180"
+                />
+              </span>
             </summary>
             <p className="text-xs text-on-surface-variant">
               Create tags for your practice tasks, organize them, or remove them

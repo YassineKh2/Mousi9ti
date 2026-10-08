@@ -57,6 +57,43 @@ describe("parseTaskConfiguration", () => {
     assert.equal(config.timeSignature, "4/4");
   });
 
+  it("parses timer mentions with seconds and mixed duration units", () => {
+    assert.equal(
+      parseTaskConfiguration("Practice with @timer(30s)").durationMinutes,
+      0.5,
+    );
+    assert.equal(
+      parseTaskConfiguration("Practice with @timer(30seconds)")
+        .durationMinutes,
+      0.5,
+    );
+    assert.equal(
+      parseTaskConfiguration("Practice with @timer(40min 40s)")
+        .durationMinutes,
+      40 + 40 / 60,
+    );
+    assert.equal(
+      parseTaskConfiguration("Practice with @time(30 minutes 30 seconds)")
+        .durationMinutes,
+      30.5,
+    );
+    assert.equal(
+      parseTaskConfiguration("Practice with @timer(20)").durationMinutes,
+      20,
+    );
+  });
+
+  it("caps timer mentions at 180 minutes", () => {
+    assert.equal(
+      parseTaskConfiguration("Practice with @timer(240)").durationMinutes,
+      180,
+    );
+    assert.equal(
+      parseTaskConfiguration("Practice with @time(3 hours)").durationMinutes,
+      180,
+    );
+  });
+
   it("preserves the selected position from an @scale mention", () => {
     const config = parseTaskConfiguration("Practice @scale(C major, pos 1)");
     assert.equal(config.scale?.position, 1);

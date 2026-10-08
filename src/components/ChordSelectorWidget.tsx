@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Plus } from "lucide-react";
+import { Music2, Plus } from "lucide-react";
 import { SwipeableChordCard } from "./SwipeableChordCard";
 import { ChordSearchInput } from "./ChordSearchInput";
 import { ChordSelection } from "../types";
@@ -120,6 +120,7 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-mono text-sm font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
+          <Music2 size={16} className="shrink-0 text-primary" />
           Chord Selector
         </h3>
       </div>

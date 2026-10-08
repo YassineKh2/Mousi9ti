@@ -40,6 +40,9 @@ import {
   COMMON_TECHNIQUES,
   COMMON_EXERCISES,
   getMentionSuggestions as getCategorizedMentionSuggestions,
+  formatDurationLabel,
+  MAX_TIMER_DURATION_MINUTES,
+  parseDurationMinutes,
 } from "../utils/taskMentions";
 import {
   PracticeTask,
@@ -132,11 +135,12 @@ const parseParams = (tool: string, params: string) => {
     const parsed = parseChordInput(params);
     return { root: parsed.root, type: parsed.type, label: parsed.label };
   } else if (tool === "timer" || tool === "time") {
-    const rawMin = parts[0]
-      ? parts[0].replace(/(?:mins|min|minutes|m)/gi, "").trim()
-      : "";
-    const parsedMin = parseInt(rawMin, 10);
-    return { minutes: !isNaN(parsedMin) && parsedMin > 0 ? parsedMin : 5 };
+    return {
+      minutes: Math.min(
+        parseDurationMinutes(params) ?? 5,
+        MAX_TIMER_DURATION_MINUTES,
+      ),
+    };
   } else if (tool === "custom") {
     return { text: params?.trim() || "Custom" };
   } else if (tool === "tuning") {
@@ -498,9 +502,10 @@ const getMentionSuggestions = (
         return baseList
           .filter(
             (m) =>
-              ctx.query === "" ||
-              m.startsWith(ctx.query) ||
-              (numMatch && m === parseInt(numMatch[0], 10).toString()),
+              Number(m) <= MAX_TIMER_DURATION_MINUTES &&
+              (ctx.query === "" ||
+                m.startsWith(ctx.query) ||
+                (numMatch && m === parseInt(numMatch[0], 10).toString())),
           )
           .map((m) => ({
             label: `${m} Minutes`,
@@ -1058,7 +1063,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
         Icon = Music;
       } else if (tool === "chord") {
         Icon = Hash;
-      } else if (tool === "timer") {
+      } else if (tool === "timer" || tool === "time") {
         Icon = Clock;
       } else if (tool === "custom") {
         Icon = Tag;
@@ -1079,7 +1084,9 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
       if (tool === "metronome") label = `${p.bpm} BPM · ${p.signature}`;
       else if (tool === "scale") label = p.label || `${p.root} ${p.type}`;
       else if (tool === "chord") label = p.label || `${p.root} ${p.type}`;
-      else if (tool === "timer") label = `${p.minutes}m`;
+      else if (tool === "timer" || tool === "time") {
+        label = formatDurationLabel(p.minutes);
+      }
       else if (tool === "custom") label = p.text || "Custom";
       else if (tool === "tuning") label = p.tuning || "Tuning";
       else if (tool === "key") label = p.key || "Key";
@@ -1451,9 +1458,12 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   return (
     <div className="font-mono bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex flex-col shadow-xl relative group h-125 min-h-125 max-h-125 flex-none">
       <div className="flex items-center justify-between pb-3 border-b border-outline-variant/10 shrink-0">
-        <span className="font-mono text-xs font-semibold tracking-[0.2em] text-on-surface uppercase">
-          Daily Practice Goals
-        </span>
+        <div className="flex min-w-0 items-center gap-2">
+          <Target size={16} className="shrink-0 text-primary" />
+          <span className="font-mono text-xs font-semibold tracking-[0.2em] text-on-surface uppercase">
+            Daily Practice Goals
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-primary">{progress}%</span>
           {onStartDailyTasks && !isDailyRoutineActive && (
@@ -1658,7 +1668,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
       >
         {suggestions.length > 0 && (
           <div
-            className="absolute bottom-[calc(100%+8px)] left-0 w-72 sm:w-80 max-h-52 overflow-y-auto bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-xl z-50 animate-in fade-in slide-in-from-bottom-2 py-1 custom-scrollbar overscroll-contain"
+            className="absolute bottom-[calc(100%+8px)] left-0 w-72 sm:w-80 max-h-52 overflow-y-auto bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-xl z-50 dropdown-menu-enter py-1 custom-scrollbar overscroll-contain"
             onWheel={(e) => e.stopPropagation()}
           >
             {suggestions.map((s, i) => (
@@ -1841,7 +1851,7 @@ export const DropdownEditor: React.FC<{
   );
   const [signature, setSignature] = useState(initial.signature || "4/4");
   const [minutesStr, setMinutesStr] = useState(
-    initial.minutes ? String(initial.minutes) : "5",
+    active.params || "5",
   );
   const [randomMode, setRandomMode] = useState(
     initial.accidentalMode || "both",
@@ -1872,9 +1882,14 @@ export const DropdownEditor: React.FC<{
   };
 
   const saveTimer = (newMin: string) => {
-    const cleanMin = parseInt(newMin, 10);
-    if (!isNaN(cleanMin) && cleanMin > 0) {
-      onSave(`${cleanMin}`, false);
+    const durationMinutes = parseDurationMinutes(newMin);
+    if (durationMinutes !== undefined) {
+      onSave(
+        durationMinutes > MAX_TIMER_DURATION_MINUTES
+          ? String(MAX_TIMER_DURATION_MINUTES)
+          : newMin.trim(),
+        false,
+      );
     }
   };
 
@@ -1975,7 +1990,7 @@ export const DropdownEditor: React.FC<{
       <div className="fixed inset-0 z-90" onClick={onClose} onWheel={onClose} />
       <div
         ref={dropdownRef}
-        className="fixed z-100 w-[min(320px,calc(100vw-16px))] bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-2xl p-4 flex flex-col gap-3 animate-in fade-in zoom-in-95 overscroll-contain"
+        className="fixed z-100 w-[min(320px,calc(100vw-16px))] bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-2xl p-4 flex flex-col gap-3 dropdown-menu-enter overscroll-contain"
         style={{ top: coords.top, left: coords.left }}
         onWheel={(e) => e.stopPropagation()}
       >
@@ -2648,32 +2663,38 @@ export const DropdownEditor: React.FC<{
             </div>
           )}
 
-          {active.tool === "timer" && (
+          {(active.tool === "timer" || active.tool === "time") && (
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">
-                Minutes
+                Duration
               </label>
               <input
                 type="text"
-                inputMode="numeric"
                 value={minutesStr}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, "");
+                  const val = e.target.value;
                   setMinutesStr(val);
                   if (val) {
                     saveTimer(val);
                   }
                 }}
                 onBlur={() => {
-                  if (!minutesStr.trim() || parseInt(minutesStr, 10) <= 0) {
+                  const durationMinutes = parseDurationMinutes(minutesStr);
+                  if (durationMinutes === undefined) {
                     setMinutesStr("5");
                     saveTimer("5");
+                  } else if (durationMinutes > MAX_TIMER_DURATION_MINUTES) {
+                    setMinutesStr(String(MAX_TIMER_DURATION_MINUTES));
+                    saveTimer(String(MAX_TIMER_DURATION_MINUTES));
                   }
                 }}
-                placeholder="e.g. 3"
+                placeholder="Up to 180 minutes"
                 className="bg-surface-container-lowest px-2 py-1.5 rounded text-sm text-on-surface border border-outline-variant/50 focus:border-primary outline-none font-mono"
                 autoFocus
               />
+              <span className="text-[10px] text-on-surface-variant">
+                Maximum: 180 minutes
+              </span>
             </div>
           )}
         </div>

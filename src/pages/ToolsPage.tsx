@@ -166,7 +166,7 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
 
               {/* Mobile Dropdown Menu */}
               {isToolMenuOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-surface border border-outline-variant/40 rounded-xl p-2 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-surface border border-outline-variant/40 rounded-xl p-2 shadow-2xl dropdown-menu-enter">
                   <div className="flex flex-col gap-1">
                     {[
                       { id: "circle", label: "Circle of Fifths", desc: "Explore key signatures & harmony", icon: Compass },

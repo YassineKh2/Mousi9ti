@@ -206,7 +206,7 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
       </div>
 
       {/* Auto-Advance Interval Settings & Progress Bar */}
-      <div className="space-y-2">
+      <div className="mt-auto space-y-2">
         {autoAdvance && (
           <div className="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
             <div
@@ -216,8 +216,8 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between pt-2 border-t border-outline-variant/10 gap-2">
-          <div className="flex items-center gap-1.5 flex-1">
+        <div className="box-content flex min-h-11 flex-wrap items-end justify-between pt-2 border-t border-outline-variant/10 gap-2">
+          <div className="flex items-end gap-1.5 flex-1">
             <button
               onClick={() => setAutoAdvance(!autoAdvance)}
               className={`flex min-h-10 items-center gap-1.5 px-2.5 py-1.5 rounded font-mono text-[10px] tracking-wider border transition-all md:min-h-0 ${

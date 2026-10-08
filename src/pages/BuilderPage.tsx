@@ -580,7 +580,7 @@ const RepeatsDropdown = forwardRef<
         {isOpen && (
           <div
             style={dropdownStyle}
-            className="fixed z-[9999] bg-surface-container-high border border-outline-variant/40 rounded-xl shadow-2xl overflow-hidden p-3 flex flex-col gap-3 backdrop-blur-md"
+            className="fixed z-[9999] bg-surface-container-high border border-outline-variant/40 rounded-xl shadow-2xl overflow-hidden p-3 flex flex-col gap-3 backdrop-blur-md dropdown-menu-enter"
           >
             {/* Custom Input Inside Dropdown */}
             <div>
@@ -710,7 +710,7 @@ const SearchableSelect = ({
 
   const resultsPanel = isOpen ? (
     <div
-      className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface border border-outline-variant/40 rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-56"
+      className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface border border-outline-variant/40 rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-56 dropdown-menu-enter"
       style={{ minWidth: "180px" }}
     >
       {!inline && (

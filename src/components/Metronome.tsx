@@ -423,7 +423,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
       </div>
 
       {/* Bottom Controls: Tap Tempo, Bar Cycle Toggle & Big Play Button */}
-      <div className="flex flex-wrap justify-between items-center mt-3 pt-2 border-t border-outline-variant/10 gap-2">
+      <div className="box-content mt-auto flex min-h-11 flex-wrap justify-between items-center pt-2 border-t border-outline-variant/10 gap-2">
         <div className="flex flex-wrap items-center gap-2 flex-1">
           <button
             onClick={handleTapTempo}

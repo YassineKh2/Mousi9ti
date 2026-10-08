@@ -63,10 +63,8 @@ export function clampBpm(bpm: number): number {
 }
 
 export function clampDurationMinutes(minutes: number): number {
-  return Math.max(
-    MIN_DURATION_MINUTES,
-    Math.min(MAX_DURATION_MINUTES, Math.round(minutes)),
-  );
+  if (minutes <= 0) return MIN_DURATION_MINUTES;
+  return Math.max(1 / 60, Math.min(MAX_DURATION_MINUTES, minutes));
 }
 
 function cloneMentionRegex(): RegExp {
