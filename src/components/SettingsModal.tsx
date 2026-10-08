@@ -353,6 +353,101 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             Tasks
           </span>
 
+          <section
+            aria-labelledby="task-default-duration-heading"
+            className={
+              activeTab === "tasks"
+                ? "space-y-3 border-b border-outline-variant/20 pb-4"
+                : "hidden"
+            }
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3
+                  id="task-default-duration-heading"
+                  className="font-mono text-xs font-semibold text-on-surface"
+                >
+                  Default Task Duration
+                </h3>
+                <p className="mt-1 text-[11px] text-on-surface-variant">
+                  Applied to new tasks; you can still change each task.
+                </p>
+              </div>
+              <select
+                value={settings.taskDefaultDuration}
+                onChange={(event) =>
+                  onUpdateSettings({
+                    taskDefaultDuration: event.target.value as
+                      | "forever"
+                      | "week"
+                      | "month"
+                      | "year"
+                      | "custom",
+                  })
+                }
+                aria-label="Default duration for new tasks"
+                className="w-full shrink-0 rounded-md border border-outline-variant/40 bg-surface-container-high px-3 py-2 font-mono text-xs text-on-surface outline-none transition-colors focus:border-primary sm:w-44"
+              >
+                <option value="forever">No limit</option>
+                <option value="week">1 week</option>
+                <option value="month">1 month</option>
+                <option value="year">1 year</option>
+                <option value="custom">Custom duration</option>
+              </select>
+            </div>
+            {settings.taskDefaultDuration === "custom" && (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <label
+                  htmlFor="task-default-custom-duration"
+                  className="font-mono text-xs text-on-surface-variant"
+                >
+                  Custom duration
+                </label>
+                <input
+                  id="task-default-custom-duration"
+                  type="number"
+                  min={1}
+                  max={999}
+                  step={1}
+                  value={settings.taskDefaultCustomDuration}
+                  onChange={(event) => {
+                    const duration = Number(event.target.value);
+                    if (
+                      Number.isInteger(duration) &&
+                      duration >= 1 &&
+                      duration <= 999
+                    ) {
+                      onUpdateSettings({ taskDefaultCustomDuration: duration });
+                    }
+                  }}
+                  className="w-16 [appearance:textfield] rounded-md border border-outline-variant/40 bg-surface-container-high px-2 py-2 text-center font-mono text-xs text-on-surface outline-none focus:border-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <select
+                  value={settings.taskDefaultCustomUnit}
+                  onChange={(event) =>
+                    onUpdateSettings({
+                      taskDefaultCustomUnit: event.target.value as
+                        | "days"
+                        | "weeks"
+                        | "months"
+                        | "years",
+                    })
+                  }
+                  aria-label="Custom task duration unit"
+                  className="rounded-md border border-outline-variant/40 bg-surface-container-high px-2 py-2 font-mono text-xs text-on-surface outline-none focus:border-primary"
+                >
+                  <option value="days">days</option>
+                  <option value="weeks">weeks</option>
+                  <option value="months">months</option>
+                  <option value="years">years</option>
+                </select>
+                <span className="font-mono text-xs text-on-surface-variant">
+                  from creation
+                </span>
+              </div>
+            )}
+          </section>
+
           {/* Daily Task Completion */}
           <div
             className={activeTab === "tasks" ? "flex flex-col gap-3" : "hidden"}

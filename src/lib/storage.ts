@@ -41,6 +41,9 @@ export const DEFAULT_TIMER_PREFERENCES: UserTimerPreferences = {
 
 const DEFAULT_SETTINGS: AppSettings = {
   theme: "dark",
+  taskDefaultDuration: "forever",
+  taskDefaultCustomDuration: 4,
+  taskDefaultCustomUnit: "months",
   accentColor: "#3b82f6", // Electric Blue
   defaultInstrument: "guitar",
   defaultTuning: "E Standard",

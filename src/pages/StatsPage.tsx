@@ -949,15 +949,19 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
           <h2 className="font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
             Peak vs Average BPM
           </h2>
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-on-surface-variant">
-            <span className="inline-flex items-center gap-2 font-mono">
-              <i className="h-2 w-2 rounded-full bg-[#f59e0b]" /> Peak BPM
-            </span>
-            <span className="inline-flex items-center gap-2 font-mono">
-              <i className="h-2 w-2 rounded-full bg-[#60a5fa]" /> Average BPM
-            </span>
-          </div>
-          <div className="h-64 min-w-0">
+          {dailyBpmData.length > 0 && (
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-on-surface-variant">
+              <span className="inline-flex items-center gap-2 font-mono">
+                <i className="h-2 w-2 rounded-full bg-[var(--color-secondary)]" />{" "}
+                Peak BPM
+              </span>
+              <span className="inline-flex items-center gap-2 font-mono">
+                <i className="h-2 w-2 rounded-full bg-[var(--color-primary)]" />{" "}
+                Average BPM
+              </span>
+            </div>
+          )}
+          <div className="flex h-64 min-w-0 flex-col">
             {dailyBpmData.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={dailyBpmData} margin={{ top: 12 }}>
@@ -976,22 +980,22 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                   <Line
                     dataKey="peakBpm"
                     name="Peak BPM"
-                    stroke="#f59e0b"
+                    stroke="var(--color-secondary)"
                     strokeWidth={2}
                     type="monotone"
                   />
                   <Line
                     dataKey="averageBpm"
                     name="Average BPM"
-                    stroke="#60a5fa"
+                    stroke="var(--color-primary)"
                     strokeWidth={2}
                     type="monotone"
                   />
                 </ComposedChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-xs font-mono text-on-surface-variant">
-                No BPM data for this period.
+              <p className="mt-auto text-[10px] font-mono text-on-surface-variant">
+                No BPM data for these dates.
               </p>
             )}
           </div>
@@ -1000,61 +1004,74 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
           <h2 className="font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
             Practice Sources
           </h2>
-          <div className="stats-source-content flex-1">
-            <div className="stats-source-chart">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Tooltip
-                    formatter={(value: number) => formatDuration(value)}
-                    contentStyle={statsTooltipContentStyle}
-                    labelStyle={statsTooltipLabelStyle}
-                    itemStyle={statsTooltipItemStyle}
-                  />
-                  <Pie
-                    data={sourceChart}
-                    dataKey="seconds"
-                    nameKey="label"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={58}
-                    outerRadius={82}
-                    paddingAngle={1}
-                    stroke="none"
-                  >
-                    {sourceChart.map((entry, index) => (
-                      <Cell
-                        key={entry.name}
-                        fill={colors[index % colors.length]}
+          {sourceChart.length ? (
+            <>
+              <div className="stats-source-content flex-1">
+                <div className="stats-source-chart">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Tooltip
+                        formatter={(value: number) => formatDuration(value)}
+                        contentStyle={statsTooltipContentStyle}
+                        labelStyle={statsTooltipLabelStyle}
+                        itemStyle={statsTooltipItemStyle}
                       />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="stats-source-total">
-                <b>{formatDuration(totalSeconds)}</b>
-                <span>Total Practice</span>
-              </div>
-            </div>
-            <div className="stats-source-legend max-h-72 min-w-0 overflow-x-hidden overflow-y-auto pr-2">
-              {sourceChart.map((entry, index) => (
-                <div key={entry.name} className="stats-source-row">
-                  <span className="stats-source-name">
-                    <i
-                      style={{ backgroundColor: colors[index % colors.length] }}
-                    />
-                    <span className="min-w-0 [overflow-wrap:anywhere]">
-                      {renderAreaName(entry.name)}
-                    </span>
-                  </span>
-                  <span>{entry.percentage}%</span>
-                  <span>{formatDuration(entry.seconds)}</span>
+                      <Pie
+                        data={sourceChart}
+                        dataKey="seconds"
+                        nameKey="label"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={58}
+                        outerRadius={82}
+                        paddingAngle={1}
+                        stroke="none"
+                      >
+                        {sourceChart.map((entry, index) => (
+                          <Cell
+                            key={entry.name}
+                            fill={colors[index % colors.length]}
+                          />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="stats-source-total">
+                    <b>{formatDuration(totalSeconds)}</b>
+                    <span>Total Practice</span>
+                  </div>
                 </div>
-              ))}
+                <div className="stats-source-legend max-h-72 min-w-0 overflow-x-hidden overflow-y-auto pr-2">
+                  {sourceChart.map((entry, index) => (
+                    <div key={entry.name} className="stats-source-row">
+                      <span className="stats-source-name">
+                        <i
+                          style={{
+                            backgroundColor: colors[index % colors.length],
+                          }}
+                        />
+                        <span className="min-w-0 [overflow-wrap:anywhere]">
+                          {renderAreaName(entry.name)}
+                        </span>
+                      </span>
+                      <span>{entry.percentage}%</span>
+                      <span>{formatDuration(entry.seconds)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p className="mt-auto text-[10px] font-mono text-on-surface-variant">
+                Breakdown shows how much time was spent on each practice
+                source.
+              </p>
+            </>
+          ) : (
+            <div className="flex flex-1 items-end">
+              <p className="text-[10px] font-mono text-on-surface-variant">
+                No practice data for these dates.
+              </p>
             </div>
-          </div>
-          <p className="text-[10px] font-mono text-on-surface-variant mt-auto">
-            Breakdown shows how much time was spent on each practice source.
-          </p>
+          )}
         </section>
       </div>
 
@@ -1081,16 +1098,16 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
               <Area
                 yAxisId="time"
                 dataKey="minutes"
-                fill="#60a5fa"
+                fill="var(--color-primary)"
                 fillOpacity={0.25}
                 type="monotone"
-                stroke="#60a5fa"
+                stroke="var(--color-primary)"
                 name="Minutes"
               />
               <Line
                 yAxisId="count"
                 dataKey="sessions"
-                stroke="#f59e0b"
+                stroke="var(--color-secondary)"
                 name="Sessions"
                 strokeWidth={2}
               />

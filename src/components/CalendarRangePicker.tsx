@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface CalendarDateRange {
@@ -13,6 +13,12 @@ interface CalendarRangePickerProps {
   minDate?: number;
   inline?: boolean;
   calendarRef?: React.Ref<HTMLDivElement>;
+}
+
+interface CalendarDayHitTarget {
+  timestamp: number;
+  centerX: number;
+  centerY: number;
 }
 
 const startOfDay = (date: Date) =>
@@ -30,7 +36,12 @@ export const CalendarRangePicker: React.FC<CalendarRangePickerProps> = ({
     () => new Date(range?.start ?? Date.now()),
   );
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const completingSelection = useRef(false);
+  const dragStart = useRef<number | null>(null);
+  const dragMoved = useRef(false);
+  const activePointerId = useRef<number | null>(null);
+  const dayHitTargets = useRef<CalendarDayHitTarget[]>([]);
+  const lastPreviewDay = useRef<number | null>(null);
   const calendarDays = useMemo(() => {
     const firstDay = new Date(
       calendarMonth.getFullYear(),
@@ -62,25 +73,134 @@ export const CalendarRangePicker: React.FC<CalendarRangePickerProps> = ({
       end: Math.max(selectionStart, timestamp),
     });
     setSelectionStart(null);
-    setIsDragging(false);
     onComplete?.();
   };
 
-  const previewDay = (timestamp: number) => {
-    if (!isDragging || selectionStart === null) return;
+  const previewDay = (timestamp: number, start = selectionStart) => {
+    if (start === null) return;
     if (minimumDay !== undefined && timestamp < minimumDay) return;
+    if (lastPreviewDay.current === timestamp) return;
+    lastPreviewDay.current = timestamp;
     onChange({
-      start: Math.min(selectionStart, timestamp),
-      end: Math.max(selectionStart, timestamp),
+      start: Math.min(start, timestamp),
+      end: Math.max(start, timestamp),
     });
   };
 
-  const finishDrag = () => {
-    setIsDragging(false);
-    if (selectionStart !== null && range && range.start !== range.end) {
+  const measureDayTargets = (grid: HTMLDivElement) =>
+    Array.from(
+      grid.querySelectorAll<HTMLButtonElement>(
+        "button[data-timestamp]:not(:disabled)",
+      ),
+    ).map((button) => {
+      const rect = button.getBoundingClientRect();
+      return {
+        timestamp: Number(button.dataset.timestamp),
+        centerX: rect.left + rect.width / 2,
+        centerY: rect.top + rect.height / 2,
+      };
+    });
+
+  const nearestDay = (
+    event: React.PointerEvent<HTMLDivElement>,
+    targets: CalendarDayHitTarget[] = dayHitTargets.current,
+  ) => {
+    let nearest: { timestamp: number; distance: number } | null = null;
+
+    targets.forEach(({ timestamp, centerX, centerY }) => {
+      const dx = event.clientX - centerX;
+      const dy = event.clientY - centerY;
+      const distance = dx * dx + dy * dy;
+
+      if (nearest === null || distance < nearest.distance) {
+        nearest = { timestamp, distance };
+      }
+    });
+
+    return nearest?.timestamp ?? null;
+  };
+
+  const dayAtPointer = (event: React.PointerEvent<HTMLDivElement>) => {
+    const target = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLButtonElement>("button[data-timestamp]");
+
+    if (target && event.currentTarget.contains(target)) {
+      return target.disabled ? null : Number(target.dataset.timestamp);
+    }
+
+    return nearestDay(event);
+  };
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (
+      !event.isPrimary ||
+      (event.pointerType === "mouse" && event.button !== 0)
+    ) {
+      return;
+    }
+    const clickedDay = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "button[data-timestamp]",
+    );
+    if (clickedDay?.disabled) return;
+
+    const targets = measureDayTargets(event.currentTarget);
+    const timestamp = clickedDay
+      ? Number(clickedDay.dataset.timestamp)
+      : nearestDay(event, targets);
+    if (timestamp === null) return;
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dayHitTargets.current = targets;
+    activePointerId.current = event.pointerId;
+    completingSelection.current = selectionStart !== null;
+    dragStart.current = timestamp;
+    dragMoved.current = false;
+    lastPreviewDay.current = timestamp;
+
+    if (selectionStart === null) {
+      setSelectionStart(timestamp);
+      onChange({ start: timestamp, end: timestamp });
+    }
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (
+      activePointerId.current !== event.pointerId ||
+      dragStart.current === null
+    ) {
+      return;
+    }
+    const timestamp = dayAtPointer(event);
+    if (timestamp === null || timestamp === dragStart.current) return;
+
+    dragMoved.current = true;
+    if (completingSelection.current) {
+      setSelectionStart(dragStart.current);
+    }
+    previewDay(timestamp, dragStart.current);
+  };
+
+  const finishDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (activePointerId.current !== event.pointerId) return;
+    if (completingSelection.current) {
+      if (dragMoved.current) {
+        setSelectionStart(null);
+        onComplete?.();
+      } else if (dragStart.current !== null) {
+        chooseDay(dragStart.current);
+      }
+    } else if (dragMoved.current) {
       setSelectionStart(null);
       onComplete?.();
     }
+    completingSelection.current = false;
+    dragStart.current = null;
+    dragMoved.current = false;
+    activePointerId.current = null;
+    dayHitTargets.current = [];
+    lastPreviewDay.current = null;
   };
 
   return (
@@ -131,33 +251,49 @@ export const CalendarRangePicker: React.FC<CalendarRangePickerProps> = ({
           <span key={day}>{day}</span>
         ))}
       </div>
-      <div className="stats-calendar-grid" onMouseUp={finishDrag}>
+      <div
+        className="stats-calendar-grid"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishDrag}
+        onPointerCancel={finishDrag}
+      >
         {calendarDays.map((day) => {
           const timestamp = startOfDay(day);
           const inMonth = day.getMonth() === calendarMonth.getMonth();
           const selected =
             range && timestamp >= range.start && timestamp <= range.end;
+          const isRangeStart =
+            range !== null &&
+            timestamp === startOfDay(new Date(range.start));
+          const isRangeEnd =
+            range !== null && timestamp === startOfDay(new Date(range.end));
+          const isRangeMiddle =
+            Boolean(selected) && !isRangeStart && !isRangeEnd;
           const disabled = minimumDay !== undefined && timestamp < minimumDay;
 
           return (
             <button
               key={timestamp}
               type="button"
+              data-timestamp={timestamp}
               disabled={disabled}
               aria-pressed={Boolean(selected)}
-              aria-label={day.toLocaleDateString("en-US", {
+              aria-label={`${day.toLocaleDateString("en-US", {
                 month: "long",
                 day: "numeric",
                 year: "numeric",
-              })}
-              className={`${inMonth ? "" : "is-muted"} ${selected ? "is-selected" : ""}`}
-              onMouseDown={(event) => {
-                event.preventDefault();
-                if (disabled) return;
-                setIsDragging(true);
-                chooseDay(timestamp);
-              }}
-              onMouseEnter={() => previewDay(timestamp)}
+              })}${isRangeStart ? ", range start" : ""}${isRangeEnd ? ", range end" : ""}`}
+              className={[
+                inMonth ? "" : "is-muted",
+                selected ? "is-selected" : "",
+                isRangeStart ? "is-range-start" : "",
+                isRangeEnd ? "is-range-end" : "",
+                isRangeStart && isRangeEnd ? "is-range-single" : "",
+                isRangeMiddle ? "is-range-middle" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               onClick={(event) => {
                 if (event.detail === 0 && !disabled) chooseDay(timestamp);
               }}

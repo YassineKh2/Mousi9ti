@@ -275,6 +275,9 @@ export type FretboardTheme =
 
 export interface AppSettings {
   theme: "dark" | "light";
+  taskDefaultDuration: "forever" | "week" | "month" | "year" | "custom";
+  taskDefaultCustomDuration: number;
+  taskDefaultCustomUnit: "days" | "weeks" | "months" | "years";
   accentColor: string; // hex
   defaultInstrument: "guitar" | "piano";
   defaultTuning: string;

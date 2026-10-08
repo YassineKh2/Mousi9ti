@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
+import { createPortal } from "react-dom";
 import {
   Play,
   Square,
@@ -30,7 +36,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { NoteName, PracticeTask, TaskActivity } from "../types";
+import { AppSettings, NoteName, PracticeTask, TaskActivity } from "../types";
 import {
   ALL_ROOT_NOTES,
   SCALES_DATABASE,
@@ -73,8 +79,15 @@ import {
   CalendarRangePicker,
 } from "../components/CalendarRangePicker";
 import { StreakData } from "../types";
+import { useSettingsContext } from "../contexts/SettingsContext";
 
-type TaskDurationPeriod = "forever" | "week" | "month" | "year" | "custom";
+type TaskDurationPeriod =
+  | "default"
+  | "forever"
+  | "week"
+  | "month"
+  | "year"
+  | "custom";
 
 interface RoutineTask {
   id: string;
@@ -86,7 +99,7 @@ interface RoutineTask {
 }
 
 const getTaskExpiration = (period: TaskDurationPeriod): number | undefined => {
-  if (period === "forever") return undefined;
+  if (period === "forever" || period === "default") return undefined;
   if (period === "custom") return undefined;
 
   const expiration = new Date();
@@ -99,6 +112,65 @@ const getTaskExpiration = (period: TaskDurationPeriod): number | undefined => {
     expiration.setMonth(expiration.getMonth() + 1, 1);
   } else {
     expiration.setFullYear(expiration.getFullYear() + 1, 0, 1);
+  }
+  return expiration.getTime();
+};
+
+const getDefaultTaskDurationLabel = (
+  settings: Pick<
+    AppSettings,
+    | "taskDefaultDuration"
+    | "taskDefaultCustomDuration"
+    | "taskDefaultCustomUnit"
+  >,
+) => {
+  if (settings.taskDefaultDuration === "forever") return "No limit";
+  if (settings.taskDefaultDuration === "week") return "1 week";
+  if (settings.taskDefaultDuration === "month") return "1 month";
+  if (settings.taskDefaultDuration === "year") return "1 year";
+  return `${settings.taskDefaultCustomDuration} ${settings.taskDefaultCustomUnit}`;
+};
+
+const addCalendarMonths = (date: Date, months: number) => {
+  const day = date.getDate();
+  date.setDate(1);
+  date.setMonth(date.getMonth() + months);
+  date.setDate(
+    Math.min(day, new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()),
+  );
+};
+
+const getDefaultTaskExpiration = (
+  settings: Pick<
+    AppSettings,
+    | "taskDefaultDuration"
+    | "taskDefaultCustomDuration"
+    | "taskDefaultCustomUnit"
+  >,
+  createdAt: number,
+): number | undefined => {
+  if (settings.taskDefaultDuration === "forever") return undefined;
+
+  const expiration = new Date(createdAt);
+  if (settings.taskDefaultDuration === "week") {
+    expiration.setDate(expiration.getDate() + 7);
+  } else if (settings.taskDefaultDuration === "month") {
+    addCalendarMonths(expiration, 1);
+  } else if (settings.taskDefaultDuration === "year") {
+    addCalendarMonths(expiration, 12);
+  } else {
+    const duration = Number.isInteger(settings.taskDefaultCustomDuration)
+      ? Math.min(Math.max(settings.taskDefaultCustomDuration, 1), 999)
+      : 1;
+    if (settings.taskDefaultCustomUnit === "days") {
+      expiration.setDate(expiration.getDate() + duration);
+    } else if (settings.taskDefaultCustomUnit === "weeks") {
+      expiration.setDate(expiration.getDate() + duration * 7);
+    } else if (settings.taskDefaultCustomUnit === "years") {
+      addCalendarMonths(expiration, duration * 12);
+    } else {
+      addCalendarMonths(expiration, duration);
+    }
   }
   return expiration.getTime();
 };
@@ -147,18 +219,52 @@ const TASK_DURATION_OPTIONS: { value: TaskDurationPeriod; label: string }[] = [
 const TaskDurationMenu: React.FC<{
   value: TaskDurationPeriod;
   onChange: (value: TaskDurationPeriod) => void;
+  customRange: CalendarDateRange | null;
+  onCustomRangeChange: (range: CalendarDateRange) => void;
+  defaultDurationLabel?: string;
+  iconOnly?: boolean;
   className?: string;
-}> = ({ value, onChange, className = "" }) => {
+}> = ({
+  value,
+  onChange,
+  customRange,
+  onCustomRangeChange,
+  defaultDurationLabel,
+  iconOnly = false,
+  className = "",
+}) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [showingCustomCalendar, setShowingCustomCalendar] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState<React.CSSProperties | null>(
+    null,
+  );
+  const durationOptions = defaultDurationLabel
+    ? [
+        {
+          value: "default" as const,
+          label: `Default (${defaultDurationLabel})`,
+        },
+        ...TASK_DURATION_OPTIONS,
+      ]
+    : TASK_DURATION_OPTIONS;
   const selectedLabel =
-    TASK_DURATION_OPTIONS.find((option) => option.value === value)?.label ??
+    durationOptions.find((option) => option.value === value)?.label ??
     "No limit";
 
   useEffect(() => {
     if (!isOpen) return;
     const closeOnOutsideClick = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) setIsOpen(false);
+      const target = event.target as Node;
+      if (
+        !menuRef.current?.contains(target) &&
+        !menuPanelRef.current?.contains(target)
+      ) {
+        setIsOpen(false);
+      }
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setIsOpen(false);
@@ -171,6 +277,69 @@ const TaskDurationMenu: React.FC<{
     };
   }, [isOpen]);
 
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+
+    const updateMenuPosition = () => {
+      const button = buttonRef.current;
+      const panel = menuPanelRef.current;
+      if (!button || !panel) return;
+
+      const buttonRect = button.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const panelHeight = panel.scrollHeight;
+      const viewportWidth = document.documentElement.clientWidth;
+      const viewportHeight = document.documentElement.clientHeight;
+      const gap = 8;
+      const edgePadding = 8;
+      const availableViewportHeight = Math.max(
+        0,
+        viewportHeight - edgePadding * 2,
+      );
+      const maxHeight = Math.min(panelHeight, availableViewportHeight);
+      const spaceAbove = Math.max(
+        0,
+        buttonRect.top - gap - edgePadding,
+      );
+      const spaceBelow = Math.max(
+        0,
+        viewportHeight - buttonRect.bottom - gap - edgePadding,
+      );
+      const openAbove =
+        panelHeight > spaceBelow && spaceAbove > spaceBelow;
+      const left = iconOnly
+        ? buttonRect.right - panelRect.width
+        : buttonRect.left;
+      const clampedLeft = Math.min(
+        Math.max(edgePadding, left),
+        Math.max(edgePadding, viewportWidth - panelRect.width - edgePadding),
+      );
+      const top = openAbove
+        ? buttonRect.top - gap - maxHeight
+        : buttonRect.bottom + gap;
+      const clampedTop = Math.min(
+        Math.max(edgePadding, top),
+        Math.max(edgePadding, viewportHeight - maxHeight - edgePadding),
+      );
+
+      setMenuPosition({
+        position: "fixed",
+        top: clampedTop,
+        left: clampedLeft,
+        maxHeight,
+        transformOrigin: openAbove ? "bottom left" : "top left",
+      });
+    };
+
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [iconOnly, isOpen, showingCustomCalendar, value, durationOptions.length]);
+
   return (
     <div
       ref={menuRef}
@@ -178,34 +347,109 @@ const TaskDurationMenu: React.FC<{
       onClick={(event) => event.stopPropagation()}
     >
       <button
+        ref={buttonRef}
         type="button"
         aria-expanded={isOpen}
-        onClick={() => setIsOpen((open) => !open)}
-        className="inline-flex min-h-9 items-center gap-2 rounded-md border border-outline-variant/40 bg-surface-container-lowest px-2.5 text-xs font-mono text-on-surface transition-colors hover:border-primary/60 hover:bg-surface-container-high"
+        aria-label={`Task duration: ${selectedLabel}`}
+        title={selectedLabel}
+        onClick={() => {
+          if (isOpen) {
+            setIsOpen(false);
+          } else {
+            setMenuPosition(null);
+            setShowingCustomCalendar(value === "custom");
+            setIsMounted(true);
+            setIsOpen(true);
+          }
+        }}
+        className={`inline-flex items-center transition-colors ${
+          iconOnly
+            ? "p-1 text-on-surface-variant hover:text-primary"
+            : "min-h-9 gap-2 rounded-md border border-outline-variant/40 bg-surface-container-lowest px-2.5 text-xs font-mono text-on-surface hover:border-primary/60 hover:bg-surface-container-high"
+        }`}
       >
-        <Calendar size={14} className="text-primary" />
-        <span>{selectedLabel}</span>
-        <ChevronDown size={13} className="text-on-surface-variant" />
+        <Calendar
+          size={14}
+          className={iconOnly ? "text-current" : "text-primary"}
+        />
+        {!iconOnly && (
+          <>
+            <span>{selectedLabel}</span>
+            <ChevronDown size={13} className="text-on-surface-variant" />
+          </>
+        )}
       </button>
-      {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-48 rounded-xl border border-outline-variant/40 bg-surface p-2 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-          {TASK_DURATION_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              aria-current={value === option.value ? "true" : undefined}
-              onClick={() => {
-                onChange(option.value);
-                setIsOpen(false);
-              }}
-              className={`block w-full rounded px-3 py-2 text-left text-xs font-mono transition-colors hover:bg-surface-container-high ${
-                value === option.value ? "text-primary" : "text-on-surface"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+      {isMounted && (
+        createPortal(
+          <div
+            ref={menuPanelRef}
+            style={
+              menuPosition ?? {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                visibility: "hidden",
+              }
+            }
+            className={`z-50 w-[21rem] max-w-[calc(100vw-2rem)] rounded-xl border border-outline-variant/40 bg-surface p-2 shadow-2xl ${
+              showingCustomCalendar
+                ? "task-duration-calendar-view pb-4"
+                : ""
+            } ${
+              menuPosition
+                ? isOpen
+                  ? "task-duration-menu-enter"
+                  : "task-duration-menu-exit"
+                : ""
+            }`}
+            onClick={(event) => event.stopPropagation()}
+            onAnimationEnd={() => {
+              if (!isOpen) setIsMounted(false);
+            }}
+          >
+            {showingCustomCalendar ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowingCustomCalendar(false)}
+                  className="mb-2 flex w-full items-center gap-1 rounded px-2 py-2 text-left text-xs font-mono text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+                >
+                  <ChevronLeft size={14} />
+                  Duration options
+                </button>
+                <CalendarRangePicker
+                  range={customRange}
+                  minDate={Date.now()}
+                  inline
+                  onChange={onCustomRangeChange}
+                  onComplete={() => setIsOpen(false)}
+                />
+              </>
+            ) : (
+              durationOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-current={value === option.value ? "true" : undefined}
+                  onClick={() => {
+                    onChange(option.value);
+                    if (option.value === "custom") {
+                      setShowingCustomCalendar(true);
+                    } else {
+                      setIsOpen(false);
+                    }
+                  }}
+                  className={`block w-full rounded px-3 py-2 text-left text-xs font-mono transition-colors hover:bg-surface-container-high ${
+                    value === option.value ? "text-primary" : "text-on-surface"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))
+            )}
+          </div>,
+          document.body,
+        )
       )}
     </div>
   );
@@ -564,12 +808,15 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   onToggleSession = () => {},
   onEndSession = () => {},
 }) => {
+  const settings = useSettingsContext();
   const internalTimer = useTimer();
   const timer = propTimer || internalTimer;
   const [taskHistory, setTaskHistory] = useState<TaskActivity[]>(
     getSavedTaskActivities,
   );
   const [isCompletionPickerOpen, setIsCompletionPickerOpen] = useState(false);
+  const completionPickerRef = useRef<HTMLDivElement>(null);
+  const completionPickerTriggerRef = useRef<HTMLButtonElement>(null);
   const [historyMonth, setHistoryMonth] = useState(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
@@ -605,6 +852,29 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
     setHistoryMonth(nextMonth);
     setHistoryWeekStart(getMonthWeeks(nextMonth)[0]);
   };
+
+  useEffect(() => {
+    if (!isCompletionPickerOpen) return;
+
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!completionPickerRef.current?.contains(event.target as Node)) {
+        setIsCompletionPickerOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsCompletionPickerOpen(false);
+        completionPickerTriggerRef.current?.focus();
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isCompletionPickerOpen]);
 
   const [streakData, setStreakData] = useState<StreakData>(
     propStreak || {
@@ -763,14 +1033,10 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   // New task input state & Autocomplete
   const [newTaskInput, setNewTaskInput] = useState("");
   const [newTaskDuration, setNewTaskDuration] =
-    useState<TaskDurationPeriod>("forever");
+    useState<TaskDurationPeriod>("default");
   const [newTaskRange, setNewTaskRange] = useState<CalendarDateRange | null>(
     null,
   );
-  const [isNewTaskCalendarOpen, setIsNewTaskCalendarOpen] = useState(false);
-  const [editingDurationTaskId, setEditingDurationTaskId] = useState<
-    string | null
-  >(null);
   const [cursor, setCursor] = useState(0);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [activeDropdown, setActiveDropdown] = useState<ActiveDropdown | null>(
@@ -872,19 +1138,40 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
     e.preventDefault();
     if (!newTaskInput.trim() || (newTaskDuration === "custom" && !newTaskRange))
       return;
+    const createdAt = Date.now();
+    const usesDefaultDuration = newTaskDuration === "default";
+    const configuredExpiration = usesDefaultDuration
+      ? getDefaultTaskExpiration(settings, createdAt)
+      : undefined;
+    const customRange =
+      usesDefaultDuration && configuredExpiration !== undefined
+        ? {
+            start: createdAt,
+            end: configuredExpiration,
+          }
+        : undefined;
+    const taskDuration: TaskDurationPeriod = usesDefaultDuration
+      ? configuredExpiration === undefined
+        ? "forever"
+        : "custom"
+      : newTaskDuration;
     const newTask = {
-      id: `t-${Date.now()}`,
+      id: `t-${createdAt}`,
       text: newTaskInput.trim(),
       completed: false,
-      duration: newTaskDuration,
+      duration: taskDuration,
       startsAt:
-        newTaskDuration === "custom" && newTaskRange
+        usesDefaultDuration
+          ? customRange?.start
+          : newTaskDuration === "custom" && newTaskRange
           ? getStartOfDay(newTaskRange.start)
           : undefined,
       expiresAt:
-        newTaskDuration === "custom" && newTaskRange
-          ? getEndOfDay(newTaskRange.end)
-          : getTaskExpiration(newTaskDuration),
+        usesDefaultDuration
+          ? configuredExpiration
+          : newTaskDuration === "custom" && newTaskRange
+            ? getEndOfDay(newTaskRange.end)
+            : getTaskExpiration(newTaskDuration),
     };
     setWeeklySchedule((prev) =>
       prev.map((d) => {
@@ -895,9 +1182,8 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       }),
     );
     setNewTaskInput("");
-    setNewTaskDuration("forever");
+    setNewTaskDuration("default");
     setNewTaskRange(null);
-    setIsNewTaskCalendarOpen(false);
     setCursor(0);
   };
 
@@ -1146,8 +1432,9 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
             <strong className="text-primary font-bold">
               {formatHoursMins(completedMins)} ({completionPercent}%)
             </strong>
-            <div className="routine-history-picker">
+            <div ref={completionPickerRef} className="routine-history-picker">
               <button
+                ref={completionPickerTriggerRef}
                 type="button"
                 className="routine-history-trigger"
                 onClick={() => setIsCompletionPickerOpen((isOpen) => !isOpen)}
@@ -1191,37 +1478,37 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                       <ChevronRight size={16} />
                     </button>
                   </div>
-                  <label
-                    className="routine-history-week-label"
-                    htmlFor="routine-history-week"
-                  >
-                    WEEK
-                  </label>
-                  <div className="routine-history-select-wrap">
-                    <select
-                      id="routine-history-week"
-                      value={historyWeekStart.getTime()}
-                      onChange={(event) =>
-                        setHistoryWeekStart(
-                          new Date(Number(event.target.value)),
-                        )
-                      }
-                    >
-                      {historyWeeks.map((weekStart, index) => {
-                        const weekEnd = new Date(weekStart);
-                        weekEnd.setDate(weekEnd.getDate() + 6);
-                        return (
-                          <option
-                            key={weekStart.getTime()}
-                            value={weekStart.getTime()}
-                          >
-                            Week {index + 1} · {formatHistoryDate(weekStart)} –{" "}
-                            {formatHistoryDate(weekEnd)}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <ChevronDown size={14} />
+                  <div className="routine-history-week-label">SELECT WEEK</div>
+                  <div className="routine-history-week-list">
+                    {historyWeeks.map((weekStart, index) => {
+                      const weekEnd = new Date(weekStart);
+                      weekEnd.setDate(weekEnd.getDate() + 6);
+                      const isSelected =
+                        weekStart.getTime() === historyWeekStart.getTime();
+
+                      return (
+                        <button
+                          key={weekStart.getTime()}
+                          type="button"
+                          className={`routine-history-week-option ${
+                            isSelected ? "selected" : ""
+                          }`}
+                          aria-pressed={isSelected}
+                          onClick={() => {
+                            setHistoryWeekStart(new Date(weekStart));
+                            setIsCompletionPickerOpen(false);
+                          }}
+                        >
+                          <span className="routine-history-week-number">
+                            Week {index + 1}
+                          </span>
+                          <span className="routine-history-week-range">
+                            {formatHistoryDate(weekStart)} – {formatHistoryDate(weekEnd)}
+                          </span>
+                          {isSelected && <CheckCircle2 size={15} aria-hidden="true" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1406,7 +1693,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                   <div
                     key={task.id}
                     onClick={() => toggleTaskCompleted(task.id)}
-                    className={`group flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                    className={`group flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
                       task.completed
                         ? "bg-surface-container-low/50 border-outline-variant/20 opacity-75"
                         : "bg-surface-container-low border-outline-variant/30 hover:border-primary/50"
@@ -1418,7 +1705,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                         e.stopPropagation();
                         toggleTaskCompleted(task.id);
                       }}
-                      className="mt-0.5 text-on-surface-variant hover:text-primary transition-colors shrink-0"
+                      className="text-on-surface-variant hover:text-primary transition-colors shrink-0"
                     >
                       {task.completed ? (
                         <CheckCircle2 size={18} className="text-primary" />
@@ -1432,59 +1719,41 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                       >
                         {renderTaskText(task)}
                       </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-                        <TaskDurationMenu
-                          value={task.duration ?? "forever"}
-                          onChange={(duration) => {
-                            if (duration === "custom") {
-                              setEditingDurationTaskId(task.id);
-                              return;
-                            }
-                            updateTaskDuration(task.id, duration);
-                            setEditingDurationTaskId(null);
-                          }}
-                        />
-                        {task.startsAt !== undefined &&
-                          task.expiresAt !== undefined && (
-                            <span className="text-[10px] font-mono text-on-surface-variant">
-                              {new Date(task.startsAt).toLocaleDateString(
-                                undefined,
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                },
-                              )}
-                              {" - "}
-                              {new Date(task.expiresAt).toLocaleDateString(
-                                undefined,
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                },
-                              )}
-                            </span>
-                          )}
-                      </div>
-                      {editingDurationTaskId === task.id && (
-                        <div className="mt-2">
-                          <p className="mb-2 text-[10px] font-mono text-on-surface-variant">
-                            Select active dates
-                          </p>
-                          <CalendarRangePicker
-                            range={taskRange(task)}
-                            minDate={Date.now()}
-                            inline
-                            onChange={(range) =>
-                              updateTaskRange(task.id, range)
-                            }
-                            onComplete={() => setEditingDurationTaskId(null)}
-                          />
-                        </div>
-                      )}
+                      {task.startsAt !== undefined &&
+                        task.expiresAt !== undefined && (
+                          <span className="mt-1 block text-[10px] font-mono text-on-surface-variant">
+                            {new Date(task.startsAt).toLocaleDateString(
+                              undefined,
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              },
+                            )}
+                            {" - "}
+                            {new Date(task.expiresAt).toLocaleDateString(
+                              undefined,
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              },
+                            )}
+                          </span>
+                        )}
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <TaskDurationMenu
+                        value={task.duration ?? "forever"}
+                        customRange={taskRange(task)}
+                        onCustomRangeChange={(range) =>
+                          updateTaskRange(task.id, range)
+                        }
+                        onChange={(duration) =>
+                          updateTaskDuration(task.id, duration)
+                        }
+                        iconOnly
+                      />
                       <button
                         type="button"
                         onClick={(e) => {
@@ -1604,36 +1873,20 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                   Task duration
                 </span>
                 <span className="block text-[10px] font-mono text-on-surface-variant">
-                  New tasks have no end date by default
+                  New tasks use the default duration from Settings
                 </span>
               </div>
               <TaskDurationMenu
                 value={newTaskDuration}
+                customRange={newTaskRange}
+                onCustomRangeChange={setNewTaskRange}
+                defaultDurationLabel={getDefaultTaskDurationLabel(settings)}
                 onChange={(duration) => {
                   setNewTaskDuration(duration);
-                  if (duration === "custom") {
-                    setIsNewTaskCalendarOpen(true);
-                  } else {
-                    setNewTaskRange(null);
-                    setIsNewTaskCalendarOpen(false);
-                  }
+                  if (duration !== "custom") setNewTaskRange(null);
                 }}
               />
             </div>
-            {newTaskDuration === "custom" && isNewTaskCalendarOpen && (
-              <div className="mt-2">
-                <p className="mb-2 text-[10px] font-mono text-on-surface-variant">
-                  Drag across dates or select a start and end date
-                </p>
-                <CalendarRangePicker
-                  range={newTaskRange}
-                  minDate={Date.now()}
-                  inline
-                  onChange={setNewTaskRange}
-                  onComplete={() => setIsNewTaskCalendarOpen(false)}
-                />
-              </div>
-            )}
             {newTaskDuration === "custom" && newTaskRange && (
               <p className="mt-2 text-[10px] font-mono text-on-surface-variant">
                 {new Date(newTaskRange.start).toLocaleDateString(undefined, {

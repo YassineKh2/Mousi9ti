@@ -104,6 +104,53 @@ it("hides practice sources that round to zero minutes", () => {
   assert.doesNotMatch(sources, /Solo/);
 });
 
+it("shows bottom empty states when the selected dates have no chart data", () => {
+  const saved = new Map([
+    ["mous9iti_custom_tags", JSON.stringify(["Solo"])],
+  ]);
+  const originalStorage = globalThis.localStorage;
+  globalThis.localStorage = {
+    getItem: (key: string) => saved.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      saved.set(key, value);
+    },
+  } as Storage;
+
+  try {
+    const html = renderToStaticMarkup(
+      <StatsPage
+        sessions={[]}
+        streak={{
+          currentStreak: 0,
+          longestStreak: 0,
+          lastVisitDate: new Date().toISOString().slice(0, 10),
+          graceDaysUsed: 0,
+          history: [],
+        }}
+      />,
+    );
+    const bpm = html.slice(
+      html.indexOf("Peak vs Average BPM"),
+      html.indexOf("Practice Sources"),
+    );
+    const sources = html.slice(
+      html.indexOf("Practice Sources"),
+      html.indexOf("Trends"),
+    );
+
+    assert.match(bpm, /No BPM data for these dates/);
+    assert.doesNotMatch(bpm, />\s*Peak BPM<|>\s*Average BPM</);
+    assert.match(sources, /No practice data for these dates/);
+    assert.doesNotMatch(
+      sources,
+      /Breakdown shows how much time was spent on each practice source/,
+    );
+    assert.doesNotMatch(sources, /Total Practice/);
+  } finally {
+    globalThis.localStorage = originalStorage;
+  }
+});
+
 it("paginates analytics and limits individual tasks to custom activities", () => {
   const timestamp = Date.now();
   const date = new Date(timestamp).toISOString().slice(0, 10);
