@@ -328,7 +328,7 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
                 <Radio size={16} className="text-primary" />
                 Acoustic Guitar Pitch Reference
               </h2>
-              <p className="text-xs text-on-surface-variant mt-1">
+              <p className="text-xs font-mono text-on-surface-variant mt-1">
                 Audition precise reference frequencies (A4 = 440Hz standard)
               </p>
             </div>
@@ -392,7 +392,7 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
                 <Sparkles size={16} className="text-primary" />
                 Interval Recognition Quiz
               </h2>
-              <p className="text-xs text-on-surface-variant mt-1">
+              <p className="text-xs font-mono text-on-surface-variant mt-1">
                 Listen to the ascending two-note interval and identify the
                 musical distance
               </p>

@@ -447,8 +447,8 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
         data-tour="scales-panel"
         className="bg-surface-container border border-outline-variant/30 rounded-lg p-3 sm:p-6 shadow-xl space-y-4"
       >
-        <div className="flex flex-col items-stretch gap-3 pb-3 border-b border-outline-variant/30 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <div className="flex min-w-0 items-center gap-2 sm:flex-1 sm:gap-3">
+        <div className="flex flex-col items-stretch gap-3 pb-3 border-b border-outline-variant/30 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+          <div className="flex min-w-0 items-center gap-2 lg:flex-1 lg:gap-3">
             {/* Interactive Root Note Badge Selector */}
             <div className="relative" ref={rootMenuRef}>
               <button
@@ -644,46 +644,55 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-2 flex-nowrap sm:justify-end">
+          <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:flex-nowrap lg:justify-end">
             {/* Note Label Display Mode */}
-            <div className="flex h-10 min-w-0 flex-1 items-stretch gap-1 overflow-x-auto rounded-lg border border-outline-variant/30 bg-surface-container-low p-1">
+            <div className="flex h-10 w-full min-w-0 items-stretch gap-1 rounded-lg border border-outline-variant/30 bg-surface-container-low p-1 lg:w-auto lg:flex-1">
               {(["name", "degree", "interval"] as NoteDisplayMode[]).map(
                 (mode) => (
                   <button
                     key={mode}
                     type="button"
                     onClick={() => setDisplayMode(mode)}
-                    className={`flex min-w-max flex-1 items-center justify-center rounded px-2 text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                    className={`flex min-w-0 flex-1 items-center justify-center rounded px-1 text-[10px] font-mono uppercase tracking-wider transition-colors lg:min-w-max lg:px-2 ${
                       displayMode === mode
                         ? "bg-primary text-on-primary font-semibold shadow-sm"
                         : "text-on-surface-variant hover:bg-outline-variant/10 hover:text-on-surface"
                     }`}
                   >
-                    {mode === "name"
-                      ? "Note Name"
-                      : mode === "degree"
-                        ? "Degrees (1 3 5)"
-                        : "Intervals (R M3)"}
+                    <span className="lg:hidden">
+                      {mode === "name"
+                        ? "Name"
+                        : mode === "degree"
+                          ? "Degrees"
+                          : "Intervals"}
+                    </span>
+                    <span className="hidden lg:inline">
+                      {mode === "name"
+                        ? "Note Name"
+                        : mode === "degree"
+                          ? "Degrees (1 3 5)"
+                          : "Intervals (R M3)"}
+                    </span>
                   </button>
                 ),
               )}
             </div>
 
             {/* Instrument Toggle (Guitar / Piano / Both) */}
-            <div className="flex items-center gap-1 bg-surface-container-low p-1 rounded-lg border border-outline-variant/30">
+            <div className="flex w-fit shrink-0 items-center gap-1 rounded-lg border border-outline-variant/30 bg-surface-container-low p-1">
               <button
                 type="button"
                 onClick={() => setInstrumentView("guitar")}
                 aria-label="Guitar view"
                 title="Guitar view"
-                className={`w-8 sm:w-auto h-8 px-0 sm:px-2 flex items-center justify-center gap-1.5 text-xs font-mono rounded transition-all cursor-pointer ${
+                className={`w-8 lg:w-auto h-8 px-0 lg:px-2 flex items-center justify-center gap-1.5 text-xs font-mono rounded transition-all cursor-pointer ${
                   instrumentView === "guitar"
                     ? "bg-primary text-on-primary font-bold shadow"
                     : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >
                 <Guitar size={14} />
-                <span className="hidden sm:inline">Guitar</span>
+                <span className="hidden lg:inline">Guitar</span>
               </button>
 
               <button
@@ -691,14 +700,14 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                 onClick={() => setInstrumentView("piano")}
                 aria-label="Piano view"
                 title="Piano view"
-                className={`w-8 sm:w-auto h-8 px-0 sm:px-2 flex items-center justify-center gap-1.5 text-xs font-mono rounded transition-all cursor-pointer ${
+                className={`w-8 lg:w-auto h-8 px-0 lg:px-2 flex items-center justify-center gap-1.5 text-xs font-mono rounded transition-all cursor-pointer ${
                   instrumentView === "piano"
                     ? "bg-primary text-on-primary font-bold shadow"
                     : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >
                 <Piano size={14} />
-                <span className="hidden sm:inline">Piano</span>
+                <span className="hidden lg:inline">Piano</span>
               </button>
 
               <button
@@ -706,20 +715,20 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                 onClick={() => setInstrumentView("both")}
                 aria-label="Guitar and piano view"
                 title="Guitar and piano view"
-                className={`w-8 sm:w-auto h-8 px-0 sm:px-2 flex items-center justify-center gap-1.5 text-xs font-mono rounded transition-all cursor-pointer ${
+                className={`w-8 lg:w-auto h-8 px-0 lg:px-2 flex items-center justify-center gap-1.5 text-xs font-mono rounded transition-all cursor-pointer ${
                   instrumentView === "both"
                     ? "bg-primary text-on-primary font-bold shadow"
                     : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >
                 <Layers size={14} />
-                <span className="hidden sm:inline">Both</span>
+                <span className="hidden lg:inline">Both</span>
               </button>
             </div>
 
             {/* Play Scale with Integrated Direction Dropdown */}
             <div
-              className="relative inline-flex min-w-0 items-center"
+              className="relative inline-flex min-w-0 flex-1 items-center justify-end lg:flex-none"
               ref={playMenuRef}
             >
               {isPlaying ? (
@@ -740,8 +749,8 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                     title={`Play ${playDirection === "ascending" ? "Ascending" : playDirection === "descending" ? "Descending" : "Ascending & Descending"}`}
                   >
                     <Volume2 size={15} />
-                    <span className="sm:hidden">PLAY</span>
-                    <span className="hidden sm:inline">
+                    <span className="lg:hidden">PLAY</span>
+                    <span className="hidden lg:inline">
                       PLAY{" "}
                       {playDirection === "ascending"
                         ? "ASCENDING"
@@ -882,103 +891,175 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
         {/* CAGED System Box Selector (Shown when Guitar or Both is chosen) */}
         {(instrumentView === "guitar" || instrumentView === "both") &&
           selectedScale.cagedBoxes && (
-            <div className="pt-3 border-t border-outline-variant/30 space-y-2">
-              <div className="flex items-start gap-2">
-                <Box size={15} className="text-primary" />
-                <span className="text-[11px] sm:text-xs font-mono font-bold text-on-surface uppercase tracking-wider leading-5">
-                  CAGED Box Patterns (Guitar):
-                </span>
+            <div className="space-y-3 border-t border-outline-variant/30 pt-3">
+              <div className="flex items-start gap-2.5">
+                <Box size={16} className="mt-0.5 shrink-0 text-primary" />
+                <div className="min-w-0">
+                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-on-surface">
+                    CAGED Box Patterns
+                  </h3>
+                  <p className="mt-0.5 text-[11px] font-mono text-on-surface-variant">
+                    Choose a position to focus the fretboard.
+                  </p>
+                </div>
               </div>
 
-              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
                 <button
+                  type="button"
                   onClick={() => setActiveCagedBox(null)}
-                  className={`w-full px-3 py-2 text-left sm:w-auto sm:py-1.5 rounded font-mono text-xs transition-all cursor-pointer ${
+                  aria-pressed={activeCagedBox === null}
+                  className={`col-span-2 flex min-h-[56px] items-center gap-3 rounded-lg border px-3 py-1.5 text-left font-mono transition-all active:scale-[0.99] sm:col-span-3 sm:min-h-[56px] md:max-lg:col-span-1 lg:col-span-1 ${
                     activeCagedBox === null
-                      ? "bg-primary text-on-primary font-bold"
-                      : "bg-surface-container-low text-on-surface-variant hover:text-on-surface border border-outline-variant/30"
+                      ? "border-primary/60 bg-primary/15 text-primary shadow-sm"
+                      : "border-outline-variant/30 bg-surface-container-low text-on-surface-variant hover:border-primary/40 hover:text-on-surface"
                   }`}
                 >
-                  Entire Fretboard (Full View)
+                  <Layers size={17} className="shrink-0" />
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-xs font-bold">Entire fretboard</span>
+                    <span className="text-[10px] opacity-75">
+                      Show all positions
+                    </span>
+                  </span>
+                  {activeCagedBox === null && (
+                    <Check size={15} className="ml-auto shrink-0" />
+                  )}
                 </button>
 
-                {Object.keys(selectedScale.cagedBoxes).map((boxKey) => (
-                  <button
-                    key={boxKey}
-                    onClick={() => setActiveCagedBox(boxKey)}
-                    className={`w-full px-3 py-2 text-left sm:w-auto sm:py-1.5 rounded font-mono text-xs transition-all cursor-pointer ${
-                      activeCagedBox === boxKey
-                        ? "bg-primary text-on-primary font-bold"
-                        : "bg-surface-container-low text-on-surface-variant hover:text-on-surface border border-outline-variant/30"
-                    }`}
-                  >
-                    {boxKey}
-                  </button>
-                ))}
+                {Object.keys(selectedScale.cagedBoxes).map((boxKey, index) => {
+                  const isActive = activeCagedBox === boxKey;
+                  const patternNumber =
+                    boxKey.match(/^Pattern\s*(\d+)/i)?.[1] ??
+                    String(index + 1);
+                  const shapeName =
+                    boxKey.match(/\(([^)]+)\)/)?.[1] ?? boxKey;
+
+                  return (
+                    <button
+                      key={boxKey}
+                      type="button"
+                      onClick={() => setActiveCagedBox(boxKey)}
+                      aria-label={boxKey}
+                      aria-pressed={isActive}
+                      className={`relative flex min-h-[56px] min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left font-mono transition-all active:scale-[0.98] last:col-span-2 sm:last:col-span-1 sm:min-h-[56px] sm:px-3 ${
+                        isActive
+                          ? "border-primary/60 bg-primary/15 text-primary shadow-sm"
+                          : "border-outline-variant/30 bg-surface-container-low text-on-surface-variant hover:border-primary/40 hover:text-on-surface"
+                      }`}
+                    >
+                      <span
+                        className={`flex size-8 shrink-0 items-center justify-center rounded-md text-xs font-bold ${
+                          isActive
+                            ? "bg-primary text-on-primary"
+                            : "bg-surface-container-high text-on-surface"
+                        }`}
+                      >
+                        {patternNumber}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[9px] uppercase tracking-wider opacity-70">
+                          Pattern
+                        </span>
+                        <span className="block truncate text-[11px] font-bold sm:text-xs">
+                          {shapeName}
+                        </span>
+                      </span>
+                      {isActive && (
+                        <Check
+                          size={16}
+                          className="absolute right-3 top-3 shrink-0 sm:right-4 sm:top-4"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
 
         {/* Piano Visible Range / Scale Span Focus (Shown when Piano or Both is chosen) */}
         {(instrumentView === "piano" || instrumentView === "both") && (
-          <div className="pt-3 border-t border-outline-variant/30 space-y-2">
-            <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-2">
-                <Piano size={15} className="text-primary" />
-                <span className="text-[11px] sm:text-xs font-mono font-bold text-on-surface uppercase tracking-wider leading-5">
-                  Piano Visible Range (Scale Focus):
-                </span>
+          <div className="space-y-3 border-t border-outline-variant/30 pt-3">
+            <div className="flex items-start gap-2.5">
+              <Piano size={16} className="mt-0.5 shrink-0 text-primary" />
+              <div className="min-w-0">
+                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-on-surface">
+                  Piano Visible Range
+                </h3>
+                <p className="mt-0.5 text-[11px] font-mono text-on-surface-variant">
+                  Choose how much of the keyboard to highlight.
+                </p>
               </div>
-              <span className="text-[11px] font-mono text-on-surface-variant hidden sm:inline">
-                Dims notes outside active range (e.g. before {selectedRoot}4 &
-                after {selectedRoot}5)
-              </span>
             </div>
 
-            <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap">
-              <button
-                onClick={() => setPianoFocusRange("octave4")}
-                className={`w-full px-3 py-2 text-left sm:w-auto sm:py-1.5 rounded font-mono text-xs transition-all cursor-pointer ${
-                  pianoFocusRange === "octave4"
-                    ? "bg-primary text-on-primary font-bold"
-                    : "bg-surface-container-low text-on-surface-variant hover:text-on-surface border border-outline-variant/30"
-                }`}
-              >
-                Focus {selectedRoot}4 – {selectedRoot}5 (1 Octave)
-              </button>
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+              {[
+                {
+                  range: "octave4" as const,
+                  title: `${selectedRoot}4 – ${selectedRoot}5`,
+                  detail: "1 octave",
+                },
+                {
+                  range: "octave3" as const,
+                  title: `${selectedRoot}3 – ${selectedRoot}4`,
+                  detail: "1 octave",
+                },
+                {
+                  range: "octave34" as const,
+                  title: `${selectedRoot}3 – ${selectedRoot}5`,
+                  detail: "2 octaves",
+                },
+                {
+                  range: "all" as const,
+                  title: "Entire keyboard",
+                  detail: "Show all keys",
+                },
+              ].map(({ range, title, detail }) => {
+                const isActive = pianoFocusRange === range;
 
-              <button
-                onClick={() => setPianoFocusRange("octave3")}
-                className={`w-full px-3 py-2 text-left sm:w-auto sm:py-1.5 rounded font-mono text-xs transition-all cursor-pointer ${
-                  pianoFocusRange === "octave3"
-                    ? "bg-primary text-on-primary font-bold"
-                    : "bg-surface-container-low text-on-surface-variant hover:text-on-surface border border-outline-variant/30"
-                }`}
-              >
-                Focus {selectedRoot}3 – {selectedRoot}4 (1 Octave)
-              </button>
-
-              <button
-                onClick={() => setPianoFocusRange("octave34")}
-                className={`w-full px-3 py-2 text-left sm:w-auto sm:py-1.5 rounded font-mono text-xs transition-all cursor-pointer ${
-                  pianoFocusRange === "octave34"
-                    ? "bg-primary text-on-primary font-bold"
-                    : "bg-surface-container-low text-on-surface-variant hover:text-on-surface border border-outline-variant/30"
-                }`}
-              >
-                Focus {selectedRoot}3 – {selectedRoot}5 (2 Octaves)
-              </button>
-
-              <button
-                onClick={() => setPianoFocusRange("all")}
-                className={`w-full px-3 py-2 text-left sm:w-auto sm:py-1.5 rounded font-mono text-xs transition-all cursor-pointer ${
-                  pianoFocusRange === "all"
-                    ? "bg-primary text-on-primary font-bold"
-                    : "bg-surface-container-low text-on-surface-variant hover:text-on-surface border border-outline-variant/30"
-                }`}
-              >
-                Entire Keyboard (Full View)
-              </button>
+                return (
+                  <button
+                    key={range}
+                    type="button"
+                    onClick={() => setPianoFocusRange(range)}
+                    aria-pressed={isActive}
+                    className={`relative flex min-h-[56px] min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left font-mono transition-all active:scale-[0.98] sm:px-3 ${
+                      isActive
+                        ? "border-primary/60 bg-primary/15 text-primary shadow-sm"
+                        : "border-outline-variant/30 bg-surface-container-low text-on-surface-variant hover:border-primary/40 hover:text-on-surface"
+                    }`}
+                  >
+                    <span
+                      className={`flex size-8 shrink-0 items-center justify-center rounded-md ${
+                        isActive
+                          ? "bg-primary text-on-primary"
+                          : "bg-surface-container-high text-on-surface"
+                      }`}
+                    >
+                      {range === "all" ? (
+                        <Layers size={16} />
+                      ) : (
+                        <Piano size={16} />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[11px] font-bold sm:text-xs">
+                        {title}
+                      </span>
+                      <span className="block text-[9px] uppercase tracking-wider opacity-70">
+                        {detail}
+                      </span>
+                    </span>
+                    {isActive && (
+                      <Check
+                        size={16}
+                        className="absolute right-2 top-2 shrink-0 sm:right-3 sm:top-3"
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

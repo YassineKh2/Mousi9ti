@@ -492,7 +492,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
             <Wrench size={16} className="text-primary" />
             Chord Editor
           </h1>
-          <p className="font-mono text-sm text-on-surface-variant mt-1">
+          <p className="font-mono text-xs text-on-surface-variant mt-1">
             Design, preview, and save custom chord voicings.
           </p>
         </div>
@@ -1007,7 +1007,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
         >
           <div className="w-full">
             <h2 className="text-xl font-bold mb-1">Piano Note Designer</h2>
-            <p className="text-xs text-on-surface-variant mb-6">
+            <p className="text-xs font-mono text-on-surface-variant mb-6">
               Click keys to add or remove notes from the custom piano voicing.
             </p>
             <div className="h-[340px] w-full overflow-hidden">

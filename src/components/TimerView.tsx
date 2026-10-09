@@ -189,7 +189,7 @@ export const TimerView: React.FC<TimerViewProps> = ({
             <Clock size={16} className="text-primary" />
             Practice Timer
           </h2>
-          <p className="text-xs text-on-surface-variant mt-1">
+          <p className="text-xs font-mono text-on-surface-variant mt-1">
             Focus on your technique for a specific duration
           </p>
         </div>

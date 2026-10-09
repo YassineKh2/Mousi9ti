@@ -365,7 +365,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       {/* Mobile Bottom Tab Bar */}
       <nav
         data-tour="sidebar-nav"
-        className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-container-lowest border-t border-outline-variant/30 z-50 flex items-center justify-start gap-1 overflow-x-auto px-2 no-scrollbar"
+        className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-container-lowest border-t border-outline-variant/30 z-50 grid grid-cols-7 items-center px-1"
       >
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
@@ -374,14 +374,14 @@ export const Navigation: React.FC<NavigationProps> = ({
               key={item.id}
               data-tour={`nav-item-${item.id}`}
               onClick={() => onSelectTab(item.id)}
-              className={`flex min-w-[3.5rem] shrink-0 flex-col items-center gap-1 py-1 px-2 transition-colors ${
+              className={`flex min-w-0 w-full flex-col items-center gap-1 py-1 px-0 transition-colors ${
                 isActive
                   ? "text-primary font-semibold"
                   : "text-on-surface-variant hover:text-on-surface"
               }`}
             >
               {item.icon}
-              <span className="text-[9px] font-mono tracking-tighter">
+              <span className="text-[8px] font-mono tracking-tighter">
                 {item.label}
               </span>
             </button>

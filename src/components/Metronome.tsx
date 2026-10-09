@@ -7,6 +7,7 @@ import {
   Volume2,
   VolumeX,
   Repeat2,
+  Hand,
 } from "lucide-react";
 import {
   MetronomeSound,
@@ -210,12 +211,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
   const startTimeRef = useRef<number | null>(null);
 
   const handleBeatCallback = useCallback(
-    (
-      beat: number,
-      isAccent: boolean,
-      isSub: boolean,
-      silentBar: boolean,
-    ) => {
+    (beat: number, isAccent: boolean, isSub: boolean, silentBar: boolean) => {
       setCurrentBeat(beat);
       setIsAccentBeat(isAccent);
       setIsSilentBar(silentBar);
@@ -537,26 +533,21 @@ export const Metronome: React.FC<MetronomeProps> = ({
       <div className="precision-metro">
         <div className="precision-metro__header">
           <div className="precision-metro__title">
-            <MetronomeGlyph />
             <div>
-              <h2>PRECISION METRONOME</h2>
+              <h2>
+                <MetronomeGlyph />
+                PRECISION METRONOME
+              </h2>
+              <p className="precision-metro__description">
+                Set your tempo and stay in rhythm.
+              </p>
             </div>
           </div>
           <div className="precision-metro__selects">
             <label className="precision-metro__select">
-              <span
-                onClick={(event) => {
-                  const select = timeSignatureSelectRef.current;
-                  if (select && typeof select.showPicker === "function") {
-                    select.showPicker();
-                    event.preventDefault();
-                  }
-                }}
-              >
-                Time signature
-              </span>
               <select
                 ref={timeSignatureSelectRef}
+                aria-label="Time signature"
                 value={timeSignature}
                 onChange={(e) =>
                   handleTimeSignatureChange(e.target.value as TimeSignature)
@@ -576,19 +567,9 @@ export const Metronome: React.FC<MetronomeProps> = ({
               </select>
             </label>
             <label className="precision-metro__select">
-              <span
-                onClick={(event) => {
-                  const select = soundTypeSelectRef.current;
-                  if (select && typeof select.showPicker === "function") {
-                    select.showPicker();
-                    event.preventDefault();
-                  }
-                }}
-              >
-                Click sound
-              </span>
               <select
                 ref={soundTypeSelectRef}
+                aria-label="Click sound"
                 value={soundType}
                 onChange={(e) => setSoundType(e.target.value as MetronomeSound)}
               >
@@ -906,7 +887,9 @@ export const Metronome: React.FC<MetronomeProps> = ({
                 title="Tap along to set the tempo"
                 onClick={handleTapTempo}
               >
-                <span className="precision-metro__tap">T</span>
+                <span className="precision-metro__tap" aria-hidden="true">
+                  <Hand size={12} strokeWidth={2.25} />
+                </span>
                 Tap tempo
               </button>
               <button

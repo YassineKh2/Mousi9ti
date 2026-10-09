@@ -495,6 +495,14 @@
   box-shadow: 0 16px 35px rgb(0 0 0 / 28%);
 }
 
+@media (max-width: 1023px) {
+  .routine-history-popover {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
 .routine-history-month {
   display: grid;
   grid-template-columns: 2rem 1fr 2rem;

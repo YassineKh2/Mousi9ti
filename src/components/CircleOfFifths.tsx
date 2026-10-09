@@ -83,7 +83,7 @@ export const CircleOfFifths: React.FC<CircleOfFifthsProps> = ({
             <Sparkles size={16} className="text-primary" />
             Interactive Circle of Fifths
           </h2>
-          <p className="text-xs text-[color:var(--circle-subtle)] mt-0.5">
+          <p className="text-xs font-mono text-on-surface-variant mt-0.5">
             Harmonic relationships, relative keys, and diatonic chord analysis
           </p>
         </div>

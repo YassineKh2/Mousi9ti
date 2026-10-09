@@ -269,7 +269,7 @@ const TaskDurationMenu: React.FC<{
     ? [
         {
           value: "default" as const,
-          label: `Default (${defaultDurationLabel})`,
+          label: defaultDurationLabel ?? "Default",
         },
         ...TASK_DURATION_OPTIONS,
       ]
@@ -1541,7 +1541,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 
       {/* 7 Day Cards Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        {daysInWeek.map((day) => {
+        {daysInWeek.map((day, index) => {
           const dayHistory = getTaskHistoryForDay(day.day);
           const loggedTasks = new Map<
             string,
@@ -1577,6 +1577,8 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
               key={day.day}
               onClick={() => setActiveDayCode(day.day)}
               className={`text-left p-3.5 rounded-xl border flex flex-col justify-between gap-3 relative transition-all cursor-pointer ${
+                index === daysInWeek.length - 1 ? "col-span-2 sm:col-span-1" : ""
+              } ${
                 isSelected
                   ? "bg-surface-container-high border-primary ring-1 ring-primary shadow-md"
                   : "bg-surface-container-low border-outline-variant/30 hover:bg-surface-container hover:border-outline-variant"
@@ -1700,7 +1702,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                   <div
                     key={task.id}
                     onClick={() => toggleTaskCompleted(task.id)}
-                    className={`group flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                    className={`group flex w-full items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
                       task.completed
                         ? "bg-surface-container-low/50 border-outline-variant/20 opacity-75"
                         : "bg-surface-container-low border-outline-variant/30 hover:border-primary/50"
@@ -1722,7 +1724,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                     </button>
                     <div className="min-w-0 flex-1">
                       <div
-                        className={`text-sm font-mono leading-relaxed ${task.completed ? "line-through text-on-surface-variant" : "text-on-surface"}`}
+                        className={`text-sm font-mono leading-relaxed break-all [overflow-wrap:anywhere] ${task.completed ? "line-through text-on-surface-variant" : "text-on-surface"}`}
                       >
                         {renderTaskText(task)}
                       </div>
@@ -1749,7 +1751,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                           </span>
                         )}
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="ml-auto flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <TaskDurationMenu
                         value={task.duration ?? "forever"}
                         customRange={taskRange(task)}
@@ -1874,7 +1876,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                 <Plus size={18} />
               </button>
             </div>
-            <div className="mt-3 flex flex-wrap items-start justify-between gap-2 border-t border-outline-variant/20 pt-3">
+            <div className="mt-3 flex flex-wrap items-start justify-between gap-2">
               <div className="space-y-1">
                 <span className="block text-xs font-mono font-semibold text-on-surface">
                   Task duration
