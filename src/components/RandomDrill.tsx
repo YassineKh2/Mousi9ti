@@ -145,7 +145,7 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
   }, [pickNextRandomNote]);
 
   return (
-    <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-4 md:p-5 flex flex-col justify-between relative shadow-xl">
+    <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-4 md:p-5 flex h-full flex-col relative shadow-xl">
       {/* Top Header */}
       <div className="flex items-center justify-between pb-3 border-b border-outline-variant/10">
         <div className="flex items-center gap-2">
@@ -171,7 +171,7 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
       </div>
 
       {/* Center Note Display (Background-free, pure typography) */}
-      <div className="flex flex-col items-center justify-center my-3 relative select-none">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center my-3 relative select-none">
         <div
           className="group cursor-pointer flex flex-col items-center justify-center transition-transform hover:scale-105"
           onClick={pickNextRandomNote}
@@ -206,7 +206,7 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
       </div>
 
       {/* Auto-Advance Interval Settings & Progress Bar */}
-      <div className="mt-auto space-y-2">
+      <div className="space-y-2">
         {autoAdvance && (
           <div className="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
             <div

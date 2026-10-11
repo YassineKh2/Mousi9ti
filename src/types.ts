@@ -225,6 +225,11 @@ export interface PracticeTask {
   id: string;
   text: string;
   completed: boolean;
+  completedByDate?: Record<string, boolean>;
+  startsAt?: number;
+  expiresAt?: number;
+  visibilityHistory?: { startsAt?: number; expiresAt?: number }[];
+  hiddenDates?: string[];
   attributedDurationSeconds?: number;
   manuallyConfirmedDurationSeconds?: number;
 }

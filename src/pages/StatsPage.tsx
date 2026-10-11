@@ -13,6 +13,7 @@ import {
   getSavedTaskAttributions,
 } from "../lib/storage";
 import { getSavedCustomTags } from "../lib/customTaskTags";
+import { isTaskVisibleOnDate } from "../lib/taskDates";
 import { isPracticeDayComplete } from "../lib/practiceDays";
 import { CalendarRangePicker } from "../components/CalendarRangePicker";
 import {
@@ -231,8 +232,8 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     if (range === "all") return 0;
     const start = new Date();
     start.setHours(0, 0, 0, 0);
-    // Weeks start on Sunday to match the calendar grid.
-    if (range === "week") start.setDate(start.getDate() - start.getDay());
+    if (range === "week")
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
     else start.setDate(start.getDate() - Number(range) + 1);
     return start.getTime();
   }, [customRange, range]);
@@ -254,7 +255,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
             ) + 1,
           )
         : range === "week"
-          ? new Date().getDay() + 1
+          ? ((new Date().getDay() + 6) % 7) + 1
           : Number(range);
 
   const allActivities = useMemo(() => {
@@ -389,7 +390,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     .filter((a) => a.source === "Metronome")
     .reduce((sum, a) => sum + a.countedDurationSeconds, 0);
   const today = new Date().toISOString().slice(0, 10);
-  const tasksByWeekday = new Map<string, string[]>();
+  const tasksByWeekday = new Map<string, PracticeTask[]>();
   try {
     const schedule: unknown = JSON.parse(
       localStorage.getItem("mous9iti_weekly_schedule") || "[]",
@@ -399,16 +400,15 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
         if (day && typeof day.day === "string" && Array.isArray(day.tasks)) {
           tasksByWeekday.set(
             day.day,
-            day.tasks
-              .map((task: unknown) =>
+            day.tasks.filter(
+              (task: unknown): task is PracticeTask =>
                 task &&
                 typeof task === "object" &&
                 "id" in task &&
-                typeof task.id === "string"
-                  ? task.id
-                  : null,
-              )
-              .filter((id: string | null): id is string => id !== null),
+                typeof task.id === "string" &&
+                "text" in task &&
+                typeof task.text === "string",
+            ),
           );
         }
       });
@@ -451,8 +451,14 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     const weekday = weekdayCodes[new Date(`${date}T12:00:00`).getDay()];
     const plannedTaskIds =
       date === today ? todayTasks?.map((task) => task.id) : undefined;
-    const dayTaskIds = plannedTaskIds ??
-      tasksByWeekday.get(weekday) ?? [...(taskIdsByDate.get(date) || [])];
+    const datedPlannedTaskIds = tasksByWeekday
+      .get(weekday)
+      ?.filter((task) => isTaskVisibleOnDate(task, new Date(`${date}T12:00:00`)))
+      .map((task) => task.id);
+    const dayTaskIds =
+      plannedTaskIds ??
+      datedPlannedTaskIds ??
+      [...(taskIdsByDate.get(date) || [])];
     const hasGeneralTime = activities.some(
       (activity) =>
         activity.date === date &&

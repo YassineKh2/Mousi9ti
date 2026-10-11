@@ -14,6 +14,7 @@ import {
   getSavedSettings,
   getSavedSessions,
   getSavedStreak,
+  getSavedTaskActivities,
   getSavedTaskAttributions,
   getSavedTimerPreferences,
   getTodayDateString,
@@ -54,6 +55,12 @@ import { GlobalSessionToast } from "./components/GlobalSessionToast";
 import { SettingsContext } from "./contexts/SettingsContext";
 import { TourOverlay } from "./components/TourOverlay";
 import { getSavedPracticeTasks } from "./components/PracticeTasksWidget";
+import {
+  deleteTaskFromSchedule,
+  getTaskDateKey,
+  isTaskActiveAt,
+  getTasksForDate,
+} from "./lib/taskDates";
 import { SessionReviewModal } from "./components/SessionReviewModal";
 import { TaskCompletionModal } from "./components/TaskCompletionModal";
 import { parseTaskConfiguration } from "./lib/taskAutoConfig";
@@ -63,6 +70,33 @@ import {
   downloadAppBackup,
   restoreAppBackup,
 } from "./lib/appBackup";
+
+const getPracticeTasksForDate = (date: Date): PracticeTask[] => {
+  const savedSchedule = localStorage.getItem("mous9iti_weekly_schedule");
+  if (savedSchedule) {
+    try {
+      const schedule: { day: string; tasks: PracticeTask[] }[] =
+        JSON.parse(savedSchedule);
+      const weekdayCodes = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+      const daySchedule = Array.isArray(schedule)
+        ? schedule.find((day) => day.day === weekdayCodes[date.getDay()])
+        : undefined;
+      if (daySchedule) {
+        return getTasksForDate(
+          daySchedule.tasks,
+          date,
+          getSavedTaskActivities(),
+        ).filter((task) => isTaskActiveAt(task, Date.now()));
+      }
+    } catch (error) {
+      console.error("Failed to load routine tasks for the current date", error);
+    }
+  }
+
+  return getSavedPracticeTasks().filter((task) =>
+    isTaskActiveAt(task, Date.now()),
+  );
+};
 
 export function App() {
   type PendingScaleTarget = { scaleId: string; root: NoteName };
@@ -131,12 +165,7 @@ export function App() {
   const [sessions, setSessions] = useState<Session[]>(() => getSavedSessions());
   const [streak, setStreak] = useState<StreakData>(() => getSavedStreak());
   const [practiceTasks, setPracticeTasks] = useState<PracticeTask[]>(() => {
-    try {
-      const saved = localStorage.getItem("mous9iti_tasks");
-      return saved ? JSON.parse(saved) : getSavedPracticeTasks();
-    } catch {
-      return [];
-    }
+    return getPracticeTasksForDate(new Date());
   });
   const practiceTasksRef = useRef(practiceTasks);
   practiceTasksRef.current = practiceTasks;
@@ -210,6 +239,50 @@ export function App() {
 
   useEffect(() => {
     localStorage.setItem("mous9iti_tasks", JSON.stringify(practiceTasks));
+  }, [practiceTasks]);
+
+  useEffect(() => {
+    const now = Date.now();
+    const nextMidnight = new Date();
+    nextMidnight.setHours(24, 0, 0, 0);
+    const scheduledTasks = getTasksForDate(
+      (() => {
+        try {
+          const schedule = JSON.parse(
+            localStorage.getItem("mous9iti_weekly_schedule") || "[]",
+          ) as { day: string; tasks: PracticeTask[] }[];
+          const codes = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+          return Array.isArray(schedule)
+            ? (schedule.find(
+                (day) => day.day === codes[new Date().getDay()],
+              )?.tasks ?? practiceTasks)
+            : practiceTasks;
+        } catch (error) {
+          console.error("Failed to check routine task date boundaries", error);
+          return practiceTasks;
+        }
+      })(),
+      new Date(),
+      getSavedTaskActivities(),
+    );
+    const nextBoundary = [
+      nextMidnight.getTime(),
+      ...scheduledTasks.flatMap((task) => [task.startsAt, task.expiresAt]),
+    ]
+      .filter(
+        (boundary): boundary is number =>
+          Number.isFinite(boundary) && boundary! > now,
+      )
+      .reduce((earliest, boundary) => Math.min(earliest, boundary), Infinity);
+
+    const timeout = window.setTimeout(
+      () => {
+        setPracticeTasks(getPracticeTasksForDate(new Date()));
+      },
+      Math.min(Math.max(0, nextBoundary - now), 2_147_483_647),
+    );
+
+    return () => window.clearTimeout(timeout);
   }, [practiceTasks]);
 
   useEffect(() => {
@@ -349,7 +422,16 @@ export function App() {
     setTaskCompletion(task, completed);
     setPracticeTasks((current) =>
       current.map((item) =>
-        item.id === taskId ? { ...item, completed } : item,
+        item.id === taskId
+          ? {
+              ...item,
+              completed,
+              completedByDate: {
+                ...item.completedByDate,
+                [getTaskDateKey(new Date())]: completed,
+              },
+            }
+          : item,
       ),
     );
     if (completed && activeTaskId === taskId) {
@@ -364,6 +446,29 @@ export function App() {
           setShowTaskCompletionModal(true);
         }
       }
+    }
+  };
+
+  const deletePracticeTask = (
+    taskId: string,
+    scope: "day" | "everywhere",
+  ) => {
+    const today = new Date();
+    setPracticeTasks((tasks) => tasks.filter((task) => task.id !== taskId));
+
+    const savedSchedule = localStorage.getItem("mous9iti_weekly_schedule");
+    if (!savedSchedule) return;
+    try {
+      const schedule: { tasks: PracticeTask[] }[] = JSON.parse(savedSchedule);
+      if (!Array.isArray(schedule)) {
+        throw new Error("Saved routine schedule is not an array");
+      }
+      localStorage.setItem(
+        "mous9iti_weekly_schedule",
+        JSON.stringify(deleteTaskFromSchedule(schedule, taskId, today, scope)),
+      );
+    } catch (error) {
+      console.error("Failed to delete task from routine schedule", error);
     }
   };
   const togglePracticeTaskRef = useRef(togglePracticeTask);
@@ -1212,6 +1317,7 @@ export function App() {
               onMakeTaskActive={makeTaskActive}
               onTogglePracticeTask={togglePracticeTask}
               onPracticeTasksChange={setPracticeTasks}
+              onDeletePracticeTask={deletePracticeTask}
               onSetTaskManualDuration={setTaskManualDuration}
               onUpdateTimerPreferences={updateTimerPreferences}
               onTaskTimerStarted={(taskId) => {

@@ -62,13 +62,25 @@ import {
   DropdownEditor,
   InlineTaskRowEditor,
 } from "../components/PracticeTasksWidget";
+import { TaskDeleteDialog } from "../components/TaskDeleteDialog";
 import { useTimer } from "../lib/useTimer";
 import {
   getSavedSessions,
   getSavedTaskActivities,
-  recordTaskActivity,
+  purgeTaskActivities,
+  setTaskCompletion,
 } from "../lib/storage";
 import { clampDurationMinutes } from "../lib/taskAutoConfig";
+import {
+  getMondayMonthWeeks,
+  getTasksForDate,
+  deleteTaskFromSchedule,
+  getDayBoundaryAfter,
+  getTaskCompletionCounts,
+  getTaskDateKey,
+  isTaskExpiredAt,
+  preserveTaskHistoryBefore,
+} from "../lib/taskDates";
 import { SessionWidget } from "../components/SessionWidget";
 import {
   CalendarDateRange,
@@ -85,13 +97,8 @@ type TaskDurationPeriod =
   | "year"
   | "custom";
 
-interface RoutineTask {
-  id: string;
-  text: string;
-  completed: boolean;
+interface RoutineTask extends PracticeTask {
   duration?: TaskDurationPeriod;
-  startsAt?: number;
-  expiresAt?: number;
 }
 
 const TASK_TAG_COLOR_CLASSES: Record<string, string> = {
@@ -118,17 +125,18 @@ const TASK_TAG_COLOR_CLASSES: Record<string, string> = {
     "bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/25",
 };
 
-const getTaskExpiration = (period: TaskDurationPeriod): number | undefined => {
+const getTaskExpiration = (
+  period: TaskDurationPeriod,
+  referenceDate = Date.now(),
+): number | undefined => {
   if (period === "forever" || period === "default") return undefined;
   if (period === "custom") return undefined;
 
-  const expiration = new Date();
+  if (period === "week") return getDayBoundaryAfter(referenceDate, 7);
+
+  const expiration = new Date(referenceDate);
   expiration.setHours(0, 0, 0, 0);
-  if (period === "week") {
-    expiration.setDate(
-      expiration.getDate() + ((7 - expiration.getDay()) % 7 || 7),
-    );
-  } else if (period === "month") {
+  if (period === "month") {
     expiration.setMonth(expiration.getMonth() + 1, 1);
   } else {
     expiration.setFullYear(expiration.getFullYear() + 1, 0, 1);
@@ -176,7 +184,7 @@ const getDefaultTaskExpiration = (
 
   const expiration = new Date(createdAt);
   if (settings.taskDefaultDuration === "week") {
-    expiration.setDate(expiration.getDate() + 7);
+    return getDayBoundaryAfter(createdAt, 7);
   } else if (settings.taskDefaultDuration === "month") {
     addCalendarMonths(expiration, 1);
   } else if (settings.taskDefaultDuration === "year") {
@@ -186,9 +194,9 @@ const getDefaultTaskExpiration = (
       ? Math.min(Math.max(settings.taskDefaultCustomDuration, 1), 999)
       : 1;
     if (settings.taskDefaultCustomUnit === "days") {
-      expiration.setDate(expiration.getDate() + duration);
+      return getDayBoundaryAfter(createdAt, duration);
     } else if (settings.taskDefaultCustomUnit === "weeks") {
-      expiration.setDate(expiration.getDate() + duration * 7);
+      return getDayBoundaryAfter(createdAt, duration * 7);
     } else if (settings.taskDefaultCustomUnit === "years") {
       addCalendarMonths(expiration, duration * 12);
     } else {
@@ -199,8 +207,7 @@ const getDefaultTaskExpiration = (
 };
 
 const isExpiredTask = (task: RoutineTask | PracticeTask) => {
-  const expiresAt = "expiresAt" in task ? task.expiresAt : undefined;
-  return Number.isFinite(expiresAt) && expiresAt! <= Date.now();
+  return isTaskExpiredAt(task, Date.now());
 };
 
 const taskRange = (task: RoutineTask): CalendarDateRange | null =>
@@ -485,6 +492,27 @@ interface DayBlueprint {
   }[];
   tasks: RoutineTask[];
 }
+
+const mergeRoutineTasks = (
+  storedTasks: RoutineTask[],
+  dailyTasks: PracticeTask[],
+): RoutineTask[] => {
+  const dailyById = new Map(dailyTasks.map((task) => [task.id, task]));
+  const mergedTasks = storedTasks.map((task) => {
+    const dailyTask = dailyById.get(task.id);
+    if (!dailyTask) return task;
+    dailyById.delete(task.id);
+    return {
+      ...task,
+      ...dailyTask,
+      completedByDate: {
+        ...task.completedByDate,
+        ...dailyTask.completedByDate,
+      },
+    };
+  });
+  return [...mergedTasks, ...dailyById.values()];
+};
 
 const DEFAULT_WEEKLY_SCHEDULE: DayBlueprint[] = [
   {
@@ -783,26 +811,14 @@ const DEFAULT_WEEKLY_SCHEDULE: DayBlueprint[] = [
   },
 ];
 
-const DAY_CODES = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-const getTodayCode = () => DAY_CODES[new Date().getDay()];
+const DAY_CODES = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const getTodayCode = () => DAY_CODES[(new Date().getDay() + 6) % 7];
 const getWeekStart = (date: Date) => {
   const weekStart = new Date(date);
   weekStart.setHours(0, 0, 0, 0);
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
   return weekStart;
 };
-const getMonthWeeks = (month: Date) => {
-  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
-  const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
-  const weeks = [];
-  const weekStart = getWeekStart(firstDay);
-  while (weekStart <= lastDay) {
-    weeks.push(new Date(weekStart));
-    weekStart.setDate(weekStart.getDate() + 7);
-  }
-  return weeks;
-};
-
 interface RoutinePageProps {
   timer?: ReturnType<typeof useTimer>;
   streak?: StreakData;
@@ -840,20 +856,11 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   const [historyWeekStart, setHistoryWeekStart] = useState(() =>
     getWeekStart(new Date()),
   );
-  const historyWeeks = getMonthWeeks(historyMonth);
+  const historyWeeks = getMondayMonthWeeks(historyMonth);
   const getHistoryDateForDay = (dayCode: string) => {
     const date = new Date(historyWeekStart);
     date.setDate(date.getDate() + DAY_CODES.indexOf(dayCode));
     return date;
-  };
-  const getTaskHistoryForDay = (dayCode: string) => {
-    const date = getHistoryDateForDay(dayCode);
-    const dateKey = [
-      date.getFullYear(),
-      String(date.getMonth() + 1).padStart(2, "0"),
-      String(date.getDate()).padStart(2, "0"),
-    ].join("-");
-    return taskHistory.filter((activity) => activity.date === dateKey);
   };
   const isCurrentWeek =
     historyWeekStart.getTime() === getWeekStart(new Date()).getTime();
@@ -866,7 +873,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       1,
     );
     setHistoryMonth(nextMonth);
-    setHistoryWeekStart(getMonthWeeks(nextMonth)[0]);
+    setHistoryWeekStart(getMondayMonthWeeks(nextMonth)[0]);
   };
 
   useEffect(() => {
@@ -935,15 +942,12 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       } catch (e) {}
     }
 
-    schedule = schedule.map((day) => ({
-      ...day,
-      tasks: day.tasks.filter((task) => !isExpiredTask(task)),
-    }));
-
     if (practiceTasks) {
       const currentTasks = practiceTasks.filter((task) => !isExpiredTask(task));
       return schedule.map((day) =>
-        day.day === getTodayCode() ? { ...day, tasks: currentTasks } : day,
+        day.day === getTodayCode()
+          ? { ...day, tasks: mergeRoutineTasks(day.tasks, currentTasks) }
+          : day,
       );
     }
 
@@ -956,7 +960,10 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
         day.day === getTodayCode()
           ? {
               ...day,
-              tasks: parsedTasks.filter((task) => !isExpiredTask(task)),
+              tasks: mergeRoutineTasks(
+                day.tasks,
+                parsedTasks.filter((task) => !isExpiredTask(task)),
+              ),
             }
           : day,
       );
@@ -971,6 +978,16 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   const [activeDayCode, setActiveDayCode] = useState<string>(getTodayCode);
   const activeDay =
     weeklySchedule.find((d) => d.day === activeDayCode) || weeklySchedule[3];
+  const activeDayDate = getHistoryDateForDay(activeDayCode);
+  const activeDayTasks = getTasksForDate(
+    activeDay.tasks,
+    activeDayDate,
+    taskHistory,
+  );
+  const activeDayTaskCounts = getTaskCompletionCounts(activeDayTasks);
+  const isActiveDayToday =
+    isCurrentWeek &&
+    getStartOfDay(activeDayDate.getTime()) === getStartOfDay(Date.now());
 
   // Sync state to localStorage
   useEffect(() => {
@@ -978,11 +995,11 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       "mous9iti_weekly_schedule",
       JSON.stringify(weeklySchedule),
     );
-    if (activeDay?.day === getTodayCode()) {
+    if (activeDay?.day === getTodayCode() && isActiveDayToday) {
       localStorage.setItem(
         "mous9iti_routine",
         JSON.stringify(
-          activeDay.tasks.map((t) => ({
+          activeDayTasks.map((t) => ({
             id: t.id,
             title: t.text,
             completed: t.completed,
@@ -993,48 +1010,33 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
           })),
         ),
       );
-      localStorage.setItem("mous9iti_tasks", JSON.stringify(activeDay.tasks));
+      localStorage.setItem("mous9iti_tasks", JSON.stringify(activeDayTasks));
     }
-  }, [weeklySchedule, activeDayCode]);
+  }, [weeklySchedule, activeDayCode, historyWeekStart]);
 
   useEffect(() => {
-    const nextExpiration = weeklySchedule
-      .flatMap((day) => day.tasks)
-      .map((task) => task.expiresAt)
-      .filter((expiresAt): expiresAt is number => Number.isFinite(expiresAt))
-      .reduce((earliest, expiresAt) => Math.min(earliest, expiresAt), Infinity);
-    if (!Number.isFinite(nextExpiration)) return;
-
-    const timeout = window.setTimeout(
-      () => {
-        setWeeklySchedule((current) =>
-          current.map((day) => ({
-            ...day,
-            tasks: day.tasks.filter((task) => !isExpiredTask(task)),
-          })),
-        );
-      },
-      Math.min(Math.max(0, nextExpiration - Date.now()), 2_147_483_647),
-    );
-
-    return () => window.clearTimeout(timeout);
-  }, [weeklySchedule]);
-
-  useEffect(() => {
-    if (activeDay?.day === getTodayCode()) {
-      onPracticeTasksChange?.(activeDay.tasks);
+    if (activeDay?.day === getTodayCode() && isActiveDayToday) {
+      onPracticeTasksChange?.(
+        activeDayTasks.filter((task) => !isExpiredTask(task)),
+      );
     }
-  }, [weeklySchedule, activeDayCode, onPracticeTasksChange]);
+  }, [
+    weeklySchedule,
+    activeDayCode,
+    historyWeekStart,
+    onPracticeTasksChange,
+  ]);
 
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "mous9iti_tasks" && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
+          if (!Array.isArray(parsed)) return;
           setWeeklySchedule((prev) =>
             prev.map((d) => {
               if (d.day === getTodayCode()) {
-                return { ...d, tasks: parsed };
+                return { ...d, tasks: mergeRoutineTasks(d.tasks, parsed) };
               }
               return d;
             }),
@@ -1059,6 +1061,8 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
     null,
   );
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [pendingDeleteTask, setPendingDeleteTask] =
+    useState<RoutineTask | null>(null);
   const [editingDayField, setEditingDayField] = useState<
     "focus" | "duration" | null
   >(null);
@@ -1129,10 +1133,12 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 
   const toggleTaskCompleted = (taskId: string) => {
     const task = activeDay.tasks.find((item) => item.id === taskId);
-    if (task?.startsAt && task.startsAt > Date.now()) return;
-    if (task && !task.completed) {
-      recordTaskActivity(task, "started");
-      recordTaskActivity(task, "completed");
+    if (!task) return;
+    const completed = !activeDayTasks.find(
+      (activeTask) => activeTask.id === taskId,
+    )?.completed;
+    if (isActiveDayToday) {
+      setTaskCompletion(task, completed);
       setTaskHistory(getSavedTaskActivities());
     }
     setWeeklySchedule((prev) =>
@@ -1141,7 +1147,15 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
           return {
             ...d,
             tasks: d.tasks.map((t) =>
-              t.id === taskId ? { ...t, completed: !t.completed } : t,
+              t.id === taskId
+                ? {
+                    ...t,
+                    completedByDate: {
+                      ...t.completedByDate,
+                      [getTaskDateKey(activeDayDate)]: completed,
+                    },
+                  }
+                : t,
             ),
           };
         }
@@ -1176,11 +1190,12 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       text: newTaskInput.trim(),
       completed: false,
       duration: taskDuration,
-      startsAt: usesDefaultDuration
-        ? customRange?.start
-        : newTaskDuration === "custom" && newTaskRange
-          ? getStartOfDay(newTaskRange.start)
-          : undefined,
+      startsAt:
+        usesDefaultDuration && customRange
+          ? getStartOfDay(customRange.start)
+          : newTaskDuration === "custom" && newTaskRange
+            ? getStartOfDay(newTaskRange.start)
+            : getStartOfDay(createdAt),
       expiresAt: usesDefaultDuration
         ? configuredExpiration
         : newTaskDuration === "custom" && newTaskRange
@@ -1202,6 +1217,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   };
 
   const updateTaskDuration = (taskId: string, duration: TaskDurationPeriod) => {
+    const changeStartsAt = getStartOfDay(activeDayDate.getTime());
     setWeeklySchedule((prev) =>
       prev.map((day) =>
         day.day === activeDayCode
@@ -1212,16 +1228,20 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                   ? {
                       ...task,
                       duration,
+                      visibilityHistory: preserveTaskHistoryBefore(
+                        task,
+                        changeStartsAt,
+                      ),
                       startsAt:
                         duration === "custom" && task.duration === "custom"
-                          ? task.startsAt
-                          : undefined,
+                          ? Math.max(task.startsAt ?? changeStartsAt, changeStartsAt)
+                          : changeStartsAt,
                       expiresAt:
                         duration === "custom"
                           ? task.duration === "custom"
                             ? task.expiresAt
                             : undefined
-                          : getTaskExpiration(duration),
+                          : getTaskExpiration(duration, changeStartsAt),
                     }
                   : task,
               ),
@@ -1253,15 +1273,24 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
     );
   };
 
-  const removeTask = (taskId: string) => {
+  const removeTask = (scope: "day" | "everywhere") => {
+    if (!pendingDeleteTask) return;
+    const taskId = pendingDeleteTask.id;
     setWeeklySchedule((prev) =>
-      prev.map((d) => {
-        if (d.day === activeDayCode) {
-          return { ...d, tasks: d.tasks.filter((t) => t.id !== taskId) };
-        }
-        return d;
-      }),
+      deleteTaskFromSchedule(prev, taskId, activeDayDate, scope),
     );
+    if (editingTaskId === taskId) setEditingTaskId(null);
+    if (isActiveDayToday) purgeTaskActivities(taskId);
+    if (scope === "everywhere") {
+      onPracticeTasksChange?.(
+        (practiceTasks ?? []).filter((task) => task.id !== taskId),
+      );
+    } else if (isActiveDayToday) {
+      onPracticeTasksChange?.(
+        (practiceTasks ?? []).filter((task) => task.id !== taskId),
+      );
+    }
+    setPendingDeleteTask(null);
   };
 
   const updateActiveDay = (updates: Partial<DayBlueprint>) => {
@@ -1375,11 +1404,11 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
               rect: e.currentTarget.getBoundingClientRect(),
             });
           }}
-          className={`inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-mono font-bold align-middle shadow-sm cursor-pointer transition-colors ${badgeClass} ${task.completed ? "line-through" : ""}`}
+          className={`inline-flex max-w-full min-w-0 items-center gap-1 whitespace-normal break-words px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-mono font-bold align-middle shadow-sm cursor-pointer transition-colors ${badgeClass} ${task.completed ? "line-through" : ""}`}
           title="Click to edit badge settings"
         >
-          <Icon size={12} />
-          {label}
+          <Icon size={12} className="shrink-0" />
+          <span className="min-w-0 break-words">{label}</span>
         </button>,
       );
 
@@ -1505,6 +1534,8 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                       weekEnd.setDate(weekEnd.getDate() + 6);
                       const isSelected =
                         weekStart.getTime() === historyWeekStart.getTime();
+                      const isCurrent =
+                        weekStart.getTime() === getWeekStart(new Date()).getTime();
 
                       return (
                         <button
@@ -1512,7 +1543,8 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                           type="button"
                           className={`routine-history-week-option ${
                             isSelected ? "selected" : ""
-                          }`}
+                          } ${isCurrent ? "current" : ""}`}
+                          aria-label={`Week ${index + 1}, ${formatHistoryDate(weekStart)} to ${formatHistoryDate(weekEnd)}${isCurrent ? ", current week" : ""}`}
                           aria-pressed={isSelected}
                           onClick={() => {
                             setHistoryWeekStart(new Date(weekStart));
@@ -1526,6 +1558,11 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                             {formatHistoryDate(weekStart)} –{" "}
                             {formatHistoryDate(weekEnd)}
                           </span>
+                          {isCurrent && (
+                            <span className="routine-history-current-label">
+                              CURRENT
+                            </span>
+                          )}
                           {isSelected && (
                             <CheckCircle2 size={15} aria-hidden="true" />
                           )}
@@ -1542,27 +1579,10 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       {/* 7 Day Cards Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {daysInWeek.map((day, index) => {
-          const dayHistory = getTaskHistoryForDay(day.day);
-          const loggedTasks = new Map<
-            string,
-            { id: string; text: string; completed: boolean }
-          >();
-          dayHistory.forEach((activity) => {
-            const loggedTask = loggedTasks.get(activity.taskId);
-            loggedTasks.set(activity.taskId, {
-              id: activity.taskId,
-              text: loggedTask?.text || activity.taskText,
-              completed: loggedTask?.completed || activity.kind === "completed",
-            });
-          });
-          const dayTasks = isCurrentWeek
-            ? day.tasks
-            : [...loggedTasks.values()];
-          const completedCount = dayTasks.filter(
-            (task) => task.completed,
-          ).length;
-          const totalCount = dayTasks.length;
           const historyDate = getHistoryDateForDay(day.day);
+          const dayTasks = getTasksForDate(day.tasks, historyDate, taskHistory);
+          const { completed: completedCount, total: totalCount } =
+            getTaskCompletionCounts(dayTasks);
           const pct =
             totalCount > 0
               ? Math.round((completedCount / totalCount) * 100)
@@ -1600,7 +1620,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                 )}
               </div>
               <p className="-mt-2 text-[10px] font-mono text-on-surface-variant">
-                {formatHistoryDate(historyDate)} · {dayHistory.length} done
+                {formatHistoryDate(historyDate)} · {completedCount} done
               </p>
 
               <div>
@@ -1653,8 +1673,8 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
             </div>
             <div className="bg-surface-container-high border border-outline-variant/40 px-3 py-1 rounded-lg text-xs font-mono font-bold text-primary">
               {Math.round(
-                (activeDay.tasks.filter((t) => t.completed).length /
-                  (activeDay.tasks.length || 1)) *
+                (activeDayTaskCounts.completed /
+                  (activeDayTaskCounts.total || 1)) *
                   100,
               )}
               %
@@ -1664,13 +1684,13 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
           {/* Tasks List */}
           {/* Tasks List */}
           <div className="flex flex-col gap-2.5 min-h-[300px] overflow-y-auto max-h-[360px] custom-scrollbar pr-1">
-            {activeDay.tasks.length === 0 ? (
+            {activeDayTasks.length === 0 ? (
               <div className="text-center py-12 text-on-surface-variant text-sm font-mono">
                 No goals defined for {activeDay.name}. Add one below or
                 configure the blueprint.
               </div>
             ) : (
-              activeDay.tasks.map((task) => {
+              activeDayTasks.map((task) => {
                 if (editingTaskId === task.id) {
                   return (
                     <InlineTaskRowEditor
@@ -1778,7 +1798,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          removeTask(task.id);
+                          setPendingDeleteTask(task);
                         }}
                         className="p-1 text-on-surface-variant hover:text-error transition-colors"
                         title="Delete goal"
@@ -1936,8 +1956,8 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                 Active Day Progress
               </span>
               <span className="text-xs font-mono text-primary font-bold">
-                {activeDay.tasks.filter((t) => t.completed).length}/
-                {activeDay.tasks.length} goals
+                {activeDayTaskCounts.completed}/{activeDayTaskCounts.total}{" "}
+                goals
               </span>
             </div>
             <div className="flex flex-col gap-1 text-xs font-mono text-on-surface-variant">
@@ -2031,6 +2051,13 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
           active={activeDropdown}
           onClose={() => setActiveDropdown(null)}
           onSave={updateMention}
+        />
+      )}
+      {pendingDeleteTask && (
+        <TaskDeleteDialog
+          taskName={pendingDeleteTask.text}
+          onConfirm={removeTask}
+          onCancel={() => setPendingDeleteTask(null)}
         />
       )}
     </div>

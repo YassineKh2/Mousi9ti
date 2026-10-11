@@ -55,6 +55,8 @@ import {
   setTaskCompletion,
 } from "../lib/storage";
 import { useSettingsContext } from "../contexts/SettingsContext";
+import { TaskDeleteDialog } from "./TaskDeleteDialog";
+import { deleteTaskFromSchedule, getTaskDateKey } from "../lib/taskDates";
 import { ToggleSwitchIndicator } from "./ToggleSwitch";
 import {
   CUSTOM_TASK_TAGS_CHANGED_EVENT,
@@ -862,6 +864,7 @@ interface PracticeTasksWidgetProps {
     preferences: Partial<UserTimerPreferences>,
   ) => void;
   onTasksChange?: (tasks: PracticeTask[]) => void;
+  onDeleteTask?: (taskId: string, scope: "day" | "everywhere") => void;
   onSetTaskManualDuration?: (taskId: string, minutes: number) => void;
 }
 
@@ -894,6 +897,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   onToggleTask: onToggleControlledTask,
   onUpdateTimerPreferences,
   onTasksChange,
+  onDeleteTask,
   onSetTaskManualDuration,
 }) => {
   const settings = useSettingsContext();
@@ -913,6 +917,8 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [customTags, setCustomTags] = useState(getSavedCustomTags);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [pendingDeleteTask, setPendingDeleteTask] =
+    useState<PracticeTask | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<ActiveDropdown | null>(
     null,
   );
@@ -965,10 +971,14 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
       tasks.map((t) => (t.id === id ? { ...t, completed: nextCompleted } : t)),
     );
   };
-  const deleteTask = (id: string) => {
+  const deleteTask = (scope: "day" | "everywhere") => {
+    if (!pendingDeleteTask) return;
+    const id = pendingDeleteTask.id;
     if (editingTaskId === id) setEditingTaskId(null);
     purgeTaskActivities(id);
-    setTasks(tasks.filter((t) => t.id !== id));
+    if (onDeleteTask) onDeleteTask(id, scope);
+    else setTasks(tasks.filter((task) => task.id !== id));
+    setPendingDeleteTask(null);
   };
 
   const startEditTask = (id: string) => {
@@ -1119,10 +1129,10 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
               rect: e.currentTarget.getBoundingClientRect(),
             });
           }}
-          className={`inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-mono font-bold align-middle shadow-sm cursor-pointer transition-colors ${badgeClass} ${task.completed ? "line-through" : ""}`}
+          className={`inline-flex max-w-full min-w-0 items-center gap-1 whitespace-normal break-words px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-mono font-bold align-middle shadow-sm cursor-pointer transition-colors ${badgeClass} ${task.completed ? "line-through" : ""}`}
         >
-          <Icon size={12} />
-          {label}
+          <Icon size={12} className="shrink-0" />
+          <span className="min-w-0 break-words">{label}</span>
         </button>,
       );
 
@@ -1456,15 +1466,15 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   }
 
   return (
-    <div className="font-mono bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex flex-col shadow-xl relative group h-125 min-h-125 max-h-125 flex-none">
-      <div className="flex items-center justify-between pb-3 border-b border-outline-variant/10 shrink-0">
+    <div className="daily-practice-widget font-mono bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex min-h-0 w-full min-w-0 flex-col shadow-xl relative group">
+      <div className="daily-practice-widget__header flex items-center justify-between gap-2 pb-3 border-b border-outline-variant/10 shrink-0">
         <div className="flex min-w-0 items-center gap-2">
           <Target size={16} className="shrink-0 text-primary" />
-          <span className="font-mono text-xs font-semibold tracking-[0.2em] text-on-surface uppercase">
+          <span className="daily-practice-widget__title font-mono text-xs font-semibold tracking-[0.2em] text-on-surface uppercase">
             Daily Practice Goals
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="daily-practice-widget__actions flex shrink-0 items-center gap-2">
           <span className="text-xs font-bold text-primary">{progress}%</span>
           {onStartDailyTasks && !isDailyRoutineActive && (
             <button
@@ -1565,7 +1575,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
           </div>
         )}
 
-      <div className="flex-1 overflow-y-auto pr-2 space-y-2 my-2 custom-scrollbar min-h-0">
+      <div className="flex-1 overflow-y-auto pr-2 space-y-2 my-2 custom-scrollbar min-h-0 min-w-0">
         {tasks.length === 0 ? (
           <p className="font-mono text-xs text-on-surface-variant text-center mt-4">
             No tasks set. Add a goal below!
@@ -1593,7 +1603,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
             return (
               <div
                 key={task.id}
-                className={`group/task flex items-start gap-2 rounded border p-2 transition-colors ${task.id === activeTaskId ? "border-primary/50 bg-primary/10" : task.completed ? "border-transparent bg-surface-container-low opacity-60" : "border-transparent hover:bg-surface-container-low"}`}
+                className={`daily-practice-widget__task-row group/task flex min-w-0 items-start gap-2 rounded border p-2 transition-colors ${task.id === activeTaskId ? "border-primary/50 bg-primary/10" : task.completed ? "border-transparent bg-surface-container-low opacity-60" : "border-transparent hover:bg-surface-container-low"}`}
               >
                 <button
                   type="button"
@@ -1608,7 +1618,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                 </button>
                 <div
                   onClick={() => toggleTask(task.id)}
-                  className={`flex-1 cursor-pointer break-words text-sm leading-relaxed ${task.completed ? "line-through text-on-surface-variant" : "text-on-surface"}`}
+                  className={`daily-practice-widget__task-text min-w-0 flex-1 cursor-pointer break-words text-sm leading-relaxed ${task.completed ? "line-through text-on-surface-variant" : "text-on-surface"}`}
                 >
                   {renderTaskText(task)}
                 </div>
@@ -1630,7 +1640,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                       <Target size={13} className="hidden sm:block" />
                     </button>
                   )}
-                <div className="opacity-100 sm:opacity-0 sm:group-hover/task:opacity-100 flex items-center gap-1 transition-opacity">
+                <div className="daily-practice-widget__task-actions opacity-100 sm:opacity-0 sm:group-hover/task:opacity-100 flex shrink-0 items-center gap-1 transition-opacity">
                   <button
                     type="button"
                     onClick={(event) => {
@@ -1647,7 +1657,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      deleteTask(task.id);
+                      setPendingDeleteTask(task);
                     }}
                     className="text-error hover:bg-error/10 p-1.5 sm:p-1 rounded transition-colors focus:outline-none focus:opacity-100 touch-manipulation"
                     aria-label="Delete task"
@@ -1664,11 +1674,11 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
 
       <form
         onSubmit={addTask}
-        className="mt-3 pt-3 border-t border-outline-variant/10 shrink-0 flex flex-col relative overflow-visible"
+        className="daily-practice-widget__form mt-3 pt-3 border-t border-outline-variant/10 shrink-0 flex min-w-0 flex-col relative overflow-visible"
       >
         {suggestions.length > 0 && (
           <div
-            className="absolute bottom-[calc(100%+8px)] left-0 w-72 sm:w-80 max-h-52 overflow-y-auto bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-xl z-50 dropdown-menu-enter py-1 custom-scrollbar overscroll-contain"
+            className="daily-practice-widget__suggestions absolute bottom-[calc(100%+8px)] left-0 w-full max-w-80 max-h-52 overflow-y-auto bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-xl z-50 dropdown-menu-enter py-1 custom-scrollbar overscroll-contain"
             onWheel={(e) => e.stopPropagation()}
           >
             {suggestions.map((s, i) => (
@@ -1709,7 +1719,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex min-w-0 gap-2">
           <div className="relative flex-1 bg-surface-container-lowest border border-outline-variant/50 rounded focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/50 transition-all flex items-center overflow-hidden">
             <div
               ref={backdropRef}
@@ -1728,7 +1738,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
               onMouseUp={handleInputSelect}
               onKeyDown={handleKeyDown}
               placeholder="e.g. Warm up @exercise(Spider Drill) in @tuning(Drop D)..."
-              className="w-full bg-transparent px-3 py-2 font-mono text-sm text-on-surface outline-none caret-primary relative z-10"
+              className="w-full min-w-0 bg-transparent px-3 py-2 font-mono text-sm text-on-surface outline-none caret-primary relative z-10"
               autoComplete="off"
               spellCheck="false"
             />
@@ -1741,7 +1751,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
             <Plus size={18} />
           </button>
         </div>
-        <div className="text-[9px] text-on-surface-variant font-mono mt-2 uppercase tracking-wider text-center flex items-center justify-center gap-2">
+        <div className="daily-practice-widget__hint text-[9px] text-on-surface-variant font-mono mt-2 uppercase tracking-wider text-center flex items-center justify-center gap-2">
           <span>
             Type <strong className="text-primary">@</strong> for tags (custom,
             tuning, scale, chord, bpm, timer...)
@@ -1754,6 +1764,13 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
           active={activeDropdown}
           onClose={() => setActiveDropdown(null)}
           onSave={updateMention}
+        />
+      )}
+      {pendingDeleteTask && (
+        <TaskDeleteDialog
+          taskName={pendingDeleteTask.text}
+          onConfirm={deleteTask}
+          onCancel={() => setPendingDeleteTask(null)}
         />
       )}
     </div>

@@ -83,6 +83,7 @@ interface DashboardWidgetProps {
   isDragging: boolean;
   insertionPosition: "before" | "after" | null;
   insertionAxis: "horizontal" | "vertical" | null;
+  compactInstrumentSelector: boolean;
   onPointerStart: (id: DashboardWidgetId) => void;
   onKeyboardMove: (id: DashboardWidgetId, direction: -1 | 1) => void;
   onRemove: (id: DashboardWidgetId) => void;
@@ -95,6 +96,7 @@ const DashboardWidget: React.FC<DashboardWidgetProps> = ({
   isDragging,
   insertionPosition,
   insertionAxis,
+  compactInstrumentSelector,
   onPointerStart,
   onKeyboardMove,
   onRemove,
@@ -103,7 +105,7 @@ const DashboardWidget: React.FC<DashboardWidgetProps> = ({
   <section
     draggable={false}
     data-dashboard-widget={widget.id}
-    className={`relative flex min-w-0 flex-1 flex-col transition-[transform,opacity] duration-200 ease-out ${editMode ? "rounded-b-xl" : ""} ${isDragging ? "scale-[1.02] opacity-60 shadow-2xl" : ""}`}
+    className={`relative flex min-w-0 flex-1 flex-col transition-[transform,opacity] duration-200 ease-out ${widget.id === "instruments" ? "instrument-dashboard-widget" : ""} ${compactInstrumentSelector ? "instrument-dashboard-widget--compact-selector" : ""} ${widget.id === "practice-tasks" ? "daily-practice-widget-container" : ""} ${editMode ? "rounded-b-xl" : ""} ${isDragging ? "scale-[1.02] opacity-60 shadow-2xl" : ""}`}
   >
     {insertionPosition === "before" && insertionAxis === "vertical" && (
       <span className="pointer-events-none absolute -top-3 left-1 right-1 z-10 h-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--color-primary)]" />
@@ -170,7 +172,7 @@ const DashboardWidget: React.FC<DashboardWidgetProps> = ({
       </div>
     )}
     <div
-      className={`flex min-h-0 flex-1 flex-col *:h-full ${editMode ? "*:rounded-t-none" : ""}`}
+      className={`flex min-h-0 flex-1 flex-col *:h-full ${widget.id === "practice-tasks" ? "daily-practice-widget-content relative" : ""} ${editMode ? "*:rounded-t-none" : ""}`}
     >
       {children}
     </div>
@@ -207,6 +209,7 @@ interface DashboardPageProps {
   onMakeTaskActive: (taskId: string | null) => void;
   onTogglePracticeTask: (taskId: string) => void;
   onPracticeTasksChange: (tasks: PracticeTask[]) => void;
+  onDeletePracticeTask: (taskId: string, scope: "day" | "everywhere") => void;
   onSetTaskManualDuration: (taskId: string, minutes: number) => void;
   onUpdateTimerPreferences: (
     preferences: Partial<UserTimerPreferences>,
@@ -244,6 +247,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onMakeTaskActive,
   onTogglePracticeTask,
   onPracticeTasksChange,
+  onDeletePracticeTask,
   onSetTaskManualDuration,
   onUpdateTimerPreferences,
   onTaskTimerStarted,
@@ -745,6 +749,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             onMakeTaskActive={onMakeTaskActive}
             onToggleTask={onTogglePracticeTask}
             onTasksChange={onPracticeTasksChange}
+            onDeleteTask={onDeletePracticeTask}
             onSetTaskManualDuration={onSetTaskManualDuration}
             onUpdateTimerPreferences={onUpdateTimerPreferences}
           />
@@ -898,8 +903,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {instrumentToolbarTarget &&
         createPortal(
-          <div className="flex flex-col gap-3 rounded-lg border border-outline-variant/30 bg-surface-container px-3 py-3 shadow-md md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-4 md:px-5">
-            <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2 md:flex md:flex-wrap md:items-center md:gap-3">
+          <div className="dashboard-scale-toolbar flex flex-col gap-3 rounded-lg border border-outline-variant/30 bg-surface-container px-3 py-3 shadow-md md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-4 md:px-5">
+            <div className="dashboard-scale-toolbar__selectors grid grid-cols-[auto_minmax(0,1fr)] gap-2 md:flex md:flex-wrap md:items-center md:gap-3">
               <div className="col-span-2 flex items-center gap-2 md:col-span-1">
                 <Sparkles size={16} className="text-primary" />
                 <span className="font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
@@ -960,7 +965,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               </div>
 
               <div
-                className="relative col-span-1 h-10 min-w-0 md:col-span-1 md:h-9"
+                className="relative col-span-1 h-10 min-w-0 md:col-span-1 md:h-9 md:flex-1"
                 ref={scaleMenuRef}
               >
                 <button
@@ -1135,13 +1140,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <div className="dashboard-scale-toolbar__controls flex flex-col gap-2 md:flex-row md:items-center">
               <div className="flex h-12 w-full min-w-0 items-stretch gap-1.5 overflow-x-auto rounded border border-outline-variant/30 bg-surface-container-low p-1 md:h-9">
                 {(["name", "degree", "interval"] as NoteDisplayMode[]).map(
                   (mode) => (
                     <button
                       key={mode}
                       type="button"
+                      aria-label={`Display notes by ${mode}`}
                       onClick={() => setDisplayMode(mode)}
                       className={`flex min-w-max flex-1 items-center justify-center rounded px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${
                         displayMode === mode
@@ -1149,45 +1155,52 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                           : "text-on-surface-variant hover:bg-outline-variant/10 hover:text-on-surface"
                       }`}
                     >
-                      {mode === "name" ? (
-                        "Note Name"
-                      ) : mode === "degree" ? (
-                        <>
-                          Degrees{" "}
-                          <span className="hidden md:inline">(1 3 5)</span>
-                        </>
-                      ) : (
-                        <>
-                          Intervals{" "}
-                          <span className="hidden md:inline">(R M3)</span>
-                        </>
-                      )}
+                      <span className="dashboard-scale-toolbar__mode-label">
+                        {mode === "name"
+                          ? "Note Name"
+                          : mode === "degree"
+                            ? "Degrees (1 3 5)"
+                            : "Intervals (R M3)"}
+                      </span>
+                      <span className="dashboard-scale-toolbar__mode-compact">
+                        {mode === "name"
+                          ? "Name"
+                          : mode === "degree"
+                            ? "Degree"
+                            : "Interval"}
+                      </span>
                     </button>
                   ),
                 )}
               </div>
 
-              <div className="grid h-12 grid-cols-3 items-center gap-1 rounded border border-outline-variant/30 bg-surface-container-low p-1 md:h-9 md:flex">
+              <div className="dashboard-scale-toolbar__instruments grid h-12 grid-cols-3 items-center gap-1 rounded border border-outline-variant/30 bg-surface-container-low p-1 md:h-9 md:flex">
                 <button
+                  type="button"
+                  aria-label="Guitar"
                   onClick={() => handleInstrumentToggle("guitar")}
                   className={`flex h-full items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-mono transition-all md:px-3 ${instrumentView === "guitar" ? "bg-primary text-on-primary font-bold shadow" : "text-on-surface-variant hover:text-on-surface"}`}
                 >
                   <Guitar size={14} />
-                  <span>Guitar</span>
+                  <span className="dashboard-scale-toolbar__instrument-label">Guitar</span>
                 </button>
                 <button
+                  type="button"
+                  aria-label="Piano"
                   onClick={() => handleInstrumentToggle("piano")}
                   className={`flex h-full items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-mono transition-all md:px-3 ${instrumentView === "piano" ? "bg-primary text-on-primary font-bold shadow" : "text-on-surface-variant hover:text-on-surface"}`}
                 >
                   <Piano size={14} />
-                  <span>Piano</span>
+                  <span className="dashboard-scale-toolbar__instrument-label">Piano</span>
                 </button>
                 <button
+                  type="button"
+                  aria-label="Both instruments"
                   onClick={() => handleInstrumentToggle("both")}
                   className={`flex h-full items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-mono transition-all md:px-3 ${instrumentView === "both" ? "bg-primary text-on-primary font-bold shadow" : "text-on-surface-variant hover:text-on-surface"}`}
                 >
                   <Layers size={14} />
-                  <span>Both</span>
+                  <span className="dashboard-scale-toolbar__instrument-label">Both</span>
                 </button>
               </div>
             </div>
@@ -1203,7 +1216,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             className="flex flex-col md:flex-row items-stretch gap-3 md:gap-5 w-full"
           >
             {row.widgets.map((widget) => (
-              <DashboardWidget key={widget.id} {...widgetProps(widget)}>
+              <DashboardWidget
+                key={widget.id}
+                {...widgetProps(widget)}
+                compactInstrumentSelector={
+                  widget.id === "instruments" && row.widgets.length > 2
+                }
+              >
                 {renderWidget(widget, row.widgets.length)}
               </DashboardWidget>
             ))}

@@ -151,6 +151,100 @@ it("shows bottom empty states when the selected dates have no chart data", () =>
   }
 });
 
+it("counts task completions and in-progress tasks once within the Monday-based week", () => {
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+  const currentWeekTimestamp = weekStart.getTime() + 60_000;
+  const oldTimestamp = currentWeekTimestamp - 7 * 86400000;
+  const today = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
+  const saved = new Map([
+    [
+      "Mousi9ti_task_activities_v1",
+      JSON.stringify([
+        {
+          id: "completed-start",
+          taskId: "completed-task",
+          taskText: "Completed",
+          date: today,
+          timestamp: currentWeekTimestamp,
+          kind: "started",
+          durationSeconds: 0,
+          area: "Custom",
+        },
+        {
+          id: "completed-done",
+          taskId: "completed-task",
+          taskText: "Completed",
+          date: today,
+          timestamp: currentWeekTimestamp + 1,
+          kind: "completed",
+          durationSeconds: 0,
+          area: "Custom",
+        },
+        {
+          id: "open-start",
+          taskId: "open-task",
+          taskText: "Still in progress",
+          date: today,
+          timestamp: currentWeekTimestamp + 2,
+          kind: "started",
+          durationSeconds: 0,
+          area: "Custom",
+        },
+        {
+          id: "old-completion",
+          taskId: "old-task",
+          taskText: "Previous week",
+          date: today,
+          timestamp: oldTimestamp,
+          kind: "completed",
+          durationSeconds: 0,
+          area: "Custom",
+        },
+      ]),
+    ],
+  ]);
+  const originalStorage = globalThis.localStorage;
+  globalThis.localStorage = {
+    getItem: (key: string) => saved.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      saved.set(key, value);
+    },
+  } as Storage;
+
+  try {
+    const html = renderToStaticMarkup(
+      <StatsPage
+        sessions={[]}
+        streak={{
+          currentStreak: 0,
+          longestStreak: 0,
+          lastVisitDate: today,
+          graceDaysUsed: 0,
+          history: [],
+        }}
+      />,
+    );
+    const completionHeading = html.indexOf("Task Completion");
+    const completion = html.slice(
+      html.lastIndexOf("<section", completionHeading),
+      html.indexOf("</section>", completionHeading),
+    );
+
+    assert.match(completion, /<b>50%<\/b>/);
+    assert.match(completion, />1<span class="ml-4 text-on-surface-variant">Completed<\/span>/);
+    assert.match(completion, />1<span class="ml-4 text-on-surface-variant">In progress<\/span>/);
+  } finally {
+    globalThis.localStorage = originalStorage;
+  }
+});
+
 it("paginates analytics and limits individual tasks to custom activities", () => {
   const timestamp = Date.now();
   const date = new Date(timestamp).toISOString().slice(0, 10);
