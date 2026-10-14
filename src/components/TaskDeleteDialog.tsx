@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
+import { formatDurationLabel, parseParams } from "../utils/taskMentions";
 
 type DeleteScope = "day" | "everywhere";
+
+const TASK_MENTION_REGEX =
+  /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time|random)(?:\(([^)]*)\))?)/gi;
 
 interface TaskDeleteDialogProps {
   taskName: string;
@@ -15,6 +19,65 @@ export const TaskDeleteDialog: React.FC<TaskDeleteDialogProps> = ({
   onCancel,
 }) => {
   const [scope, setScope] = useState<DeleteScope | null>(null);
+
+  const renderTaskName = () => {
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    TASK_MENTION_REGEX.lastIndex = 0;
+
+    while ((match = TASK_MENTION_REGEX.exec(taskName)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(
+          <span key={`text-${lastIndex}`}>
+            {taskName.slice(lastIndex, match.index)}
+          </span>,
+        );
+      }
+
+      const tool = match[2].toLowerCase();
+      const params = match[3] || "";
+      const parsed = parseParams(tool, params);
+      let label = tool;
+
+      if (tool === "metronome") label = `${parsed.bpm} BPM · ${parsed.signature}`;
+      else if (tool === "scale") label = parsed.label || `${parsed.root} ${parsed.type}`;
+      else if (tool === "chord") label = parsed.label || `${parsed.root} ${parsed.type}`;
+      else if (tool === "timer" || tool === "time") {
+        label = formatDurationLabel(parsed.minutes);
+      } else if (tool === "custom") label = parsed.text || "Custom";
+      else if (tool === "tuning") label = parsed.tuning || "Tuning";
+      else if (tool === "key") label = parsed.key || "Key";
+      else if (tool === "technique") label = parsed.technique || "Technique";
+      else if (tool === "bpm") label = `${parsed.bpm} BPM · ${parsed.signature}`;
+      else if (tool === "exercise") label = parsed.exercise || "Exercise";
+      else if (tool === "random") {
+        const modeLabels: Record<string, string> = {
+          both: "all notes",
+          sharps: "sharp notes",
+          flats: "flat notes",
+          naturals: "natural notes",
+        };
+        label = `random (${modeLabels[parsed.accidentalMode] || "all notes"})${parsed.autoAdvance ? ` · auto advance for ${parsed.interval}` : ""}`;
+      }
+
+      parts.push(
+        <span
+          key={`mention-${match.index}`}
+          className="mx-0.5 inline-flex max-w-full min-w-0 items-center whitespace-normal break-words rounded border border-outline-variant/40 bg-surface-container-high px-1.5 py-0.5 align-middle font-mono text-[11px] font-bold text-on-surface-variant"
+        >
+          {label}
+        </span>,
+      );
+      lastIndex = TASK_MENTION_REGEX.lastIndex;
+    }
+
+    if (lastIndex < taskName.length) {
+      parts.push(<span key={`text-${lastIndex}`}>{taskName.slice(lastIndex)}</span>);
+    }
+
+    return parts;
+  };
 
   return (
     <div
@@ -37,7 +100,7 @@ export const TaskDeleteDialog: React.FC<TaskDeleteDialogProps> = ({
                 Delete task?
               </h2>
               <p className="mt-2 break-words text-sm leading-relaxed text-on-surface-variant">
-                Choose where to delete “{taskName}”.
+                Choose where to delete “{renderTaskName()}”.
               </p>
             </div>
           </div>

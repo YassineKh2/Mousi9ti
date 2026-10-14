@@ -227,7 +227,19 @@ describe("formatConfigurationSummary", () => {
     assert.deepEqual(summary, [
       "Scale: C Major",
       "Tempo: 100 BPM",
-      "Duration: 10 min",
+      "Duration: 10m",
+    ]);
+  });
+
+  it("formats second-based durations as seconds", () => {
+    const config = parseTaskConfiguration("Practice with @timer(30s)");
+    assert.deepEqual(formatConfigurationSummary(config), ["Duration: 30s"]);
+  });
+
+  it("formats mixed minute and second durations accurately", () => {
+    const config = parseTaskConfiguration("Practice with @timer(40min 40s)");
+    assert.deepEqual(formatConfigurationSummary(config), [
+      "Duration: 40m 40s",
     ]);
   });
 

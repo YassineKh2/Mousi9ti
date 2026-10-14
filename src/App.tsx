@@ -608,14 +608,18 @@ export function App() {
           (task) => task.id !== timedTaskId && !task.completed,
         );
         const advanceDelaySeconds = timerPreferences.autoAdvanceDelaySeconds;
-        setTimedTaskAdvanceToast(
-          nextTask && advanceDelaySeconds > 0
-            ? { taskId: timedTaskId, nextTaskName: nextTask.text }
-            : null,
-        );
-        timedTaskAdvanceTimeoutRef.current = window.setTimeout(() => {
-          if (autoAdvanceTimedTasksRef.current) finishTimedTask(timedTaskId);
-        }, advanceDelaySeconds * 1000);
+        if (!nextTask) {
+          finishTimedTask(timedTaskId);
+        } else {
+          setTimedTaskAdvanceToast(
+            advanceDelaySeconds > 0
+              ? { taskId: timedTaskId, nextTaskName: nextTask.text }
+              : null,
+          );
+          timedTaskAdvanceTimeoutRef.current = window.setTimeout(() => {
+            if (autoAdvanceTimedTasksRef.current) finishTimedTask(timedTaskId);
+          }, advanceDelaySeconds * 1000);
+        }
       }
       flushTaskAttribution(Date.now());
       if (durationSeconds > 0) {
@@ -1406,28 +1410,27 @@ export function App() {
             key={timedTaskAdvanceToast.taskId}
             role="status"
             aria-live="polite"
-            className="fixed bottom-20 right-4 z-[105] w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-lg border border-primary/35 bg-surface-container px-4 pb-4 pt-3 text-on-surface shadow-xl animate-in fade-in slide-in-from-bottom-1 duration-200 lg:bottom-6 lg:right-6"
+            className="fixed bottom-20 right-4 z-[105] flex w-[calc(100vw-2rem)] max-w-lg items-start gap-2.5 overflow-hidden rounded-lg border border-primary/30 bg-primary/10 px-4 pb-4 pt-3 text-xs text-on-surface shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-bottom-1 duration-200 lg:bottom-6 lg:right-6"
           >
-            <div className="flex items-center gap-3">
-              <div className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                <SkipForward size={16} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold">Auto-passing to</p>
-                <p className="break-words text-sm text-on-surface-variant">
+            <SkipForward size={15} className="mt-0.5 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="font-mono">
+                Auto-passing to{" "}
+                <span className="break-words font-semibold">
                   {timedTaskAdvanceToast.nextTaskName}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => finishTimedTask(timedTaskAdvanceToast.taskId)}
-                className="flex shrink-0 items-center gap-1.5 rounded border border-primary/40 px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
-              >
-                <SkipForward size={14} />
-                Go now
-              </button>
+                </span>
+                .
+              </p>
             </div>
-            <div className="absolute inset-x-0 bottom-0 h-1 bg-surface-container-highest">
+            <button
+              type="button"
+              onClick={() => finishTimedTask(timedTaskAdvanceToast.taskId)}
+              className="flex shrink-0 items-center gap-1 rounded border border-primary/40 px-2 py-1 font-mono text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10"
+            >
+              <SkipForward size={13} />
+              Go now
+            </button>
+            <div className="absolute inset-x-0 bottom-0 h-1 bg-primary/10">
               <div
                 className="h-full origin-left bg-primary"
                 style={{

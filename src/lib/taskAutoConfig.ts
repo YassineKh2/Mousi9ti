@@ -10,7 +10,11 @@ import {
   SCALES_DATABASE,
 } from "../data/musicTheory";
 import { searchChords, searchScales } from "../utils/musicSearch";
-import { MENTION_REGEX, parseParams } from "../utils/taskMentions";
+import {
+  formatDurationLabel,
+  MENTION_REGEX,
+  parseParams,
+} from "../utils/taskMentions";
 
 // Normalized, partial dashboard configuration recognized from a task's text.
 // Every field is optional: only confidently recognized values are populated.
@@ -360,7 +364,7 @@ export function formatConfigurationSummary(
     parts.push(`Time signature: ${config.timeSignature}`);
   }
   if (config.durationMinutes !== undefined) {
-    parts.push(`Duration: ${config.durationMinutes} min`);
+    parts.push(`Duration: ${formatDurationLabel(config.durationMinutes)}`);
   }
   if (config.randomNote) {
     const modeLabels: Record<RandomNoteAccidentalMode, string> = {

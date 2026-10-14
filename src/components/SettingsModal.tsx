@@ -534,7 +534,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <section
             aria-labelledby="daily-task-completion-heading"
             className={
-              activeTab === "tasks  border-t" ? "flex flex-col gap-3" : "hidden"
+              activeTab === "tasks"
+                ? "flex flex-col gap-3 border-t border-outline-variant/20 pt-4"
+                : "hidden"
             }
           >
             <div>
