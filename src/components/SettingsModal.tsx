@@ -460,34 +460,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
           </section>
 
-          {/* Daily Task Completion */}
-          <div
-            className={activeTab === "tasks" ? "flex flex-col gap-3" : "hidden"}
-          >
-            <div>
-              <span className="font-mono text-xs font-semibold text-on-surface block">
-                Daily Task Completion
-              </span>
-              <span className="text-[11px] text-on-surface-variant">
-                Choose what happens to the Practice Tracker after the last task.
-              </span>
-            </div>
-            <select
-              value={completionBehavior}
-              onChange={(event) =>
-                onUpdateCompletionBehavior(
-                  event.target.value as TaskCompletionBehavior,
-                )
-              }
-              className="w-full rounded-lg border border-outline-variant/30 bg-surface-container px-3 py-2 font-mono text-xs text-on-surface outline-none transition-colors focus:border-primary"
-              aria-label="Daily task completion behavior"
-            >
-              <option value="stop">Stop Practice Tracker automatically</option>
-              <option value="continue">Keep Practice Tracker running</option>
-              <option value="ask">Ask me every time</option>
-            </select>
-          </div>
-
           <div
             className={
               activeTab === "tasks"
@@ -558,11 +530,111 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             />
           </div>
 
+          {/* Daily Task Completion */}
+          <section
+            aria-labelledby="daily-task-completion-heading"
+            className={activeTab === "tasks" ? "flex flex-col gap-3" : "hidden"}
+          >
+            <div>
+              <h3
+                id="daily-task-completion-heading"
+                className="font-mono text-xs font-semibold text-on-surface"
+              >
+                Daily Task Completion
+              </h3>
+              <p className="mb-2 text-[10px] text-on-surface-variant">
+                Choose what happens to the Practice Tracker after the last task.
+              </p>
+            </div>
+            <div
+              className="grid grid-cols-3 gap-2"
+              role="group"
+              aria-label="Daily task completion behavior"
+            >
+              {(
+                [
+                  {
+                    id: "stop",
+                    label: "Stop",
+                    description: "End the session after the last task.",
+                  },
+                  {
+                    id: "continue",
+                    label: "Continue",
+                    description: "Keep the session running.",
+                  },
+                  {
+                    id: "ask",
+                    label: "Ask every time",
+                    description: "Choose whether to stop or continue.",
+                  },
+                ] as const
+              ).map((behavior) => (
+                <button
+                  key={behavior.id}
+                  type="button"
+                  aria-pressed={completionBehavior === behavior.id}
+                  onClick={() => onUpdateCompletionBehavior(behavior.id)}
+                  className={`flex min-h-20 flex-col items-start justify-center gap-1 rounded border px-2 py-2 text-left transition-all ${
+                    completionBehavior === behavior.id
+                      ? "bg-primary text-on-primary border-primary font-bold shadow-sm"
+                      : "bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:border-primary/50"
+                  }`}
+                >
+                  <span className="font-mono text-xs">{behavior.label}</span>
+                  <span className="font-mono text-[10px] font-normal leading-snug opacity-80">
+                    {behavior.description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Task Instrument Suggestions */}
+          <section
+            aria-labelledby="task-instrument-suggestions-heading"
+            className={
+              activeTab === "tasks"
+                ? "mt-4 space-y-1.5 border-t border-outline-variant/20 pt-4"
+                : "hidden"
+            }
+          >
+            <h3
+              id="task-instrument-suggestions-heading"
+              className="font-mono text-xs font-semibold text-on-surface"
+            >
+              Task Instrument Suggestions
+            </h3>
+            <p className="mb-2 text-[10px] text-on-surface-variant">
+              Choose which instrument's techniques and exercises appear in task
+              suggestions.
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {(["guitar", "piano", "both"] as const).map((instrument) => (
+                <button
+                  key={instrument}
+                  type="button"
+                  aria-pressed={settings.taskInstrumentFilter === instrument}
+                  onClick={() =>
+                    onUpdateSettings({ taskInstrumentFilter: instrument })
+                  }
+                  className={`rounded border px-1 py-2 font-mono text-[11px] capitalize transition-all ${
+                    settings.taskInstrumentFilter === instrument
+                      ? "bg-primary text-on-primary border-primary font-bold shadow-sm"
+                      : "bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:border-primary/50"
+                  }`}
+                >
+                  {instrument}
+                </button>
+              ))}
+            </div>
+          </section>
+
           <section
             aria-labelledby="task-tag-colors-heading"
             className={
               activeTab === "tasks"
-                ? "flex flex-col gap-3 border-t border-outline-variant/20 pt-4 sm:flex-row sm:items-center sm:justify-between"
+                ? "space-y-1.5 border-t border-outline-variant/20 pt-4"
                 : "hidden"
             }
           >
@@ -573,19 +645,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               >
                 Daily Task Tag Colors
               </h3>
-              <p className="mt-1 text-[11px] text-on-surface-variant">
+              <p className="mb-2 text-[10px] text-on-surface-variant">
                 Show every task tag in the simple gray style or in full color.
               </p>
             </div>
-            <div className="flex items-center self-start sm:self-auto gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant/30 shrink-0">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 aria-pressed={!settings.taskTagsColored}
                 onClick={() => onUpdateSettings({ taskTagsColored: false })}
-                className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
+                className={`rounded border px-1 py-2 font-mono text-[11px] transition-all ${
                   !settings.taskTagsColored
-                    ? "bg-primary text-on-primary font-bold"
-                    : "text-on-surface-variant hover:text-on-surface"
+                    ? "bg-primary text-on-primary border-primary font-bold shadow-sm"
+                    : "bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:border-primary/50"
                 }`}
               >
                 Gray
@@ -594,10 +666,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 type="button"
                 aria-pressed={settings.taskTagsColored}
                 onClick={() => onUpdateSettings({ taskTagsColored: true })}
-                className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
+                className={`rounded border px-1 py-2 font-mono text-[11px] transition-all ${
                   settings.taskTagsColored
-                    ? "bg-primary text-on-primary font-bold"
-                    : "text-on-surface-variant hover:text-on-surface"
+                    ? "bg-primary text-on-primary border-primary font-bold shadow-sm"
+                    : "bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:border-primary/50"
                 }`}
               >
                 Colored

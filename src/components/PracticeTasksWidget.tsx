@@ -25,6 +25,8 @@ import {
   ChevronLeft,
   Play,
   Pause,
+  Guitar,
+  Piano,
 } from "lucide-react";
 import { ALL_ROOT_NOTES, GUITAR_TUNINGS } from "../data/musicTheory";
 import { CHORD_TYPES_CATALOG } from "../data/chordsData";
@@ -39,12 +41,15 @@ import {
   COMMON_PRACTICE_KEYS,
   COMMON_TECHNIQUES,
   COMMON_EXERCISES,
+  getTaskTechniqueSuggestions,
+  getTaskExerciseSuggestions,
   getMentionSuggestions as getCategorizedMentionSuggestions,
   formatDurationLabel,
   MAX_TIMER_DURATION_MINUTES,
   parseDurationMinutes,
 } from "../utils/taskMentions";
 import {
+  AppSettings,
   PracticeTask,
   TaskCompletionBehavior,
   UserTimerPreferences,
@@ -542,12 +547,15 @@ const getMentionSuggestions = (
   return [];
 };
 
-const getDashboardMentionSuggestions = (ctx: MentionContext | null) => {
+const getDashboardMentionSuggestions = (
+  ctx: MentionContext | null,
+  instrument: AppSettings["taskInstrumentFilter"],
+) => {
   if (
     ctx?.type === "param" &&
     ["custom", "exercise", "technique"].includes(ctx.tool || "")
   ) {
-    return getCategorizedMentionSuggestions(ctx);
+    return getCategorizedMentionSuggestions(ctx, instrument);
   }
   return getMentionSuggestions(ctx);
 };
@@ -660,6 +668,7 @@ export const InlineTaskRowEditor: React.FC<InlineTaskRowEditorProps> = ({
   onSave,
   onCancel,
 }) => {
+  const { taskInstrumentFilter } = useSettingsContext();
   const [text, setText] = useState(initialText);
   const [cursor, setCursor] = useState(initialText.length);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
@@ -684,7 +693,7 @@ export const InlineTaskRowEditor: React.FC<InlineTaskRowEditorProps> = ({
   }, [text, cursor]);
 
   const ctx = getMentionContext(text, cursor);
-  const suggestions = getDashboardMentionSuggestions(ctx);
+  const suggestions = getDashboardMentionSuggestions(ctx, taskInstrumentFilter);
   const safeSuggestionIndex = Math.max(
     0,
     Math.min(suggestionIndex, suggestions.length - 1),
@@ -848,7 +857,13 @@ export const InlineTaskRowEditor: React.FC<InlineTaskRowEditorProps> = ({
 
 interface PracticeTasksWidgetProps {
   onOpenRoutine?: () => void;
-  onFinishDailyTasksOnboarding?: () => void;
+  onFinishDailyTasksOnboarding?: (
+    quickStartInstrument: "guitar" | "piano" | null,
+  ) => void;
+  onQuickStartTasks: (
+    instrument: "guitar" | "piano",
+    tasks: PracticeTask[],
+  ) => void;
   tasks?: PracticeTask[];
   activeTaskId?: string | null;
   timerStatus?: "idle" | "running" | "paused" | "finished";
@@ -884,6 +899,7 @@ export const getSavedPracticeTasks = (): PracticeTask[] => {
 export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   onOpenRoutine,
   onFinishDailyTasksOnboarding,
+  onQuickStartTasks,
   tasks: controlledTasks,
   activeTaskId,
   timerStatus,
@@ -926,6 +942,8 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   const [onboardingCompletionBehavior, setOnboardingCompletionBehavior] =
     useState<TaskCompletionBehavior>("ask");
   const [onboardingAutoTaskSetup, setOnboardingAutoTaskSetup] = useState(false);
+  const [onboardingAutoAdvanceTimedTasks, setOnboardingAutoAdvanceTimedTasks] =
+    useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -1002,7 +1020,10 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   };
 
   const ctx = getMentionContext(newTaskText, cursor);
-  const suggestions = getDashboardMentionSuggestions(ctx);
+  const suggestions = getDashboardMentionSuggestions(
+    ctx,
+    settings.taskInstrumentFilter,
+  );
   const safeSuggestionIndex = Math.max(
     0,
     Math.min(suggestionIndex, suggestions.length - 1),
@@ -1179,16 +1200,19 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   const progress =
     tasks.length === 0 ? 0 : Math.round((completedCount / tasks.length) * 100);
 
-  const finishOnboarding = () => {
+  const finishOnboarding = (
+    quickStartInstrument: "guitar" | "piano" | null = null,
+  ) => {
     onUpdateTimerPreferences?.({
       completionBehavior: onboardingCompletionBehavior,
+      autoAdvanceTimedTasks: onboardingAutoAdvanceTimedTasks,
       autoConfigureDashboardFromTask: onboardingAutoTaskSetup,
       hasSeenDailyTasksOnboarding: true,
       hasSeenAutoConfigOnboarding: true,
       hasSeenTaskTimerOnboarding: true,
     });
     setOnboardingStep(null);
-    onFinishDailyTasksOnboarding?.();
+    onFinishDailyTasksOnboarding?.(quickStartInstrument);
   };
 
   if (tasks.length === 0 && !timerPreferences?.hasSeenDailyTasksOnboarding) {
@@ -1198,14 +1222,25 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
       icon: React.ReactNode;
       gifPlaceholder: string;
       trackingDetails?: string[];
-      control?: "completion" | "automatic-setup";
+      control?:
+        | "completion"
+        | "automatic-setup"
+        | "auto-advance"
+        | "quick-start";
     }[] = [
       {
         title: "Your daily tasks",
         description:
-          "A daily task is one practice goal for today, such as working on a scale or learning a chord change. Your list belongs to you: nothing is added automatically, and you can edit or remove goals whenever your plans change.",
+          "A daily task is one practice goal for today, such as working on a scale or learning a chord change. You can add, edit or remove goals whenever your plans change.",
         icon: <Target size={20} />,
         gifPlaceholder: "Adding and organizing daily tasks",
+      },
+      {
+        title: "Set task time limits",
+        description:
+          "Tasks have no time limit by default. You can add or edit a task's limit at any time, the change takes effect from the selected date, while earlier dates stay unchanged.",
+        icon: <Clock size={20} />,
+        gifPlaceholder: "Setting or editing a task time limit",
       },
       {
         title: "Track your time",
@@ -1245,12 +1280,46 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
       {
         title: "Auto-advance timed tasks",
         description:
-          "Turn this on in Settings under Tasks to move to the next task 5 seconds after a timer ends. The toast shows what is next and lets you go sooner.",
+          "Turn this on to move to the next task automatically after a timer ends. You can change this any time in Settings under Tasks. The toast shows what is next and lets you go sooner.",
         icon: <Clock size={20} />,
         gifPlaceholder: "Auto-advancing to the next timed task",
+        control: "auto-advance",
+      },
+      {
+        title: "Quick start your practice",
+        description:
+          "Would you like a few ready-made tasks? Choose piano or guitar to set it as your default instrument and add matching practice goals. The suggested times are flexible; adjust or remove any task to fit your level. Choose “No thanks” to keep your current defaults and start without adding any tasks.",
+        icon: <Target size={20} />,
+        gifPlaceholder: "Choosing a piano or guitar practice plan",
+        control: "quick-start",
       },
     ];
     const currentStep = steps[onboardingStep ?? -1];
+
+    const quickStart = (instrument: "guitar" | "piano") => {
+      const taskTexts =
+        instrument === "piano"
+          ? [
+              "Warm up with a relaxed five-finger pattern, hands separately, aiming for even tone @time(5)",
+              "Practice the C major scale one octave, hands separately then together if comfortable @scale(C major) @time(10)",
+              "Practice a short passage from your current piece slowly; focus on accurate notes and steady rhythm @time(15)",
+            ]
+          : [
+              "Warm up with the Spider Drill @exercise(Spider Drill) @time(5)",
+              "Practice the A minor pentatonic scale @scale(A minor pentatonic) @time(10)",
+              "Practice smooth G major to C major chord changes @chord(G major) @chord(C major) @time(10)",
+            ];
+      const createdAt = Date.now();
+      onQuickStartTasks(
+        instrument,
+        taskTexts.map((text, index) => ({
+          id: `${createdAt}-${index}`,
+          text,
+          completed: false,
+        })),
+      );
+      finishOnboarding(instrument);
+    };
 
     return (
       <div className="font-mono bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex min-h-80 flex-col shadow-xl relative">
@@ -1279,6 +1348,9 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
               );
               setOnboardingAutoTaskSetup(
                 timerPreferences?.autoConfigureDashboardFromTask ?? false,
+              );
+              setOnboardingAutoAdvanceTimedTasks(
+                timerPreferences?.autoAdvanceTimedTasks ?? false,
               );
               setOnboardingStep(0);
             }}
@@ -1323,7 +1395,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                     </div>
                     <h2
                       id="daily-task-onboarding-title"
-                      className="text-2xl font-semibold text-on-surface"
+                      className="font-mono text-2xl font-semibold text-on-surface"
                     >
                       {currentStep.title}
                     </h2>
@@ -1335,7 +1407,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
 
                   {currentStep.trackingDetails && (
                     <div className="mt-6">
-                      <h3 className="text-sm font-semibold text-on-surface">
+                      <h3 className="font-mono text-sm font-semibold text-on-surface">
                         How tracking works
                       </h3>
                       <div className="mt-3 space-y-2.5">
@@ -1350,7 +1422,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                         ))}
                       </div>
                       <div className="mt-6 border-l-2 border-primary/40 pl-4">
-                        <h3 className="text-sm font-semibold text-on-surface">
+                        <h3 className="font-mono text-sm font-semibold text-on-surface">
                           Practice without tasks
                         </h3>
                         <p className="mt-1.5 text-sm leading-6 text-on-surface-variant">
@@ -1362,23 +1434,25 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                     </div>
                   )}
 
-                  <div className="mt-6 rounded-xl border border-dashed border-outline-variant/40 bg-surface-container-low p-2">
-                    <div
-                      role="img"
-                      aria-label={`GIF placeholder: ${currentStep.gifPlaceholder}`}
-                      className="flex min-h-[220px] flex-col items-center justify-center rounded-lg border border-outline-variant/20 bg-surface-container px-6 text-center"
-                    >
-                      <div className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
-                        <ImageIcon size={25} strokeWidth={1.7} />
+                  {currentStep.control !== "quick-start" && (
+                    <div className="mt-6 rounded-xl border border-dashed border-outline-variant/40 bg-surface-container-low p-2">
+                      <div
+                        role="img"
+                        aria-label={`GIF placeholder: ${currentStep.gifPlaceholder}`}
+                        className="flex min-h-[220px] flex-col items-center justify-center rounded-lg border border-outline-variant/20 bg-surface-container px-6 text-center"
+                      >
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
+                          <ImageIcon size={25} strokeWidth={1.7} />
+                        </div>
+                        <span className="mt-4 rounded-md border border-outline-variant/30 bg-surface-container-low px-2.5 py-1 text-[11px] font-medium uppercase text-on-surface-variant">
+                          GIF
+                        </span>
+                        <p className="mt-3 text-sm text-on-surface-variant">
+                          {currentStep.gifPlaceholder}
+                        </p>
                       </div>
-                      <span className="mt-4 rounded-md border border-outline-variant/30 bg-surface-container-low px-2.5 py-1 text-[11px] font-medium uppercase text-on-surface-variant">
-                        GIF
-                      </span>
-                      <p className="mt-3 text-sm text-on-surface-variant">
-                        {currentStep.gifPlaceholder}
-                      </p>
                     </div>
-                  </div>
+                  )}
 
                   {currentStep.control === "completion" && (
                     <label className="mt-5 block">
@@ -1426,6 +1500,52 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                       />
                     </button>
                   )}
+                  {currentStep.control === "auto-advance" && (
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={onboardingAutoAdvanceTimedTasks}
+                      aria-label="Auto-advance timed tasks"
+                      onClick={() =>
+                        setOnboardingAutoAdvanceTimedTasks(
+                          (enabled) => !enabled,
+                        )
+                      }
+                      className="mt-5 flex w-full items-center justify-between gap-4 rounded border border-outline-variant/30 bg-surface-container p-3 text-left transition-colors hover:bg-surface-container-high focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                    >
+                      <span>
+                        <span className="block text-sm font-semibold text-on-surface">
+                          Auto-advance timed tasks
+                        </span>
+                        <span className="mt-1 block text-xs text-on-surface-variant">
+                          Start the next task automatically when its timer ends
+                        </span>
+                      </span>
+                      <ToggleSwitchIndicator
+                        checked={onboardingAutoAdvanceTimedTasks}
+                      />
+                    </button>
+                  )}
+                  {currentStep.control === "quick-start" && (
+                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => quickStart("guitar")}
+                        className="flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container px-4 py-4 text-sm font-semibold text-on-surface transition-colors hover:border-primary hover:bg-primary/10"
+                      >
+                        <Guitar size={18} className="text-primary" />
+                        Start with guitar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => quickStart("piano")}
+                        className="flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container px-4 py-4 text-sm font-semibold text-on-surface transition-colors hover:border-primary hover:bg-primary/10"
+                      >
+                        <Piano size={18} className="text-primary" />
+                        Start with piano
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               <div className="mt-6 flex items-center justify-between border-t border-outline-variant/20 pt-4">
@@ -1442,10 +1562,10 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                 {onboardingStep === steps.length - 1 ? (
                   <button
                     type="button"
-                    onClick={finishOnboarding}
-                    className="rounded bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:bg-primary-container hover:text-on-primary-container"
+                    onClick={() => finishOnboarding(null)}
+                    className="rounded px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
                   >
-                    Finish and open my tasks
+                    No thanks
                   </button>
                 ) : (
                   <button
@@ -1781,6 +1901,7 @@ export const DropdownEditor: React.FC<{
   onClose: () => void;
   onSave: (params: string, closeDropdown?: boolean) => void;
 }> = ({ active, onClose, onSave }) => {
+  const { taskInstrumentFilter } = useSettingsContext();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const initial = parseParams(active.tool, active.params);
 
@@ -1796,7 +1917,7 @@ export const DropdownEditor: React.FC<{
     ...savedCustomTagEntries
       .filter((tag) => tag.category === "exercise")
       .map((tag) => tag.name),
-    ...COMMON_EXERCISES,
+    ...getTaskExerciseSuggestions(taskInstrumentFilter),
   ].filter(
     (tag, index, tags) =>
       tags.findIndex(
@@ -1807,7 +1928,7 @@ export const DropdownEditor: React.FC<{
     ...savedCustomTagEntries
       .filter((tag) => tag.category === "technique")
       .map((tag) => tag.name),
-    ...COMMON_TECHNIQUES,
+    ...getTaskTechniqueSuggestions(taskInstrumentFilter),
   ].filter(
     (tag, index, tags) =>
       tags.findIndex(

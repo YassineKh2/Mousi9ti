@@ -167,6 +167,9 @@ export function App() {
   const [practiceTasks, setPracticeTasks] = useState<PracticeTask[]>(() => {
     return getPracticeTasksForDate(new Date());
   });
+  const [quickStartInstrument, setQuickStartInstrument] = useState<
+    "guitar" | "piano" | "none" | null
+  >(null);
   const practiceTasksRef = useRef(practiceTasks);
   practiceTasksRef.current = practiceTasks;
   const [activeTaskId, setActiveTaskId] = useState<string | null>(() =>
@@ -1306,7 +1309,17 @@ export function App() {
               metronomeBarCycleMode={metronomeBarCycleMode}
               onBarCycleModeChange={setMetronomeBarCycleMode}
               onOpenRoutine={() => setActiveTab("routine")}
-              onFinishDailyTasksOnboarding={() => setActiveTab("routine")}
+              onFinishDailyTasksOnboarding={(instrument) => {
+                setQuickStartInstrument(instrument ?? "none");
+                setActiveTab("routine");
+              }}
+              onQuickStartTasks={(instrument, tasks) => {
+                handleUpdateSettings({
+                  defaultInstrument: instrument,
+                  taskInstrumentFilter: instrument,
+                });
+                setPracticeTasks(tasks);
+              }}
               practiceTasks={practiceTasks}
               activeTaskId={activeTaskId}
               timerPreferences={timerPreferences}
@@ -1358,6 +1371,8 @@ export function App() {
               streak={streak}
               practiceTasks={practiceTasks}
               onPracticeTasksChange={setPracticeTasks}
+              quickStartInstrument={quickStartInstrument}
+              onQuickStartSetupHandled={() => setQuickStartInstrument(null)}
               activeSessionDuration={activeSessionDuration}
               isSessionActive={isSessionActive}
               onToggleSession={handleToggleSession}

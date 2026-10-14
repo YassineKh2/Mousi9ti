@@ -36,7 +36,16 @@ export const COMMON_PRACTICE_KEYS = [
   "E Blues",
 ];
 
-export const COMMON_TECHNIQUES = [
+const interleaveSuggestions = (guitar: string[], piano: string[]) =>
+  guitar
+    .flatMap((guitarSuggestion, index) =>
+      piano[index] ? [guitarSuggestion, piano[index]] : [guitarSuggestion],
+    )
+    .concat(piano.slice(guitar.length));
+
+export type TaskInstrumentFilter = "guitar" | "piano" | "both";
+
+export const COMMON_GUITAR_TECHNIQUES = [
   "Alternate Picking",
   "Legato",
   "Sweep Picking",
@@ -49,6 +58,9 @@ export const COMMON_TECHNIQUES = [
   "Slide",
   "Downpicking",
   "Tremolo Picking",
+];
+
+export const COMMON_PIANO_TECHNIQUES = [
   "Hanon Finger Independence",
   "Czerny Etudes & Studies",
   "Parallel Scales & Arpeggios",
@@ -61,19 +73,58 @@ export const COMMON_TECHNIQUES = [
   "Octave Glissando & Jumps",
   "Chopin Etude Technique",
   "Bach Invention Counterpoint",
+  "Hand Independence & Coordination",
+  "Wrist Rotation & Relaxation",
+  "Voicing Control & Melody Projection",
 ];
 
-export const COMMON_EXERCISES = [
+export const COMMON_TECHNIQUES = interleaveSuggestions(
+  COMMON_GUITAR_TECHNIQUES,
+  COMMON_PIANO_TECHNIQUES,
+);
+
+export const getTaskTechniqueSuggestions = (
+  instrument: TaskInstrumentFilter,
+) =>
+  instrument === "both"
+    ? COMMON_TECHNIQUES
+    : instrument === "piano"
+      ? COMMON_PIANO_TECHNIQUES
+      : COMMON_GUITAR_TECHNIQUES;
+
+export const COMMON_GUITAR_EXERCISES = [
   "Spider Drill",
   "1-2-3-4 Permutations",
   "String Skipping",
   "Triad Arpeggios",
   "Pentatonic Sequences",
-  "Finger Independence",
   "Speed Burst Drill",
-  "Octave Jumps",
   "CAGED Shift Drills",
 ];
+
+export const COMMON_PIANO_EXERCISES = [
+  "Hanon Five-Finger Patterns",
+  "C Major Scale Two Octaves",
+  "Broken Chord & Arpeggio Patterns",
+  "Contrary-Motion Scales",
+  "Chord Inversions & Voicing",
+  "Sight-Reading Rhythm Drill",
+  "Hands-Together Coordination",
+  "Octave Jumps",
+  "Finger Independence",
+];
+
+export const COMMON_EXERCISES = interleaveSuggestions(
+  COMMON_GUITAR_EXERCISES,
+  COMMON_PIANO_EXERCISES,
+);
+
+export const getTaskExerciseSuggestions = (instrument: TaskInstrumentFilter) =>
+  instrument === "both"
+    ? COMMON_EXERCISES
+    : instrument === "piano"
+      ? COMMON_PIANO_EXERCISES
+      : COMMON_GUITAR_EXERCISES;
 
 export const MENTION_REGEX =
   /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time|random)(?:\(([^)]*)\))?)/gi;
@@ -273,6 +324,7 @@ export const getMentionContext = (
 
 export const getMentionSuggestions = (
   ctx: MentionContext | null,
+  instrument: TaskInstrumentFilter = "both",
 ): { label: string; value: string; subLabel?: string }[] => {
   if (!ctx) return [];
   const savedCustomTags = getSavedCustomTagEntries();
@@ -400,10 +452,8 @@ export const getMentionSuggestions = (
       const customTechniques = savedCustomTags
         .filter((tag) => tag.category === "technique")
         .map((tag) => tag.name);
-      const recommendations = [
-        ...customTechniques,
-        ...COMMON_TECHNIQUES,
-      ].filter(
+      const commonTechniques = getTaskTechniqueSuggestions(instrument);
+      const recommendations = [...customTechniques, ...commonTechniques].filter(
         (tag, index, tags) =>
           tags.findIndex(
             (candidate) => candidate.toLowerCase() === tag.toLowerCase(),
@@ -425,10 +475,23 @@ export const getMentionSuggestions = (
       recommendations
         .filter(
           (t) =>
-            !ctx.query || t.toLowerCase().includes(ctx.query.toLowerCase()),
+            !ctx.query ||
+            t.toLowerCase().includes(ctx.query.toLowerCase()) ||
+            (COMMON_PIANO_TECHNIQUES.includes(t) &&
+              "piano".startsWith(ctx.query.toLowerCase())) ||
+            (COMMON_GUITAR_TECHNIQUES.includes(t) &&
+              "guitar".startsWith(ctx.query.toLowerCase())),
         )
         .forEach((t) =>
-          list.push({ label: t, value: t, subLabel: "Technique" }),
+          list.push({
+            label: t,
+            value: t,
+            subLabel: COMMON_PIANO_TECHNIQUES.includes(t)
+              ? "Piano technique"
+              : COMMON_GUITAR_TECHNIQUES.includes(t)
+                ? "Guitar technique"
+                : "Custom technique",
+          }),
         );
       return list.slice(0, 7);
     } else if (ctx.tool === "bpm") {
@@ -461,7 +524,8 @@ export const getMentionSuggestions = (
       const customExercises = savedCustomTags
         .filter((tag) => tag.category === "exercise")
         .map((tag) => tag.name);
-      const recommendations = [...customExercises, ...COMMON_EXERCISES].filter(
+      const commonExercises = getTaskExerciseSuggestions(instrument);
+      const recommendations = [...customExercises, ...commonExercises].filter(
         (tag, index, tags) =>
           tags.findIndex(
             (candidate) => candidate.toLowerCase() === tag.toLowerCase(),
@@ -483,10 +547,23 @@ export const getMentionSuggestions = (
       recommendations
         .filter(
           (e) =>
-            !ctx.query || e.toLowerCase().includes(ctx.query.toLowerCase()),
+            !ctx.query ||
+            e.toLowerCase().includes(ctx.query.toLowerCase()) ||
+            (COMMON_PIANO_EXERCISES.includes(e) &&
+              "piano".startsWith(ctx.query.toLowerCase())) ||
+            (COMMON_GUITAR_EXERCISES.includes(e) &&
+              "guitar".startsWith(ctx.query.toLowerCase())),
         )
         .forEach((e) =>
-          list.push({ label: e, value: e, subLabel: "Exercise" }),
+          list.push({
+            label: e,
+            value: e,
+            subLabel: COMMON_PIANO_EXERCISES.includes(e)
+              ? "Piano exercise"
+              : COMMON_GUITAR_EXERCISES.includes(e)
+                ? "Guitar exercise"
+                : "Custom exercise",
+          }),
         );
       return list.slice(0, 7);
     } else if (ctx.tool === "scale") {

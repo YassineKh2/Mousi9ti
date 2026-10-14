@@ -95,6 +95,9 @@ for (const source of ["automatic", "manual"] as const) {
     assert.match(html, /Peak vs Average BPM/);
     assert.match(html, /Peak BPM/);
     assert.match(html, /Average BPM/);
+    const trends = html.slice(html.indexOf("Trends"));
+    assert.match(trends, /bg-\[var\(--color-primary\)\]"><\/i>Minutes/);
+    assert.match(trends, /bg-\[var\(--color-secondary\)\]"><\/i>Sessions/);
     assert.match(sources, /Solo/);
     assert.match(sources, />40%</);
     assert.match(html, />10m</);
@@ -181,10 +184,13 @@ it("shows bottom empty states when the selected dates have no chart data", () =>
       html.indexOf("Practice Sources"),
       html.indexOf("Trends"),
     );
+    const trends = html.slice(html.indexOf("Trends"));
 
     assert.match(bpm, /No BPM data for these dates/);
     assert.doesNotMatch(bpm, />\s*Peak BPM<|>\s*Average BPM</);
     assert.match(sources, /No practice data for these dates/);
+    assert.match(trends, /No practice data for these dates/);
+    assert.doesNotMatch(trends, />Minutes<\/span>|>Sessions<\/span>/);
     assert.doesNotMatch(
       sources,
       /Breakdown shows how much time was spent on each practice source/,

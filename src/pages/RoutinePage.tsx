@@ -519,43 +519,43 @@ const DEFAULT_WEEKLY_SCHEDULE: DayBlueprint[] = [
     day: "MON",
     name: "Monday",
     focusTheme: "Scale Mastery & Pentatonic Flows",
-    goalDurationMins: 45,
+    goalDurationMins: 30,
     defaultBpm: 100,
     modules: [
       {
         id: "m1",
         title: "Warm-up Chromatics",
         durationMin: 10,
-        completed: true,
+        completed: false,
       },
       {
         id: "m2",
         title: "Major Scale Box Positions",
-        durationMin: 20,
-        completed: true,
+        durationMin: 10,
+        completed: false,
       },
       {
         id: "m3",
         title: "Improvisation Backing Track",
-        durationMin: 15,
-        completed: true,
+        durationMin: 10,
+        completed: false,
       },
     ],
     tasks: [
       {
         id: "t1",
-        text: "Warm up with @scale(C major) Scale • 10m logged",
-        completed: true,
+        text: "Warm up with a C major scale pattern @scale(C major) @time(10)",
+        completed: false,
       },
       {
         id: "t2",
-        text: "Practice major scale positions across neck",
-        completed: true,
+        text: "Practice the C major scale across two nearby neck positions @time(10)",
+        completed: false,
       },
       {
         id: "t3",
-        text: "Play along with @bpm(100) for @timer(15m)",
-        completed: true,
+        text: "Improvise over a simple backing track at a steady tempo @bpm(100) @time(10)",
+        completed: false,
       },
     ],
   },
@@ -563,143 +563,130 @@ const DEFAULT_WEEKLY_SCHEDULE: DayBlueprint[] = [
     day: "TUE",
     name: "Tuesday",
     focusTheme: "Chord Voicings & Transitions",
-    goalDurationMins: 50,
+    goalDurationMins: 30,
     defaultBpm: 110,
     modules: [
       {
         id: "m1",
         title: "Chord Inversion Arpeggios",
-        durationMin: 15,
-        completed: true,
+        durationMin: 10,
+        completed: false,
       },
       {
         id: "m2",
         title: "Smooth Chord Changes",
-        durationMin: 20,
-        completed: true,
+        durationMin: 10,
+        completed: false,
       },
       {
         id: "m3",
         title: "Metronome Timing Drill",
-        durationMin: 15,
-        completed: true,
+        durationMin: 10,
+        completed: false,
       },
     ],
     tasks: [
       {
         id: "t1",
-        text: "Practice @chord(G major) to @chord(C major) changes",
-        completed: true,
+        text: "Practice smooth G major to C major chord changes @chord(G major) @chord(C major) @time(10)",
+        completed: false,
       },
       {
         id: "t2",
-        text: "Chord voicing drills in @key(G Major)",
-        completed: true,
+        text: "Practice G major chord voicings and clean transitions @key(G Major) @time(10)",
+        completed: false,
       },
-      { id: "t3", text: "Metronome timing test @bpm(110)", completed: true },
+      {
+        id: "t3",
+        text: "Strum a steady rhythm with a metronome @bpm(110) @time(10)",
+        completed: false,
+      },
     ],
   },
   {
     day: "WED",
     name: "Wednesday",
     focusTheme: "Speed, Agility & Finger Independence",
-    goalDurationMins: 65,
-    defaultBpm: 130,
+    goalDurationMins: 30,
+    defaultBpm: 100,
     modules: [
       {
         id: "m1",
-        title: "Hanon & Spider Drills",
-        durationMin: 20,
-        completed: true,
+        title: "Spider Drill Warm-up",
+        durationMin: 10,
+        completed: false,
       },
       {
         id: "m2",
         title: "Alternate Picking Speed Burst",
-        durationMin: 25,
-        completed: true,
+        durationMin: 10,
+        completed: false,
       },
       {
         id: "m3",
         title: "String Skipping Etude",
-        durationMin: 20,
-        completed: true,
+        durationMin: 10,
+        completed: false,
       },
     ],
     tasks: [
       {
         id: "t1",
-        text: "Spider 1-2-3-4 drill with @bpm(130)",
-        completed: true,
+        text: "Play a relaxed 1-2-3-4 finger warm-up with even timing @bpm(100) @time(10)",
+        completed: false,
       },
       {
         id: "t2",
-        text: "Alternate picking speed bursts @technique(Alternate Picking)",
-        completed: true,
+        text: "Practice controlled alternate picking at a comfortable speed @technique(Alternate Picking) @time(10)",
+        completed: false,
       },
-      { id: "t3", text: "String skipping accuracy routine", completed: true },
+      {
+        id: "t3",
+        text: "Practice a short string-skipping pattern slowly for clean accuracy @time(10)",
+        completed: false,
+      },
     ],
   },
   {
     day: "THU",
     name: "Thursday",
     focusTheme: "Fretboard Visualization & CAGED Transitions",
-    goalDurationMins: 60,
-    defaultBpm: 120,
+    goalDurationMins: 30,
+    defaultBpm: 100,
     modules: [
       {
         id: "m1",
         title: "Warm-up Chromatics",
         durationMin: 10,
-        completed: true,
+        completed: false,
       },
       {
         id: "m2",
         title: "Random Note Fretboard Drill",
         durationMin: 10,
-        completed: true,
+        completed: false,
       },
       {
         id: "m3",
         title: "CAGED Scale Position Linking",
-        durationMin: 20,
-        completed: false,
-      },
-      {
-        id: "m4",
-        title: "BPM Speed Ladder Alternate Picking",
-        durationMin: 20,
+        durationMin: 10,
         completed: false,
       },
     ],
     tasks: [
       {
         id: "t1",
-        text: "Warm up with @scale(C major) • 10m logged",
-        completed: true,
-      },
-      {
-        id: "t2",
-        text: "Practice @key(G Major) to @key(C Major) changes",
-        completed: true,
-      },
-      {
-        id: "t3",
-        text: "Play along with @bpm(80) for @timer(5m)",
-        completed: true,
-      },
-      {
-        id: "t4",
-        text: "Neck memorization: locate F# across all 6 strings",
-        completed: true,
-      },
-      {
-        id: "t5",
-        text: "Drill @scale(A pentatonic minor) connecting Pos 1 -> Pos 2",
+        text: "Warm up with a short chromatic pattern across the strings @time(10)",
         completed: false,
       },
       {
-        id: "t6",
-        text: "Speed burst alternate picking with @bpm(120) for @timer(15m)",
+        id: "t2",
+        text: "Practice G major to C major chord changes with clean transitions @key(G Major) @time(10)",
+        completed: false,
+      },
+      {
+        id: "t3",
+        text: "Practice the A minor pentatonic scale between two nearby positions @scale(A pentatonic minor) @time(10)",
         completed: false,
       },
     ],
@@ -708,31 +695,42 @@ const DEFAULT_WEEKLY_SCHEDULE: DayBlueprint[] = [
     day: "FRI",
     name: "Friday",
     focusTheme: "Rhythm, Strumming & Grooves",
-    goalDurationMins: 40,
-    defaultBpm: 90,
+    goalDurationMins: 30,
+    defaultBpm: 80,
     modules: [
       {
         id: "m1",
         title: "Syncopated Rhythm Patterns",
-        durationMin: 20,
+        durationMin: 10,
         completed: false,
       },
       {
         id: "m2",
         title: "Metronome Subdivision Drill",
-        durationMin: 20,
+        durationMin: 10,
+        completed: false,
+      },
+      {
+        id: "m3",
+        title: "Steady Strumming Practice",
+        durationMin: 10,
         completed: false,
       },
     ],
     tasks: [
       {
         id: "t1",
-        text: "Syncopated strumming with @bpm(90)",
+        text: "Practice a relaxed down-up strumming pattern @bpm(80) @time(10)",
         completed: false,
       },
       {
         id: "t2",
-        text: "Subdivision click accuracy drill @metronome(90,4/4)",
+        text: "Work on a simple syncopated rhythm while keeping a steady pulse @time(10)",
+        completed: false,
+      },
+      {
+        id: "t3",
+        text: "Practice eighth-note subdivisions with a metronome @metronome(80,4/4) @time(10)",
         completed: false,
       },
     ],
@@ -741,37 +739,42 @@ const DEFAULT_WEEKLY_SCHEDULE: DayBlueprint[] = [
     day: "SAT",
     name: "Saturday",
     focusTheme: "Repertoire & Full Practice Suite",
-    goalDurationMins: 75,
-    defaultBpm: 115,
+    goalDurationMins: 30,
+    defaultBpm: 90,
     modules: [
       {
         id: "m1",
         title: "Full Song Playthroughs",
-        durationMin: 35,
+        durationMin: 10,
         completed: false,
       },
       {
         id: "m2",
         title: "Sweep Picking & Arpeggios",
-        durationMin: 20,
+        durationMin: 10,
         completed: false,
       },
       {
         id: "m3",
         title: "Improvisation Jam Session",
-        durationMin: 20,
+        durationMin: 10,
         completed: false,
       },
     ],
     tasks: [
       {
         id: "t1",
-        text: "Full playthrough of main pieces @custom(Performance ready)",
+        text: "Practice a short section of a current song and focus on clean changes @time(10)",
         completed: false,
       },
       {
         id: "t2",
-        text: "Sweep arpeggio transitions @technique(Sweep Picking)",
+        text: "Practice chord-to-chord transitions from your current repertoire @time(10)",
+        completed: false,
+      },
+      {
+        id: "t3",
+        text: "Play a short song section through at a comfortable tempo @bpm(90) @time(10)",
         completed: false,
       },
     ],
@@ -792,24 +795,311 @@ const DEFAULT_WEEKLY_SCHEDULE: DayBlueprint[] = [
       {
         id: "m2",
         title: "Weekly Review & Reflection",
-        durationMin: 15,
+        durationMin: 10,
+        completed: false,
+      },
+      {
+        id: "m3",
+        title: "Relaxed Playing & Next-Week Goal",
+        durationMin: 10,
         completed: false,
       },
     ],
     tasks: [
       {
         id: "t1",
-        text: "Free Improvisation in @key(A Minor)",
+        text: "Improvise freely using the A minor scale @key(A Minor) @time(10)",
         completed: false,
       },
       {
         id: "t2",
-        text: "Review weekly logs and notes @timer(15m)",
+        text: "Review one riff or song section from this week @time(10)",
+        completed: false,
+      },
+      {
+        id: "t3",
+        text: "Finish with relaxed playing and note one goal for next week @time(10)",
         completed: false,
       },
     ],
   },
 ];
+
+const PIANO_WEEKLY_PLAN: Record<
+  string,
+  {
+    focusTheme: string;
+    goalDurationMins: number;
+    defaultBpm: number;
+    modules: { title: string; durationMin: number }[];
+    tasks: string[];
+  }
+> = {
+  MON: {
+    focusTheme: "Relaxed Technique, Scales & Repertoire",
+    goalDurationMins: 30,
+    defaultBpm: 70,
+    modules: [
+      { title: "Relaxed Five-Finger Warm-up", durationMin: 5 },
+      { title: "C Major Scale", durationMin: 10 },
+      { title: "Focused Piece Practice", durationMin: 15 },
+    ],
+    tasks: [
+      "Warm up with a relaxed five-finger pattern, hands separately, aiming for even tone @time(5)",
+      "Practice the C major scale one octave, hands separately then together if comfortable @scale(C major) @time(10)",
+      "Practice a short passage from your current piece slowly; focus on accurate notes and steady rhythm @time(15)",
+    ],
+  },
+  TUE: {
+    focusTheme: "Reading, Rhythm & Chord Foundations",
+    goalDurationMins: 30,
+    defaultBpm: 70,
+    modules: [
+      { title: "Short Sight-Reading Passage", durationMin: 10 },
+      { title: "G Major & Tonic Chord", durationMin: 10 },
+      { title: "Piece Passage Practice", durationMin: 10 },
+    ],
+    tasks: [
+      "Sight-read a short, easy passage slowly without stopping to correct each note @time(10)",
+      "Practice the G major scale and G major triad, hands separately first @scale(G major) @chord(G major) @time(10)",
+      "Work on one small section of your current piece with a steady pulse @time(10)",
+    ],
+  },
+  WED: {
+    focusTheme: "Hand Coordination & Even Playing",
+    goalDurationMins: 30,
+    defaultBpm: 65,
+    modules: [
+      { title: "Hands-Together Coordination", durationMin: 10 },
+      { title: "Broken Chord Pattern", durationMin: 10 },
+      { title: "Piece Practice", durationMin: 10 },
+    ],
+    tasks: [
+      "Practice a simple hands-together pattern slowly; keep both parts even and relaxed @technique(Hand Independence & Coordination) @time(10)",
+      "Play a C major broken-chord pattern, listening for an even sound @chord(C major) @time(10)",
+      "Repeat a short piece passage hands separately where needed, then put it together @time(10)",
+    ],
+  },
+  THU: {
+    focusTheme: "Minor-Key Scale, Chords & Reading",
+    goalDurationMins: 30,
+    defaultBpm: 65,
+    modules: [
+      { title: "A Minor Scale", durationMin: 10 },
+      { title: "A Minor Chord Pattern", durationMin: 10 },
+      { title: "Sight-Reading", durationMin: 10 },
+    ],
+    tasks: [
+      "Practice the A natural minor scale slowly, hands separately, with accurate fingering @scale(A minor) @time(10)",
+      "Play an A minor triad in root position and inversion, listening for an even tone @chord(A minor) @time(10)",
+      "Sight-read a short passage at a comfortable tempo and keep going through small mistakes @time(10)",
+    ],
+  },
+  FRI: {
+    focusTheme: "Musical Expression & Repertoire",
+    goalDurationMins: 30,
+    defaultBpm: 70,
+    modules: [
+      { title: "Articulation & Dynamics", durationMin: 10 },
+      { title: "Difficult Passage in Small Sections", durationMin: 10 },
+      { title: "Expressive Play-Through", durationMin: 10 },
+    ],
+    tasks: [
+      "Choose one phrase from your piece and practice its dynamics and articulation deliberately @time(10)",
+      "Slow down one difficult passage and repeat only the small section that needs work @time(10)",
+      "Play the piece or section through while listening for phrasing and an even pulse @time(10)",
+    ],
+  },
+  SAT: {
+    focusTheme: "Repertoire Building & Confident Play-Through",
+    goalDurationMins: 35,
+    defaultBpm: 70,
+    modules: [
+      { title: "Learn a New Short Passage", durationMin: 15 },
+      { title: "Connect Practiced Sections", durationMin: 10 },
+      { title: "Play-Through & Listen", durationMin: 10 },
+    ],
+    tasks: [
+      "Learn a short new passage by checking notes and rhythm before gradually increasing tempo @time(15)",
+      "Join two practiced sections together and note any transition that needs extra work @time(10)",
+      "Play the piece through at a comfortable tempo and listen for an even, expressive sound @time(10)",
+    ],
+  },
+  SUN: {
+    focusTheme: "Light Review & Enjoyment",
+    goalDurationMins: 30,
+    defaultBpm: 60,
+    modules: [
+      { title: "Review a Familiar Piece", durationMin: 10 },
+      { title: "Easy Reading", durationMin: 10 },
+      { title: "Favorite Music", durationMin: 10 },
+    ],
+    tasks: [
+      "Review one familiar piece slowly and notice which passage feels more secure now @time(10)",
+      "Sight-read an easy passage at a comfortable pace @time(10)",
+      "Finish with a favorite piece, keeping the session relaxed @time(10)",
+    ],
+  },
+};
+
+const DEFAULT_PIANO_WEEKLY_SCHEDULE: DayBlueprint[] =
+  DEFAULT_WEEKLY_SCHEDULE.map((day) => {
+    const pianoPlan = PIANO_WEEKLY_PLAN[day.day];
+    return {
+      ...day,
+      focusTheme: pianoPlan.focusTheme,
+      goalDurationMins: pianoPlan.goalDurationMins,
+      defaultBpm: pianoPlan.defaultBpm,
+      modules: pianoPlan.modules.map((module, index) => ({
+        ...module,
+        id: `piano-${day.day.toLowerCase()}-module-${index + 1}`,
+        completed: false,
+      })),
+      tasks: pianoPlan.tasks.map((text, index) => ({
+        id: `piano-${day.day.toLowerCase()}-task-${index + 1}`,
+        text,
+        completed: false,
+      })),
+    };
+  });
+
+const isUnmodifiedDefaultSchedule = (
+  schedule: DayBlueprint[],
+  defaults: DayBlueprint[],
+) =>
+  schedule.length === defaults.length &&
+  defaults.every((defaultDay) => {
+    const day = schedule.find((candidate) => candidate.day === defaultDay.day);
+    if (!day) return false;
+    return (
+      day.name === defaultDay.name &&
+      day.focusTheme === defaultDay.focusTheme &&
+      day.goalDurationMins === defaultDay.goalDurationMins &&
+      day.defaultBpm === defaultDay.defaultBpm &&
+      day.modules.length === defaultDay.modules.length &&
+      day.modules.every(
+        (module, index) =>
+          module.id === defaultDay.modules[index].id &&
+          module.title === defaultDay.modules[index].title &&
+          module.durationMin === defaultDay.modules[index].durationMin,
+      ) &&
+      day.tasks.length === defaultDay.tasks.length &&
+      day.tasks.every(
+        (task, index) =>
+          task.id === defaultDay.tasks[index].id &&
+          task.text === defaultDay.tasks[index].text,
+      )
+    );
+  });
+
+const PREVIOUS_GUITAR_DEFAULT_TASKS: Record<string, string[]> = {
+  MON: [
+    "Warm up with @scale(C major) Scale • 10m logged",
+    "Practice major scale positions across neck",
+    "Play along with @bpm(100) for @timer(15m)",
+  ],
+  TUE: [
+    "Practice @chord(G major) to @chord(C major) changes",
+    "Chord voicing drills in @key(G Major)",
+    "Metronome timing test @bpm(110)",
+  ],
+  WED: [
+    "Spider 1-2-3-4 drill with @bpm(130)",
+    "Alternate picking speed bursts @technique(Alternate Picking)",
+    "String skipping accuracy routine",
+  ],
+  THU: [
+    "Warm up with @scale(C major) • 10m logged",
+    "Practice @key(G Major) to @key(C Major) changes",
+    "Play along with @bpm(80) for @timer(5m)",
+    "Neck memorization: locate F# across all 6 strings",
+    "Drill @scale(A pentatonic minor) connecting Pos 1 -> Pos 2",
+    "Speed burst alternate picking with @bpm(120) for @timer(15m)",
+  ],
+  FRI: [
+    "Syncopated strumming with @bpm(90)",
+    "Subdivision click accuracy drill @metronome(90,4/4)",
+  ],
+  SAT: [
+    "Full playthrough of main pieces @custom(Performance ready)",
+    "Sweep arpeggio transitions @technique(Sweep Picking)",
+  ],
+  SUN: [
+    "Free Improvisation in @key(A Minor)",
+    "Review weekly logs and notes @timer(15m)",
+  ],
+};
+
+const PREVIOUS_GUITAR_DEFAULT_DAY_DETAILS: Record<
+  string,
+  Pick<DayBlueprint, "focusTheme" | "goalDurationMins" | "defaultBpm">
+> = {
+  MON: {
+    focusTheme: "Scale Mastery & Pentatonic Flows",
+    goalDurationMins: 45,
+    defaultBpm: 100,
+  },
+  TUE: {
+    focusTheme: "Chord Voicings & Transitions",
+    goalDurationMins: 50,
+    defaultBpm: 110,
+  },
+  WED: {
+    focusTheme: "Speed, Agility & Finger Independence",
+    goalDurationMins: 65,
+    defaultBpm: 130,
+  },
+  THU: {
+    focusTheme: "Fretboard Visualization & CAGED Transitions",
+    goalDurationMins: 60,
+    defaultBpm: 120,
+  },
+  FRI: {
+    focusTheme: "Rhythm, Strumming & Grooves",
+    goalDurationMins: 40,
+    defaultBpm: 90,
+  },
+  SAT: {
+    focusTheme: "Repertoire & Full Practice Suite",
+    goalDurationMins: 75,
+    defaultBpm: 115,
+  },
+  SUN: {
+    focusTheme: "Review, Tone & Free Improvisation",
+    goalDurationMins: 30,
+    defaultBpm: 80,
+  },
+};
+
+const isUnmodifiedPreviousGuitarSchedule = (schedule: DayBlueprint[]) =>
+  schedule.length === Object.keys(PREVIOUS_GUITAR_DEFAULT_TASKS).length &&
+  Object.entries(PREVIOUS_GUITAR_DEFAULT_TASKS).every(([dayCode, texts]) => {
+    const day = schedule.find((candidate) => candidate.day === dayCode);
+    const details = PREVIOUS_GUITAR_DEFAULT_DAY_DETAILS[dayCode];
+    if (!day) return false;
+    return (
+      day.focusTheme === details.focusTheme &&
+      day.goalDurationMins === details.goalDurationMins &&
+      day.defaultBpm === details.defaultBpm &&
+      day.tasks.length === texts.length &&
+      day.tasks.every(
+        (task, index) =>
+          task.id === `t${index + 1}` && task.text === texts[index],
+      )
+    );
+  });
+
+const PREVIOUS_PIANO_DEFAULT_SCHEDULE: DayBlueprint[] =
+  DEFAULT_PIANO_WEEKLY_SCHEDULE.map((day) =>
+    day.day === "SUN"
+      ? {
+          ...day,
+          goalDurationMins: 20,
+          modules: day.modules.slice(0, 2),
+          tasks: day.tasks.slice(0, 2),
+        }
+      : day,
+  );
 
 const DAY_CODES = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const getTodayCode = () => DAY_CODES[(new Date().getDay() + 6) % 7];
@@ -824,6 +1114,8 @@ interface RoutinePageProps {
   streak?: StreakData;
   practiceTasks?: PracticeTask[];
   onPracticeTasksChange?: (tasks: PracticeTask[]) => void;
+  quickStartInstrument?: "guitar" | "piano" | "none" | null;
+  onQuickStartSetupHandled?: () => void;
   activeSessionDuration?: number;
   isSessionActive?: boolean;
   onToggleSession?: () => void;
@@ -835,6 +1127,8 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   streak: propStreak,
   practiceTasks,
   onPracticeTasksChange,
+  quickStartInstrument,
+  onQuickStartSetupHandled,
   activeSessionDuration = 0,
   isSessionActive = false,
   onToggleSession = () => {},
@@ -934,11 +1228,53 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 
   const [weeklySchedule, setWeeklySchedule] = useState<DayBlueprint[]>(() => {
     const saved = localStorage.getItem("mous9iti_weekly_schedule");
-    let schedule = DEFAULT_WEEKLY_SCHEDULE;
+    let schedule =
+      settings.defaultInstrument === "piano"
+        ? DEFAULT_PIANO_WEEKLY_SCHEDULE
+        : DEFAULT_WEEKLY_SCHEDULE;
+    if (quickStartInstrument === "none") {
+      schedule = schedule.map((day) => ({ ...day, tasks: [] }));
+    }
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) schedule = parsed;
+        if (Array.isArray(parsed)) {
+          const savedIsGuitarDefault = isUnmodifiedDefaultSchedule(
+            parsed,
+            DEFAULT_WEEKLY_SCHEDULE,
+          );
+          const savedIsPianoDefault = isUnmodifiedDefaultSchedule(
+            parsed,
+            DEFAULT_PIANO_WEEKLY_SCHEDULE,
+          );
+          const savedIsPreviousGuitarDefault =
+            isUnmodifiedPreviousGuitarSchedule(parsed);
+          const savedIsPreviousPianoDefault = isUnmodifiedDefaultSchedule(
+            parsed,
+            PREVIOUS_PIANO_DEFAULT_SCHEDULE,
+          );
+          if (
+            quickStartInstrument === "none" &&
+            (savedIsGuitarDefault ||
+              savedIsPianoDefault ||
+              savedIsPreviousGuitarDefault ||
+              savedIsPreviousPianoDefault)
+          ) {
+            schedule = parsed.map((day) => ({ ...day, tasks: [] }));
+          } else if (
+            quickStartInstrument === "piano" &&
+            (savedIsGuitarDefault || savedIsPreviousGuitarDefault)
+          ) {
+            schedule = DEFAULT_PIANO_WEEKLY_SCHEDULE;
+          } else if (
+            quickStartInstrument === "guitar" &&
+            (savedIsPianoDefault || savedIsPreviousPianoDefault)
+          ) {
+            schedule = DEFAULT_WEEKLY_SCHEDULE;
+          } else {
+            schedule = parsed;
+          }
+        }
       } catch (e) {}
     }
 
@@ -946,7 +1282,16 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       const currentTasks = practiceTasks.filter((task) => !isExpiredTask(task));
       return schedule.map((day) =>
         day.day === getTodayCode()
-          ? { ...day, tasks: mergeRoutineTasks(day.tasks, currentTasks) }
+          ? {
+              ...day,
+              tasks:
+                quickStartInstrument === "guitar" ||
+                quickStartInstrument === "piano"
+                  ? currentTasks
+                  : quickStartInstrument === "none"
+                    ? day.tasks
+                    : mergeRoutineTasks(day.tasks, currentTasks),
+            }
           : day,
       );
     }
@@ -971,6 +1316,9 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       return schedule;
     }
   });
+  useEffect(() => {
+    if (quickStartInstrument) onQuickStartSetupHandled?.();
+  }, [quickStartInstrument, onQuickStartSetupHandled]);
   const daysInWeek = DAY_CODES.map((dayCode) =>
     weeklySchedule.find((day) => day.day === dayCode),
   ).filter((day): day is DayBlueprint => Boolean(day));
@@ -1020,12 +1368,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
         activeDayTasks.filter((task) => !isExpiredTask(task)),
       );
     }
-  }, [
-    weeklySchedule,
-    activeDayCode,
-    historyWeekStart,
-    onPracticeTasksChange,
-  ]);
+  }, [weeklySchedule, activeDayCode, historyWeekStart, onPracticeTasksChange]);
 
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
@@ -1234,7 +1577,10 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                       ),
                       startsAt:
                         duration === "custom" && task.duration === "custom"
-                          ? Math.max(task.startsAt ?? changeStartsAt, changeStartsAt)
+                          ? Math.max(
+                              task.startsAt ?? changeStartsAt,
+                              changeStartsAt,
+                            )
                           : changeStartsAt,
                       expiresAt:
                         duration === "custom"
@@ -1482,96 +1828,97 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
             ref={completionPickerRef}
             className="routine-history-picker col-span-2 w-full lg:col-span-1 lg:w-auto"
           >
-              <button
-                ref={completionPickerTriggerRef}
-                type="button"
-                className="routine-history-trigger w-full justify-between lg:w-auto"
-                onClick={() => setIsCompletionPickerOpen((isOpen) => !isOpen)}
-                aria-expanded={isCompletionPickerOpen}
-                aria-label="Choose a week to view completed tasks"
-              >
-                <Calendar size={14} />
-                <span>
-                  {formatHistoryDate(historyWeekStart)} –{" "}
-                  {formatHistoryDate(
-                    new Date(
-                      historyWeekStart.getFullYear(),
-                      historyWeekStart.getMonth(),
-                      historyWeekStart.getDate() + 6,
-                    ),
-                  )}
-                </span>
-                <ChevronDown size={13} />
-              </button>
-              {isCompletionPickerOpen && (
-                <div className="routine-history-popover">
-                  <div className="routine-history-month">
-                    <button
-                      type="button"
-                      onClick={() => changeHistoryMonth(-1)}
-                      aria-label="Previous month"
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-                    <strong>
-                      {historyMonth.toLocaleDateString("en-US", {
-                        month: "long",
-                        year: "numeric",
-                      })}
-                    </strong>
-                    <button
-                      type="button"
-                      onClick={() => changeHistoryMonth(1)}
-                      aria-label="Next month"
-                    >
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
-                  <div className="routine-history-week-label">SELECT WEEK</div>
-                  <div className="routine-history-week-list">
-                    {historyWeeks.map((weekStart, index) => {
-                      const weekEnd = new Date(weekStart);
-                      weekEnd.setDate(weekEnd.getDate() + 6);
-                      const isSelected =
-                        weekStart.getTime() === historyWeekStart.getTime();
-                      const isCurrent =
-                        weekStart.getTime() === getWeekStart(new Date()).getTime();
-
-                      return (
-                        <button
-                          key={weekStart.getTime()}
-                          type="button"
-                          className={`routine-history-week-option ${
-                            isSelected ? "selected" : ""
-                          } ${isCurrent ? "current" : ""}`}
-                          aria-label={`Week ${index + 1}, ${formatHistoryDate(weekStart)} to ${formatHistoryDate(weekEnd)}${isCurrent ? ", current week" : ""}`}
-                          aria-pressed={isSelected}
-                          onClick={() => {
-                            setHistoryWeekStart(new Date(weekStart));
-                            setIsCompletionPickerOpen(false);
-                          }}
-                        >
-                          <span className="routine-history-week-number">
-                            Week {index + 1}
-                          </span>
-                          <span className="routine-history-week-range">
-                            {formatHistoryDate(weekStart)} –{" "}
-                            {formatHistoryDate(weekEnd)}
-                          </span>
-                          {isCurrent && (
-                            <span className="routine-history-current-label">
-                              CURRENT
-                            </span>
-                          )}
-                          {isSelected && (
-                            <CheckCircle2 size={15} aria-hidden="true" />
-                          )}
-                        </button>
-                      );
+            <button
+              ref={completionPickerTriggerRef}
+              type="button"
+              className="routine-history-trigger w-full justify-between lg:w-auto"
+              onClick={() => setIsCompletionPickerOpen((isOpen) => !isOpen)}
+              aria-expanded={isCompletionPickerOpen}
+              aria-label="Choose a week to view completed tasks"
+            >
+              <Calendar size={14} />
+              <span>
+                {formatHistoryDate(historyWeekStart)} –{" "}
+                {formatHistoryDate(
+                  new Date(
+                    historyWeekStart.getFullYear(),
+                    historyWeekStart.getMonth(),
+                    historyWeekStart.getDate() + 6,
+                  ),
+                )}
+              </span>
+              <ChevronDown size={13} />
+            </button>
+            {isCompletionPickerOpen && (
+              <div className="routine-history-popover">
+                <div className="routine-history-month">
+                  <button
+                    type="button"
+                    onClick={() => changeHistoryMonth(-1)}
+                    aria-label="Previous month"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <strong>
+                    {historyMonth.toLocaleDateString("en-US", {
+                      month: "long",
+                      year: "numeric",
                     })}
-                  </div>
+                  </strong>
+                  <button
+                    type="button"
+                    onClick={() => changeHistoryMonth(1)}
+                    aria-label="Next month"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
                 </div>
-              )}
+                <div className="routine-history-week-label">SELECT WEEK</div>
+                <div className="routine-history-week-list">
+                  {historyWeeks.map((weekStart, index) => {
+                    const weekEnd = new Date(weekStart);
+                    weekEnd.setDate(weekEnd.getDate() + 6);
+                    const isSelected =
+                      weekStart.getTime() === historyWeekStart.getTime();
+                    const isCurrent =
+                      weekStart.getTime() ===
+                      getWeekStart(new Date()).getTime();
+
+                    return (
+                      <button
+                        key={weekStart.getTime()}
+                        type="button"
+                        className={`routine-history-week-option ${
+                          isSelected ? "selected" : ""
+                        } ${isCurrent ? "current" : ""}`}
+                        aria-label={`Week ${index + 1}, ${formatHistoryDate(weekStart)} to ${formatHistoryDate(weekEnd)}${isCurrent ? ", current week" : ""}`}
+                        aria-pressed={isSelected}
+                        onClick={() => {
+                          setHistoryWeekStart(new Date(weekStart));
+                          setIsCompletionPickerOpen(false);
+                        }}
+                      >
+                        <span className="routine-history-week-number">
+                          Week {index + 1}
+                        </span>
+                        <span className="routine-history-week-range">
+                          {formatHistoryDate(weekStart)} –{" "}
+                          {formatHistoryDate(weekEnd)}
+                        </span>
+                        {isCurrent && (
+                          <span className="routine-history-current-label">
+                            CURRENT
+                          </span>
+                        )}
+                        {isSelected && (
+                          <CheckCircle2 size={15} aria-hidden="true" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1597,7 +1944,9 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
               key={day.day}
               onClick={() => setActiveDayCode(day.day)}
               className={`text-left p-3.5 rounded-xl border flex flex-col justify-between gap-3 relative transition-all cursor-pointer ${
-                index === daysInWeek.length - 1 ? "col-span-2 sm:col-span-1" : ""
+                index === daysInWeek.length - 1
+                  ? "col-span-2 sm:col-span-1"
+                  : ""
               } ${
                 isSelected
                   ? "bg-surface-container-high border-primary ring-1 ring-primary shadow-md"
@@ -1682,12 +2031,11 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
           </div>
 
           {/* Tasks List */}
-          {/* Tasks List */}
           <div className="flex flex-col gap-2.5 min-h-[300px] overflow-y-auto max-h-[360px] custom-scrollbar pr-1">
             {activeDayTasks.length === 0 ? (
               <div className="text-center py-12 text-on-surface-variant text-sm font-mono">
-                No goals defined for {activeDay.name}. Add one below or
-                configure the blueprint.
+                No goals defined for {activeDay.name}. Start by adding ones
+                below
               </div>
             ) : (
               activeDayTasks.map((task) => {

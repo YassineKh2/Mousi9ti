@@ -1211,40 +1211,60 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
         <h2 className="font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
           Trends
         </h2>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={trendData}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="var(--color-outline-variant)"
-                opacity={0.4}
-              />
-              <XAxis dataKey="date" fontSize={11} />
-              <YAxis yAxisId="time" unit="m" fontSize={11} />
-              <YAxis yAxisId="count" orientation="right" fontSize={11} />
-              <Tooltip
-                contentStyle={statsTooltipContentStyle}
-                labelStyle={statsTooltipLabelStyle}
-                itemStyle={statsTooltipItemStyle}
-              />
-              <Area
-                yAxisId="time"
-                dataKey="minutes"
-                fill="var(--color-primary)"
-                fillOpacity={0.25}
-                type="monotone"
-                stroke="var(--color-primary)"
-                name="Minutes"
-              />
-              <Line
-                yAxisId="count"
-                dataKey="sessions"
-                stroke="var(--color-secondary)"
-                name="Sessions"
-                strokeWidth={2}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
+        <div className="flex h-64 min-w-0 flex-col">
+          {trendData.length > 0 ? (
+            <div className="min-h-0 flex-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={trendData}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="var(--color-outline-variant)"
+                    opacity={0.4}
+                  />
+                  <XAxis dataKey="date" fontSize={11} />
+                  <YAxis yAxisId="time" unit="m" fontSize={11} />
+                  <YAxis yAxisId="count" orientation="right" fontSize={11} />
+                  <Tooltip
+                    contentStyle={statsTooltipContentStyle}
+                    labelStyle={statsTooltipLabelStyle}
+                    itemStyle={statsTooltipItemStyle}
+                  />
+                  <Area
+                    yAxisId="time"
+                    dataKey="minutes"
+                    fill="var(--color-primary)"
+                    fillOpacity={0.25}
+                    type="monotone"
+                    stroke="var(--color-primary)"
+                    name="Minutes"
+                  />
+                  <Line
+                    yAxisId="count"
+                    dataKey="sessions"
+                    stroke="var(--color-secondary)"
+                    name="Sessions"
+                    strokeWidth={2}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="mt-auto text-[10px] font-mono text-on-surface-variant">
+              No practice data for these dates.
+            </p>
+          )}
+          {trendData.length > 0 && (
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] font-mono text-on-surface-variant">
+              <span className="inline-flex items-center gap-2">
+                <i className="h-2 w-2 rounded-full bg-[var(--color-primary)]" />
+                Minutes
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <i className="h-2 w-2 rounded-full bg-[var(--color-secondary)]" />
+                Sessions
+              </span>
+            </div>
+          )}
         </div>
       </section>
 

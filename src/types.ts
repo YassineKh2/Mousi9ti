@@ -280,6 +280,7 @@ export type FretboardTheme =
 
 export interface AppSettings {
   theme: "dark" | "light";
+  taskInstrumentFilter: "guitar" | "piano" | "both";
   taskDefaultDuration: "forever" | "week" | "month" | "year" | "custom";
   taskDefaultCustomDuration: number;
   taskDefaultCustomUnit: "days" | "weeks" | "months" | "years";

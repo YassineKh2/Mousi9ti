@@ -45,6 +45,7 @@ interface MetronomeProps {
   onLogBpmToSession?: (bpm: number) => void;
   settings: AppSettings;
   showTempoPresets?: boolean;
+  showTapTempoIcon?: boolean;
   isPlaying?: boolean;
   onIsPlayingChange?: (playing: boolean) => void;
   barCycleMode?: boolean;
@@ -111,6 +112,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
   onLogBpmToSession,
   settings,
   showTempoPresets = true,
+  showTapTempoIcon = true,
   isPlaying: controlledIsPlaying,
   onIsPlayingChange,
   barCycleMode: controlledBarCycleMode,
@@ -960,9 +962,11 @@ export const Metronome: React.FC<MetronomeProps> = ({
                 title="Tap along to set the tempo"
                 onClick={handleTapTempo}
               >
-                <span className="precision-metro__tap" aria-hidden="true">
-                  <Hand size={16} strokeWidth={2.25} />
-                </span>
+                {showTapTempoIcon && (
+                  <span className="precision-metro__tap" aria-hidden="true">
+                    <Hand size={16} strokeWidth={2.25} />
+                  </span>
+                )}
                 Tap tempo
               </button>
               <button
@@ -1141,7 +1145,9 @@ export const Metronome: React.FC<MetronomeProps> = ({
             onClick={handleTapTempo}
             className="inline-flex min-h-10 items-center gap-1.5 text-[10px] font-mono tracking-widest text-on-surface-variant border border-outline-variant/30 px-3.5 py-1.5 rounded hover:text-on-surface hover:border-primary/40 hover:bg-primary/5 active:scale-95 transition-all md:min-h-0"
           >
-            <Hand size={16} strokeWidth={2.25} aria-hidden="true" />
+            {showTapTempoIcon && (
+              <Hand size={16} strokeWidth={2.25} aria-hidden="true" />
+            )}
             TAP TEMPO
           </button>
 

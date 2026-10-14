@@ -198,7 +198,13 @@ interface DashboardPageProps {
   metronomeBarCycleMode?: boolean;
   onBarCycleModeChange?: (enabled: boolean) => void;
   onOpenRoutine: () => void;
-  onFinishDailyTasksOnboarding: () => void;
+  onFinishDailyTasksOnboarding: (
+    quickStartInstrument: "guitar" | "piano" | null,
+  ) => void;
+  onQuickStartTasks: (
+    instrument: "guitar" | "piano",
+    tasks: PracticeTask[],
+  ) => void;
   practiceTasks: PracticeTask[];
   activeTaskId: string | null;
   timerPreferences: UserTimerPreferences;
@@ -237,6 +243,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onBarCycleModeChange,
   onOpenRoutine,
   onFinishDailyTasksOnboarding,
+  onQuickStartTasks,
   practiceTasks,
   activeTaskId,
   timerPreferences,
@@ -681,6 +688,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             onLogBpmToSession={onLogBpm}
             settings={settings}
             showTempoPresets={false}
+            showTapTempoIcon={false}
             isPlaying={metronomeIsPlaying}
             onIsPlayingChange={onMetronomePlayingChange}
             barCycleMode={metronomeBarCycleMode}
@@ -738,6 +746,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <PracticeTasksWidget
             onOpenRoutine={onOpenRoutine}
             onFinishDailyTasksOnboarding={onFinishDailyTasksOnboarding}
+            onQuickStartTasks={onQuickStartTasks}
             tasks={practiceTasks}
             activeTaskId={activeTaskId}
             timerPreferences={timerPreferences}

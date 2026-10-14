@@ -41,6 +41,7 @@ export const DEFAULT_TIMER_PREFERENCES: UserTimerPreferences = {
 
 const DEFAULT_SETTINGS: AppSettings = {
   theme: "dark",
+  taskInstrumentFilter: "both",
   taskDefaultDuration: "forever",
   taskDefaultCustomDuration: 4,
   taskDefaultCustomUnit: "months",
