@@ -178,10 +178,38 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
       return classes + "text-white font-black shadow-sm ";
     }
 
+    if (theme === "ebony" && settings.theme === "light" && !isRoot) {
+      return (
+        classes +
+        "bg-white text-[#202020] border border-black/20 hover:opacity-90 "
+      );
+    }
+
+    if (colorMode === "default") {
+      if (theme === "maple") {
+        return classes +
+          (isRoot
+            ? "bg-[#f0b429] text-[#38210c] font-black shadow-sm "
+            : "bg-[#7a4a26] text-white hover:opacity-90 ");
+      }
+      if (theme === "rosewood") {
+        return classes +
+          (isRoot
+            ? "bg-[#f2c14e] text-[#331c13] font-black shadow-sm "
+            : "bg-[#d1b09b] text-[#331c13] hover:opacity-90 ");
+      }
+      if (theme === "high-contrast") {
+        return classes +
+          (isRoot
+            ? "bg-[#facc15] text-black font-black shadow-sm "
+            : "bg-white text-black hover:opacity-90 ");
+      }
+    }
+
     if (colorMode === "monochrome") {
       if (isRoot) {
         classes +=
-          "bg-inverse-surface text-inverse-on-surface font-black shadow-sm border-2 border-surface ";
+          "bg-primary text-on-primary font-black shadow-sm border-2 border-surface ";
       } else {
         classes +=
           "bg-surface text-on-surface border-2 border-outline hover:bg-surface-variant hover:opacity-100 ";
@@ -521,7 +549,25 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
                               className="w-full h-full cursor-pointer hover:bg-black/10 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
                             >
                               <span
-                                className={`font-mono ${currSize.noteBtn.split(" ")[2]} ${theme === "high-contrast" ? "text-white" : "text-on-surface-variant/50"}`}
+                                className={
+                                  getNoteClasses(
+                                    isRoot,
+                                    false,
+                                    false,
+                                    false,
+                                    noteSemitone,
+                                  ) + " pointer-events-none"
+                                }
+                                style={
+                                  usePitchColors
+                                    ? {
+                                        backgroundColor: isRoot
+                                          ? "#facc15"
+                                          : getPitchColor(noteSemitone),
+                                        color: isRoot ? "#111827" : "#ffffff",
+                                      }
+                                    : undefined
+                                }
                               >
                                 {noteName}
                               </span>

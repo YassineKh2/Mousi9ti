@@ -354,6 +354,10 @@
   filter: url(#lightWidgetGlow);
 }
 
+.light .timer-view-arch-path {
+  filter: url(#lightTimerGlow);
+}
+
 .light .piano-keyboard {
   --color-surface-bright: #3a3939;
   --color-surface-container-low: #1c1b1b;

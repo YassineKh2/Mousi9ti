@@ -198,6 +198,7 @@ interface DashboardPageProps {
   metronomeBarCycleMode?: boolean;
   onBarCycleModeChange?: (enabled: boolean) => void;
   onOpenRoutine: () => void;
+  onDismissTour?: () => void;
   onFinishDailyTasksOnboarding: (
     quickStartInstrument: "guitar" | "piano" | null,
   ) => void;
@@ -242,6 +243,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   metronomeBarCycleMode,
   onBarCycleModeChange,
   onOpenRoutine,
+  onDismissTour,
   onFinishDailyTasksOnboarding,
   onQuickStartTasks,
   practiceTasks,
@@ -745,6 +747,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         return (
           <PracticeTasksWidget
             onOpenRoutine={onOpenRoutine}
+            onDismissTour={onDismissTour}
             onFinishDailyTasksOnboarding={onFinishDailyTasksOnboarding}
             onQuickStartTasks={onQuickStartTasks}
             tasks={practiceTasks}
@@ -863,10 +866,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>,
           document.body,
         )}
-      <div
-        data-tour="dashboard-customize"
-        className="flex flex-wrap items-center justify-between gap-3"
-      >
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           {isDashboardEditMode && (
             <p className="mt-1 text-xs text-on-surface-variant">
@@ -902,7 +902,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           )}
           <button
             type="button"
-            onClick={() => setIsDashboardEditMode((current) => !current)}
+            data-tour="dashboard-customize"
+            onClick={() => {
+              const enteringEditMode = !isDashboardEditMode;
+              setIsDashboardEditMode(enteringEditMode);
+              window.dispatchEvent(
+                new Event(
+                  enteringEditMode
+                    ? "mousi9ti-dashboard-customize-start"
+                    : "mousi9ti-dashboard-customize-end",
+                ),
+              );
+            }}
             className={`flex items-center gap-1.5 rounded px-3 py-2 text-xs font-mono font-bold transition-colors ${isDashboardEditMode ? "bg-primary text-on-primary" : "border border-outline-variant/40 text-on-surface hover:border-primary hover:text-primary"}`}
           >
             <Settings2 size={15} /> {isDashboardEditMode ? "Done" : "Customize"}

@@ -369,7 +369,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             aria-labelledby="task-default-duration-heading"
             className={
               activeTab === "tasks"
-                ? "space-y-3 border-b border-outline-variant/20 pb-4"
+                ? "space-y-3  border-outline-variant/20"
                 : "hidden"
             }
           >
@@ -533,7 +533,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Daily Task Completion */}
           <section
             aria-labelledby="daily-task-completion-heading"
-            className={activeTab === "tasks" ? "flex flex-col gap-3" : "hidden"}
+            className={
+              activeTab === "tasks  border-t" ? "flex flex-col gap-3" : "hidden"
+            }
           >
             <div>
               <h3
@@ -1100,7 +1102,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {
                     id: "original",
                     label: "Original",
-                    bgClass: "bg-surface-container-highest/60",
+                    bgClass:
+                      settings.theme === "dark"
+                        ? "bg-[#353534]"
+                        : "bg-surface-container-highest/60",
                     borderClass: "border-outline-variant/40",
                     stringClass: "bg-outline-variant",
                   },

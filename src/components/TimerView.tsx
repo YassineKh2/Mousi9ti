@@ -219,17 +219,17 @@ export const TimerView: React.FC<TimerViewProps> = ({
               <linearGradient id="timerGlow" x1="0" y1="0" x2="1" y2="0">
                 <stop
                   offset="0%"
-                  stopColor="var(--color-primary-container, #4d8eff)"
+                  stopColor="var(--timer-arch-start, #4d8eff)"
                   stopOpacity="1"
                 />
                 <stop
                   offset="50%"
-                  stopColor="var(--color-primary-fixed, #d8e2ff)"
+                  stopColor="var(--timer-arch-mid, #d8e2ff)"
                   stopOpacity="1"
                 />
                 <stop
                   offset="100%"
-                  stopColor="var(--color-primary-container, #4d8eff)"
+                  stopColor="var(--timer-arch-start, #4d8eff)"
                   stopOpacity="1"
                 />
               </linearGradient>
@@ -241,6 +241,16 @@ export const TimerView: React.FC<TimerViewProps> = ({
                 height="140%"
               >
                 <feGaussianBlur stdDeviation="16" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+              <filter
+                id="lightTimerGlow"
+                x="-20%"
+                y="-20%"
+                width="140%"
+                height="140%"
+              >
+                <feGaussianBlur stdDeviation="8" result="blur" />
                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
               </filter>
             </defs>
@@ -264,6 +274,7 @@ export const TimerView: React.FC<TimerViewProps> = ({
               stroke="url(#timerGlow)"
               strokeWidth={strokeWidth}
               strokeLinecap="butt"
+              className="timer-view-arch-path"
               filter="url(#heavyGlow)"
               pathLength={1000}
               strokeDasharray={1000}

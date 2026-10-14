@@ -1,10 +1,34 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  X, ArrowRight, ArrowLeft, CheckCircle2, Keyboard, MousePointerClick,
-  ChevronRight, Check, RefreshCw, List, Plus, Piano,
-  BookOpen, LayoutDashboard, Timer, Clock, Guitar, Play, Flame,
-  Music, Music2, Layers, Settings2, Compass, BarChart3, Search, Trophy,
+  X,
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle2,
+  Keyboard,
+  MousePointerClick,
+  ChevronRight,
+  Check,
+  RefreshCw,
+  List,
+  Plus,
+  Piano,
+  BookOpen,
+  LayoutDashboard,
+  Timer,
+  Clock,
+  Guitar,
+  Play,
+  Flame,
+  CalendarCheck2,
+  Music,
+  Music2,
+  Layers,
+  Settings2,
+  Compass,
+  BarChart3,
+  Search,
+  Trophy,
 } from "lucide-react";
 import { ActiveTab } from "./Navigation";
 
@@ -23,33 +47,266 @@ interface TourStep {
 // ─── Step Definitions ────────────────────────────────────────────────────────
 
 const STEPS: TourStep[] = [
-  { id: "welcome",              title: "Welcome to Mousi9ti",      description: "Your practice studio for guitar and piano. This tour walks through every section — about 3 minutes." },
-  { id: "sidebar",              title: "Navigation",                description: "All 6 sections live in the sidebar. Click any item or press 1–6 on your keyboard to switch instantly.", targetSelector: "[data-tour='sidebar-nav']", tab: "dashboard" },
-  { id: "metronome",            title: "Metronome",                 description: "Set BPM, time signature, subdivision, and click sound. It keeps running globally even when you switch pages.", targetSelector: "[data-dashboard-widget='metronome']", tab: "dashboard", action: "Press Space to start / stop" },
-  { id: "timer",                title: "Practice Timer",            description: "Countdown timer with one-tap presets. Link it to the metronome so it auto-stops when time's up.", targetSelector: "[data-dashboard-widget='timer']", tab: "dashboard" },
-  { id: "drill",                title: "Random Note Drill",         description: "A random note appears — find it on the fretboard. Builds note recognition and position memory over time.", targetSelector: "[data-dashboard-widget='random-drill']", tab: "dashboard", action: "Press N for the next note" },
-  { id: "session",              title: "Practice Session",          description: "Start a session to log your time. Ending it saves the session and counts toward your daily streak.", targetSelector: "[data-dashboard-widget='session']", tab: "dashboard" },
-  { id: "instruments-widget",   title: "Fretboard & Tuning",        description: "Switch between Guitar, Piano, or Both views. Change the tuning directly on the fretboard — every note updates instantly.", targetSelector: "[data-dashboard-widget='instruments']", tab: "dashboard" },
-  { id: "chord-widget",         title: "Chord Display",             description: "The chord selector widget shows the current chord diagram and piano voicing side by side. Tap any diagram to hear it.", targetSelector: "[data-dashboard-widget='chord-selector']", tab: "dashboard" },
-  { id: "streak",               title: "Practice Streak",           description: "Your daily streak with a 2-day grace period — one missed day won't reset the counter.", targetSelector: "[data-tour='sidebar-streak']", tab: "dashboard" },
-  { id: "dashboard-customize",  title: "Customize Dashboard",       description: "Click Customize to rearrange or hide any widget by dragging. Hit Reset to restore the default layout. Make the dashboard yours.", targetSelector: "[data-tour='dashboard-customize']", tab: "dashboard" },
-  { id: "go-scales",            title: "Open Scales",               description: "Click SCALES in the sidebar to explore the scale library.", targetSelector: "[data-tour='nav-item-scales']", tab: "dashboard", awaitAction: true },
-  { id: "scales-panel",         title: "Scale Explorer",            description: "Pick any root note and scale type. Toggle note names, degrees, or intervals — then play the scale with the arrow buttons.", targetSelector: "[data-tour='scales-panel']", tab: "scales" },
-  { id: "scales-fretboard",     title: "Fretboard & Tuning",        description: "The fretboard updates live as you change scale or root. Adjust tuning and fret count here. Switch to Piano view or show both instruments at once.", targetSelector: "[data-tour='scales-fretboard']", tab: "scales" },
-  { id: "go-chords",            title: "Open Chords",               description: "Click CHORDS in the sidebar to browse chord voicings.", targetSelector: "[data-tour='nav-item-chords']", tab: "scales", awaitAction: true },
-  { id: "chords-filters",       title: "Chord Library",             description: "Pick a root note and chord type. The diagram, piano view, and sheet notation update instantly. Tap Play to hear any voicing.", targetSelector: "[data-tour='chords-filters']", tab: "chords" },
-  { id: "chords-voicing",       title: "Guitar & Piano Voicings",   description: "Browse all guitar fingering positions for the chord. Click any diagram to hear it played. The piano voicing is shown below.", targetSelector: "[data-tour='chords-voicing']", tab: "chords" },
-  { id: "go-builder",           title: "Open Builder",              description: "Click BUILDER in the sidebar to open the chord progression builder.", targetSelector: "[data-tour='nav-item-builder']", tab: "chords", awaitAction: true },
-  { id: "builder-controls",     title: "Playback Controls",         description: "Choose your instrument, set tempo, and add reverb. Hit Play to loop your full chord progression with real instrument audio.", targetSelector: "[data-tour='builder-controls']", tab: "builder" },
-  { id: "builder-queue",        title: "Chord Queue",               description: "Your chord progression lives here. Set each chord's duration and strumming pattern. Load a preset or save your own.", targetSelector: "[data-tour='builder-queue']", tab: "builder" },
-  { id: "builder-add",          title: "Add Chords to Queue",       description: "Search for any chord, pick a voicing, then hit Add to Queue. Build progressions like I–V–vi–IV in seconds.", targetSelector: "[data-tour='builder-add']", tab: "builder" },
-  { id: "go-tools",             title: "Open Tools",                description: "Click TOOLS in the sidebar for the Circle of Fifths, tuner, and ear trainer.", targetSelector: "[data-tour='nav-item-tools']", tab: "builder", awaitAction: true },
-  { id: "tools-tabs",           title: "Theory Tools",              description: "Switch between Circle of Fifths, Ear Trainer, Tuner, Metronome, Timer, and Custom Chord Builder using these tabs.", targetSelector: "[data-tour='tools-tabs']", tab: "tools" },
-  { id: "circle-fifths",        title: "Circle of Fifths",          description: "Click any key to see its related chords. The interactive wheel shows key relationships, chord qualities, and relative minors at a glance.", targetSelector: "[data-tour='circle-of-fifths']", tab: "tools" },
-  { id: "go-stats",             title: "Open Stats",                description: "Click STATS to view your session history, BPM progression, and streak calendar.", targetSelector: "[data-tour='nav-item-stats']", tab: "tools", awaitAction: true },
-  { id: "stats-metrics",        title: "Practice Analytics",        description: "Total time logged, current streak, longest streak, and peak BPM. Charts below show your daily minutes and BPM progression over time.", targetSelector: "[data-tour='stats-metrics']", tab: "stats" },
-  { id: "search",               title: "Global Search",             description: "Search any scale, chord, or exercise from anywhere in the app. Try \"C minor\" or \"maj7\" to jump straight to it.", targetSelector: "[data-tour='search-bar']", tab: "stats" },
-  { id: "done",                 title: "You're all set!",           description: "Everything is ready. Restart this tour anytime via Settings → Restart Tour.", tab: "dashboard" },
+  {
+    id: "welcome",
+    title: "Welcome to Mousi9ti",
+    description:
+      "Your practice studio for guitar and piano. Take a quick tour of the dashboard, practice routine, music tools, and progress tracking.",
+  },
+  {
+    id: "sidebar",
+    title: "Navigation",
+    description:
+      "Move between Dashboard, Scales, Chords, Builder, Routine, Tools, and Stats from the sidebar on desktop or the bottom bar on mobile.",
+    targetSelector: "[data-tour='sidebar-nav']",
+    tab: "dashboard",
+  },
+  {
+    id: "metronome",
+    title: "Metronome",
+    description:
+      "Set BPM, time signature, subdivision, and click sound. The metronome keeps running when you switch pages.",
+    targetSelector: "[data-dashboard-widget='metronome']",
+    tab: "dashboard",
+    action: "Press Space to start / stop",
+  },
+  {
+    id: "timer",
+    title: "Practice Timer",
+    description:
+      "Use the countdown timer and quick presets to structure a focused practice block.",
+    targetSelector: "[data-dashboard-widget='timer']",
+    tab: "dashboard",
+  },
+  {
+    id: "session",
+    title: "Practice Session",
+    description:
+      "Start a session to log practice time. Ending it saves the session and contributes to your practice history.",
+    targetSelector: "[data-dashboard-widget='session']",
+    tab: "dashboard",
+  },
+  {
+    id: "instruments-widget",
+    title: "Fretboard & Piano",
+    description:
+      "Explore notes on the fretboard or piano. Switch between Guitar, Piano, or Both and adjust tuning here, choose your instrument before moving on to Daily Practice Goals.",
+    targetSelector: "[data-dashboard-widget='instruments']",
+    tab: "dashboard",
+  },
+  {
+    id: "practice-tasks",
+    title: "Daily Practice Goals",
+    description:
+      "Keep today's practice goals close at hand. Check off tasks as you work through your routine.",
+    targetSelector: "[data-dashboard-widget='practice-tasks']",
+    tab: "dashboard",
+  },
+  {
+    id: "drill",
+    title: "Random Note Drill",
+    description:
+      "A random note appears for you to find on the fretboard, building note recognition and position memory.",
+    targetSelector: "[data-dashboard-widget='random-drill']",
+    tab: "dashboard",
+    action: "Press N for the next note",
+  },
+  {
+    id: "chord-widget",
+    title: "Chord Display",
+    description:
+      "See the selected chord's guitar diagram and piano voicing together. Play the voicings to hear them.",
+    targetSelector: "[data-dashboard-widget='chord-selector']",
+    tab: "dashboard",
+  },
+  {
+    id: "streak",
+    title: "Practice Streak",
+    description:
+      "Track consecutive practice days from the sidebar. Your stats page also shows your longer-term consistency.",
+    targetSelector: "[data-tour='sidebar-streak']",
+    tab: "dashboard",
+  },
+  {
+    id: "dashboard-customize",
+    title: "Customize Dashboard",
+    description:
+      "Click Customize to rearrange or hide widgets. The tour will pause while you edit; click Done to continue the tour.",
+    targetSelector: "[data-tour='dashboard-customize']",
+    tab: "dashboard",
+    awaitAction: true,
+  },
+  {
+    id: "go-scales",
+    title: "Open Scales",
+    description:
+      "Open Scales to explore and play scales across the fretboard and piano.",
+    targetSelector: "[data-tour='nav-item-scales']",
+    tab: "dashboard",
+    awaitAction: true,
+  },
+  {
+    id: "scales-panel",
+    title: "Scale Explorer",
+    description:
+      "Choose a root note and scale type, then display note names, degrees, or intervals and play through the scale.",
+    targetSelector: "[data-tour='scales-panel']",
+    tab: "scales",
+  },
+  {
+    id: "scales-fretboard",
+    title: "Scale on Your Instrument",
+    description:
+      "The fretboard and piano respond to the selected scale. Adjust tuning and fret count or switch between guitar, piano, and both.",
+    targetSelector: "[data-tour='scales-fretboard']",
+    tab: "scales",
+  },
+  {
+    id: "go-chords",
+    title: "Open Chords",
+    description: "Open Chords to find and hear guitar and piano voicings.",
+    targetSelector: "[data-tour='nav-item-chords']",
+    tab: "scales",
+    awaitAction: true,
+  },
+  {
+    id: "chords-filters",
+    title: "Chord Library",
+    description:
+      "Choose a root and chord type to update the available voicings and notation, then play a chord to hear it.",
+    targetSelector: "[data-tour='chords-filters']",
+    tab: "chords",
+  },
+  {
+    id: "chords-voicing",
+    title: "Guitar & Piano Voicings",
+    description:
+      "Browse guitar fingering positions and the corresponding piano voicing for your selected chord.",
+    targetSelector: "[data-tour='chords-voicing']",
+    tab: "chords",
+  },
+  {
+    id: "go-builder",
+    title: "Open Builder",
+    description: "Open Builder to create, save, and play chord progressions.",
+    targetSelector: "[data-tour='nav-item-builder']",
+    tab: "chords",
+    awaitAction: true,
+  },
+  {
+    id: "builder-controls",
+    title: "Playback Controls",
+    description:
+      "Choose an instrument, set tempo and reverb, and play your progression with instrument audio.",
+    targetSelector: "[data-tour='builder-controls']",
+    tab: "builder",
+  },
+  {
+    id: "builder-queue",
+    title: "Chord Queue",
+    description:
+      "Arrange your progression, set chord durations and strumming patterns, and load or save presets.",
+    targetSelector: "[data-tour='builder-queue']",
+    tab: "builder",
+  },
+  {
+    id: "builder-add",
+    title: "Add Chords to Queue",
+    description:
+      "Search for a chord, choose a voicing, and add it to your progression.",
+    targetSelector: "[data-tour='builder-add']",
+    tab: "builder",
+  },
+  {
+    id: "go-routine",
+    title: "Open Routine",
+    description:
+      "Open Routine to plan practice goals across the week and review your completion.",
+    targetSelector: "[data-tour='nav-item-routine']",
+    tab: "builder",
+    awaitAction: true,
+  },
+  {
+    id: "routine-schedule",
+    title: "Weekly Schedule",
+    description:
+      "Review your weekly target and completion, and choose a past week to check your practice history.",
+    targetSelector: "[data-tour='routine-schedule']",
+    tab: "routine",
+  },
+  {
+    id: "routine-days",
+    title: "Choose a Practice Day",
+    description:
+      "Select a day to edit its focus, goals, and target duration. The cards summarize completion across the week.",
+    targetSelector: "[data-tour='routine-days']",
+    tab: "routine",
+  },
+  {
+    id: "routine-goals",
+    title: "Daily Goals & Task Tags",
+    description:
+      "Add and complete daily goals. Use tags such as @scale, @chord, @tuning, @bpm, or @timer to capture practice settings; automatic dashboard setup can apply recognized tags. Set how long a goal stays active.",
+    targetSelector: "[data-tour='routine-goals']",
+    tab: "routine",
+  },
+  {
+    id: "go-tools",
+    title: "Open Tools",
+    description:
+      "Open Tools for the Circle of Fifths and other music-practice utilities.",
+    targetSelector: "[data-tour='nav-item-tools']",
+    tab: "routine",
+    awaitAction: true,
+  },
+  {
+    id: "tools-tabs",
+    title: "Theory Tools",
+    description:
+      "Switch between the available theory and practice tools using these tabs.",
+    targetSelector: "[data-tour='tools-tabs']",
+    tab: "tools",
+  },
+  {
+    id: "circle-fifths",
+    title: "Circle of Fifths",
+    description:
+      "Explore key relationships, related chords, chord qualities, and relative minors from the interactive wheel.",
+    targetSelector: "[data-tour='circle-of-fifths']",
+    tab: "tools",
+  },
+  {
+    id: "go-stats",
+    title: "Open Stats",
+    description:
+      "Open Stats for your session history, practice totals, and progress charts.",
+    targetSelector: "[data-tour='nav-item-stats']",
+    tab: "tools",
+    awaitAction: true,
+  },
+  {
+    id: "stats-metrics",
+    title: "Practice Analytics",
+    description:
+      "Review practice totals, streaks, and BPM progress, with charts that help you track consistency over time.",
+    targetSelector: "[data-tour='stats-metrics']",
+    tab: "stats",
+  },
+  {
+    id: "search",
+    title: "Global Search",
+    description:
+      "Search pages, scales, and chords from anywhere in the app to jump directly to what you need.",
+    targetSelector: "[data-tour='search-bar']",
+    tab: "stats",
+  },
+  {
+    id: "done",
+    title: "You're all set!",
+    description:
+      "You're ready to practice. Restart this tour anytime from Studio Settings.",
+    tab: "dashboard",
+  },
 ];
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -57,48 +314,62 @@ const STEPS: TourStep[] = [
 const SP_PAD = 10;
 
 const SECTION_STARTS: Record<number, string> = {
-  0: "Intro", 1: "Dashboard", 10: "Scales", 13: "Chords",
-  16: "Builder", 20: "Tools", 23: "Stats", 26: "Finish",
+  0: "Intro",
+  1: "Navigation",
+  2: "Dashboard",
+  11: "Scales",
+  14: "Chords",
+  17: "Builder",
+  21: "Routine",
+  25: "Tools",
+  28: "Stats",
+  31: "Finish",
 };
 
 // ─── Step Icons ───────────────────────────────────────────────────────────────
 
 function getSidebarItemClass(i: number, stepIndex: number): string {
   if (i === stepIndex) return "bg-primary/12 text-on-surface";
-  if (i < stepIndex) return "text-on-surface-variant/50 hover:bg-surface-container-high hover:text-on-surface";
+  if (i < stepIndex)
+    return "text-on-surface-variant/50 hover:bg-surface-container-high hover:text-on-surface";
   return "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface";
 }
 
 function getStepIcon(id: string, size = 34): React.ReactNode {
   const S = size;
   const map: Record<string, React.ReactNode> = {
-    welcome:            <BookOpen size={S} />,
-    sidebar:            <LayoutDashboard size={S} />,
-    metronome:          <Timer size={S} />,
-    timer:              <Clock size={S} />,
-    drill:              <Guitar size={S} />,
-    session:            <Play size={S} />,
-    streak:             <Flame size={S} />,
+    welcome: <BookOpen size={S} />,
+    sidebar: <LayoutDashboard size={S} />,
+    metronome: <Timer size={S} />,
+    timer: <Clock size={S} />,
+    drill: <Guitar size={S} />,
+    session: <Play size={S} />,
+    "practice-tasks": <CheckCircle2 size={S} />,
+    streak: <Flame size={S} />,
     "dashboard-customize": <Settings2 size={S} />,
-    "go-scales":           <Music size={S} />,
-    "scales-panel":        <Music2 size={S} />,
-    "scales-fretboard":    <Guitar size={S} />,
-    "go-chords":           <Layers size={S} />,
-    "chords-filters":      <Layers size={S} />,
-    "chords-voicing":      <Layers size={S} />,
-    "go-builder":          <Settings2 size={S} />,
-    "builder-controls":    <Settings2 size={S} />,
-    "builder-queue":       <Settings2 size={S} />,
-    "builder-add":         <Plus size={S} />,
-    "go-tools":            <Compass size={S} />,
-    "tools-tabs":          <Compass size={S} />,
-    "circle-fifths":       <Compass size={S} />,
-    "go-stats":            <BarChart3 size={S} />,
-    "stats-metrics":       <BarChart3 size={S} />,
-    "instruments-widget":  <Guitar size={S} />,
-    "chord-widget":        <Piano size={S} />,
-    search:                <Search size={S} />,
-    done:                  <Trophy size={S} />,
+    "go-routine": <CalendarCheck2 size={S} />,
+    "routine-schedule": <CalendarCheck2 size={S} />,
+    "routine-days": <CalendarCheck2 size={S} />,
+    "routine-goals": <CheckCircle2 size={S} />,
+    "go-scales": <Music size={S} />,
+    "scales-panel": <Music2 size={S} />,
+    "scales-fretboard": <Guitar size={S} />,
+    "go-chords": <Layers size={S} />,
+    "chords-filters": <Layers size={S} />,
+    "chords-voicing": <Layers size={S} />,
+    "go-builder": <Settings2 size={S} />,
+    "builder-controls": <Settings2 size={S} />,
+    "builder-queue": <Settings2 size={S} />,
+    "builder-add": <Plus size={S} />,
+    "go-tools": <Compass size={S} />,
+    "tools-tabs": <Compass size={S} />,
+    "circle-fifths": <Compass size={S} />,
+    "go-stats": <BarChart3 size={S} />,
+    "stats-metrics": <BarChart3 size={S} />,
+    "instruments-widget": <Guitar size={S} />,
+    "chord-widget": <Piano size={S} />,
+    search: <Search size={S} />,
+    done: <Trophy size={S} />,
   };
   return map[id] ?? <BookOpen size={S} />;
 }
@@ -129,7 +400,10 @@ function resolveWithRetry(
   setRect: (r: DOMRect | null) => void,
   onNotFound?: () => void,
 ): () => void {
-  if (!selector) { setRect(null); return () => {}; }
+  if (!selector) {
+    setRect(null);
+    return () => {};
+  }
   let cancelled = false;
   let tid: ReturnType<typeof setTimeout>;
   let attempts = 0;
@@ -138,7 +412,11 @@ function resolveWithRetry(
     if (cancelled) return;
     const el = findVisible(selector);
     if (el) {
-      el.scrollIntoView({ behavior: "instant", block: "nearest" });
+      el.scrollIntoView({
+        behavior: "instant",
+        block: "center",
+        inline: "center",
+      });
       tid = setTimeout(() => {
         if (cancelled) return;
         const el2 = findVisible(selector);
@@ -158,7 +436,10 @@ function resolveWithRetry(
   };
 
   tid = setTimeout(tryOnce, 80);
-  return () => { cancelled = true; clearTimeout(tid); };
+  return () => {
+    cancelled = true;
+    clearTimeout(tid);
+  };
 }
 
 function addListener(
@@ -181,8 +462,9 @@ function attachClickAdvance(
   if (!elements.length) return () => {};
   const handler = () =>
     setTimeout(() => setStep((i) => Math.min(i + 1, STEPS.length - 1)), 80);
-  elements.forEach(el => el.addEventListener("click", handler));
-  return () => elements.forEach(el => el.removeEventListener("click", handler));
+  elements.forEach((el) => el.addEventListener("click", handler));
+  return () =>
+    elements.forEach((el) => el.removeEventListener("click", handler));
 }
 
 function makeKeyHandler(
@@ -192,7 +474,10 @@ function makeKeyHandler(
   setStep: React.Dispatch<React.SetStateAction<number>>,
 ): EventListener {
   return ((e: KeyboardEvent) => {
-    if (e.key === "Escape") { onClose(); return; }
+    if (e.key === "Escape") {
+      onClose();
+      return;
+    }
     if (e.key === "ArrowRight" && !isLast) setStep((i) => i + 1);
     if (e.key === "ArrowLeft" && !isFirst) setStep((i) => i - 1);
   }) as EventListener;
@@ -200,28 +485,47 @@ function makeKeyHandler(
 
 // ─── Spotlight (used in reveal mode) ─────────────────────────────────────────
 
-interface SpotGeometry { top: number; left: number; width: number; height: number; }
-interface TourSpotlightProps { spot: SpotGeometry | null; }
+interface SpotGeometry {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+interface TourSpotlightProps {
+  spot: SpotGeometry | null;
+}
 
 const TourSpotlight: React.FC<TourSpotlightProps> = ({ spot }) => {
   if (!spot) return null;
   return (
     <div
       style={{
-        position: "fixed", top: spot.top, left: spot.left,
-        width: spot.width, height: spot.height, borderRadius: 12,
+        position: "fixed",
+        top: spot.top,
+        left: spot.left,
+        width: spot.width,
+        height: spot.height,
+        borderRadius: 12,
         boxShadow: "0 0 0 9999px rgba(0,0,0,0.78)",
         border: "2px solid var(--color-primary)",
-        zIndex: 250, pointerEvents: "none",
-        transition: "top .28s ease,left .28s ease,width .28s ease,height .28s ease",
+        zIndex: 250,
+        pointerEvents: "none",
+        transition:
+          "top .28s ease,left .28s ease,width .28s ease,height .28s ease",
         animation: "tour-pulse-strong 1.1s ease-in-out infinite",
       }}
     >
       <div
-        style={{ position: "absolute", bottom: -34, left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap" }}
+        style={{
+          position: "absolute",
+          bottom: -34,
+          left: "50%",
+          transform: "translateX(-50%)",
+          whiteSpace: "nowrap",
+        }}
         className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary text-on-primary text-[10px] font-mono font-bold tracking-wide shadow-lg"
       >
-        <MousePointerClick size={10} /> Click to continue
+        <MousePointerClick size={10} /> Click to interact
       </div>
     </div>
   );
@@ -241,24 +545,121 @@ interface RevealOverlayProps {
   onClose: () => void;
 }
 
-const RevealOverlay: React.FC<RevealOverlayProps> = ({ spot, step, stepIndex, isFirst, isLast, onPrev, onNext, onShowList, onClose }) => {
+const RevealOverlay: React.FC<RevealOverlayProps> = ({
+  spot,
+  step,
+  stepIndex,
+  isFirst,
+  isLast,
+  onPrev,
+  onNext,
+  onShowList,
+  onClose,
+}) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [arrowPath, setArrowPath] = useState<string | null>(null);
+  const [cardPosition, setCardPosition] = useState<{
+    left: number;
+    top: number;
+  } | null>(null);
+  const positionedStepRef = useRef<number | null>(null);
+  const keepCardLeftRef = useRef(false);
+
+  const positionCard = useCallback(() => {
+    const card = cardRef.current;
+    if (!spot || !card) return;
+
+    const cardRect = card.getBoundingClientRect();
+    const margin = 16;
+    const maxLeft = Math.max(
+      margin,
+      window.innerWidth - cardRect.width - margin,
+    );
+    const maxTop = Math.max(
+      margin,
+      window.innerHeight - cardRect.height - margin,
+    );
+    const clampLeft = (left: number) =>
+      Math.min(maxLeft, Math.max(margin, left));
+    const clampTop = (top: number) => Math.min(maxTop, Math.max(margin, top));
+    const defaultPosition = { left: maxLeft, top: margin };
+    const leftPosition = { left: margin, top: margin };
+    const candidates = keepCardLeftRef.current
+      ? [
+          leftPosition,
+          { left: margin, top: clampTop(spot.top + spot.height + margin) },
+          { left: margin, top: maxTop },
+        ]
+      : [
+          defaultPosition,
+          leftPosition,
+          { left: maxLeft, top: clampTop(spot.top + spot.height + margin) },
+          { left: margin, top: clampTop(spot.top + spot.height + margin) },
+          { left: maxLeft, top: maxTop },
+          { left: margin, top: maxTop },
+        ];
+    const overlapArea = ({ left, top }: { left: number; top: number }) =>
+      Math.max(
+        0,
+        Math.min(left + cardRect.width, spot.left + spot.width) -
+          Math.max(left, spot.left),
+      ) *
+      Math.max(
+        0,
+        Math.min(top + cardRect.height, spot.top + spot.height) -
+          Math.max(top, spot.top),
+      );
+    const preferredPosition = keepCardLeftRef.current
+      ? leftPosition
+      : defaultPosition;
+    if (overlapArea(preferredPosition) === 0) {
+      setCardPosition(preferredPosition);
+      return;
+    }
+
+    const bestPosition = candidates.reduce((best, candidate) => {
+      const candidateOverlap = overlapArea(candidate);
+      const bestOverlap = overlapArea(best);
+      const candidateScore =
+        candidateOverlap * 1000 + (candidate.top > margin ? 100 : 0);
+      const bestScore = bestOverlap * 1000 + (best.top > margin ? 100 : 0);
+      return candidateScore < bestScore ? candidate : best;
+    });
+
+    if (bestPosition.left === margin) keepCardLeftRef.current = true;
+    setCardPosition(bestPosition);
+  }, [spot]);
+
+  useEffect(() => {
+    if (!spot || positionedStepRef.current === stepIndex) return;
+    const frame = requestAnimationFrame(() => {
+      if (positionedStepRef.current === stepIndex) return;
+      positionedStepRef.current = stepIndex;
+      positionCard();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [positionCard, spot, stepIndex]);
 
   const computeArrow = useCallback(() => {
-    if (!spot || !cardRef.current) { setArrowPath(null); return; }
+    if (!spot || !cardRef.current) {
+      setArrowPath(null);
+      return;
+    }
     const r = cardRef.current.getBoundingClientRect();
-    const cx = r.left;
-    const cy = r.top + r.height / 2;
     const sx = spot.left + spot.width / 2;
     const sy = spot.top + spot.height / 2;
+    const cx = Math.min(r.right, Math.max(r.left, sx));
+    const cy = Math.min(r.bottom, Math.max(r.top, sy));
     const cpx = (cx + sx) / 2;
-    const cpy = Math.min(cy, sy) - 70;
+    const cpy = (cy + sy) / 2 - 35;
     setArrowPath(`M ${cx} ${cy} Q ${cpx} ${cpy} ${sx} ${sy}`);
   }, [spot]);
 
   useEffect(() => {
-    if (!spot) { setArrowPath(null); return; }
+    if (!spot) {
+      setArrowPath(null);
+      return;
+    }
     const id = setTimeout(computeArrow, 60);
     return () => clearTimeout(id);
   }, [spot, stepIndex, computeArrow]);
@@ -281,11 +682,31 @@ const RevealOverlay: React.FC<RevealOverlayProps> = ({ spot, step, stepIndex, is
       {arrowPath && (
         <svg
           aria-hidden="true"
-          style={{ position: "fixed", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 255 }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
+            zIndex: 255,
+          }}
         >
           <defs>
-            <marker id="tour-arrow" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
-              <circle cx="3.5" cy="3.5" r="2.5" fill="var(--color-primary)" opacity="0.75" />
+            <marker
+              id="tour-arrow"
+              markerWidth="7"
+              markerHeight="7"
+              refX="3.5"
+              refY="3.5"
+              orient="auto"
+            >
+              <circle
+                cx="3.5"
+                cy="3.5"
+                r="2.5"
+                fill="var(--color-primary)"
+                opacity="0.75"
+              />
             </marker>
           </defs>
           <path
@@ -307,8 +728,18 @@ const RevealOverlay: React.FC<RevealOverlayProps> = ({ spot, step, stepIndex, is
         dragMomentum={false}
         dragElastic={0}
         onDrag={computeArrow}
-        style={{ position: "fixed", top: 24, right: 24, width: 276, minHeight: 220, zIndex: 260, touchAction: "none" }}
-        className="bg-surface border border-outline-variant/40 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.55)] overflow-hidden flex flex-col cursor-grab active:cursor-grabbing"
+        style={{
+          position: "fixed",
+          top: cardPosition?.top ?? 24,
+          left: cardPosition?.left,
+          right: cardPosition ? undefined : 24,
+          width: "min(276px, calc(100vw - 32px))",
+          minHeight: 220,
+          maxHeight: "calc(100vh - 32px)",
+          zIndex: 260,
+          touchAction: "none",
+        }}
+        className="bg-surface border border-outline-variant/40 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.55)] overflow-y-auto flex flex-col cursor-grab active:cursor-grabbing"
       >
         {/* Drag handle bar */}
         <div className="flex justify-center pt-2.5 pb-0 shrink-0">
@@ -324,7 +755,9 @@ const RevealOverlay: React.FC<RevealOverlayProps> = ({ spot, step, stepIndex, is
             <p className="font-mono text-[9px] text-on-surface-variant/50 uppercase tracking-wider mb-0.5">
               Step {stepIndex + 1} of {STEPS.length}
             </p>
-            <p className="font-mono text-[12px] font-bold text-on-surface leading-snug">{step.title}</p>
+            <p className="font-mono text-[12px] font-bold text-on-surface leading-snug">
+              {step.title}
+            </p>
           </div>
           {/* × close button — harder to accidentally hit than a bottom button */}
           <button
@@ -338,14 +771,18 @@ const RevealOverlay: React.FC<RevealOverlayProps> = ({ spot, step, stepIndex, is
 
         {/* Description */}
         <div className="px-4 pb-2 flex-1">
-          <p className="font-mono text-[11px] text-on-surface-variant leading-relaxed">{step.description}</p>
+          <p className="font-mono text-[11px] text-on-surface-variant leading-relaxed">
+            {step.description}
+          </p>
         </div>
 
         {/* Hint — only shown once the spotlight is visible */}
         {spot && (
           <div className="px-4 pb-3 flex items-center gap-1.5">
             <MousePointerClick size={10} className="text-primary/60 shrink-0" />
-            <span className="font-mono text-[10px] text-on-surface-variant/50">Interact with the highlighted element</span>
+            <span className="font-mono text-[10px] text-on-surface-variant/50">
+              Interact with the highlighted element
+            </span>
           </div>
         )}
 
@@ -371,7 +808,15 @@ const RevealOverlay: React.FC<RevealOverlayProps> = ({ spot, step, stepIndex, is
             onClick={onNext}
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-[11px] font-semibold bg-primary text-on-primary hover:brightness-110 transition-all"
           >
-            {isLast ? <><CheckCircle2 size={11} /> Done</> : <>Next <ArrowRight size={10} /></>}
+            {isLast ? (
+              <>
+                <CheckCircle2 size={11} /> Done
+              </>
+            ) : (
+              <>
+                Next <ArrowRight size={10} />
+              </>
+            )}
           </button>
         </div>
       </motion.div>
@@ -387,7 +832,11 @@ interface TourSidebarProps {
   onRestart: () => void;
 }
 
-const TourSidebar: React.FC<TourSidebarProps> = ({ stepIndex, onGoToStep, onRestart }) => {
+const TourSidebar: React.FC<TourSidebarProps> = ({
+  stepIndex,
+  onGoToStep,
+  onRestart,
+}) => {
   const activeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -429,11 +878,22 @@ const TourSidebar: React.FC<TourSidebarProps> = ({ stepIndex, onGoToStep, onRest
             >
               {/* Status icon */}
               <span className="shrink-0 w-4 h-4 flex items-center justify-center">
-                {i < stepIndex && <Check size={11} className="text-primary/70" />}
-                {i === stepIndex && <ChevronRight size={11} className="text-primary" />}
-                {i > stepIndex && s.awaitAction && <MousePointerClick size={9} className="text-on-surface-variant/35" />}
+                {i < stepIndex && (
+                  <Check size={11} className="text-primary/70" />
+                )}
+                {i === stepIndex && (
+                  <ChevronRight size={11} className="text-primary" />
+                )}
+                {i > stepIndex && s.awaitAction && (
+                  <MousePointerClick
+                    size={9}
+                    className="text-on-surface-variant/35"
+                  />
+                )}
               </span>
-              <span className={`font-mono text-[11px] leading-snug truncate ${i === stepIndex ? "font-semibold" : ""}`}>
+              <span
+                className={`font-mono text-[11px] leading-snug truncate ${i === stepIndex ? "font-semibold" : ""}`}
+              >
                 {s.title}
               </span>
             </button>
@@ -472,13 +932,27 @@ interface TourContentProps {
 }
 
 const TourContent: React.FC<TourContentProps> = ({
-  step, stepIndex, isFirst, isLast, onClose, onNext, onPrev, onShowMe, onGoToStep, onRestart,
+  step,
+  stepIndex,
+  isFirst,
+  isLast,
+  onClose,
+  onNext,
+  onPrev,
+  onShowMe,
+  onGoToStep,
+  onRestart,
 }) => {
   // Mobile-only toggle: show the full step list instead of the content area
   const [showList, setShowList] = useState(false);
-  useEffect(() => { setShowList(false); }, [stepIndex]);
+  useEffect(() => {
+    setShowList(false);
+  }, [stepIndex]);
 
-  const handleGoToStep = (i: number) => { onGoToStep(i); setShowList(false); };
+  const handleGoToStep = (i: number) => {
+    onGoToStep(i);
+    setShowList(false);
+  };
 
   return (
     <div className="flex flex-col flex-1 min-w-0 h-full">
@@ -520,7 +994,11 @@ const TourContent: React.FC<TourContentProps> = ({
       {/* Step list (mobile only, toggled via List button) */}
       {showList ? (
         <div className="flex-1 overflow-hidden">
-          <TourSidebar stepIndex={stepIndex} onGoToStep={handleGoToStep} onRestart={onRestart} />
+          <TourSidebar
+            stepIndex={stepIndex}
+            onGoToStep={handleGoToStep}
+            onRestart={onRestart}
+          />
         </div>
       ) : (
         <>
@@ -556,7 +1034,9 @@ const TourContent: React.FC<TourContentProps> = ({
                 {step.action && (
                   <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-primary/8 border border-primary/18">
                     <Keyboard size={14} className="text-primary shrink-0" />
-                    <span className="font-mono text-[11px] text-on-surface">{step.action}</span>
+                    <span className="font-mono text-[11px] text-on-surface">
+                      {step.action}
+                    </span>
                   </div>
                 )}
 
@@ -569,7 +1049,6 @@ const TourContent: React.FC<TourContentProps> = ({
                     <MousePointerClick size={16} /> Show me
                   </button>
                 )}
-
               </motion.div>
             </AnimatePresence>
           </div>
@@ -583,13 +1062,19 @@ const TourContent: React.FC<TourContentProps> = ({
               >
                 <ArrowLeft size={12} /> Back
               </button>
-            ) : <span />}
+            ) : (
+              <span />
+            )}
 
             <span className="flex-1 text-center font-mono text-[10px] text-on-surface-variant/40 hidden sm:block">
               Navigate with ← → keys
             </span>
 
-            <TourNextButton isLast={isLast} stepIndex={stepIndex} onClick={onNext} />
+            <TourNextButton
+              isLast={isLast}
+              stepIndex={stepIndex}
+              onClick={onNext}
+            />
           </div>
         </>
       )}
@@ -597,17 +1082,27 @@ const TourContent: React.FC<TourContentProps> = ({
   );
 };
 
-const TourNextButton: React.FC<{ isLast: boolean; stepIndex: number; onClick: () => void }> = ({ isLast, stepIndex, onClick }) => {
+const TourNextButton: React.FC<{
+  isLast: boolean;
+  stepIndex: number;
+  onClick: () => void;
+}> = ({ isLast, stepIndex, onClick }) => {
   const nextTitle = !isLast ? STEPS[stepIndex + 1]?.title : undefined;
   return (
     <button
       onClick={onClick}
       className="flex items-center gap-1.5 px-4 py-2 rounded-lg font-mono text-xs font-semibold bg-primary text-on-primary hover:brightness-110 active:scale-95 transition-all shadow-sm max-w-[220px] truncate"
     >
-      {isLast
-        ? <><CheckCircle2 size={13} /> Done</>
-        : <><span className="truncate">Next: {nextTitle}</span> <ArrowRight size={12} className="shrink-0" /></>
-      }
+      {isLast ? (
+        <>
+          <CheckCircle2 size={13} /> Done
+        </>
+      ) : (
+        <>
+          <span className="truncate">Next: {nextTitle}</span>{" "}
+          <ArrowRight size={12} className="shrink-0" />
+        </>
+      )}
     </button>
   );
 };
@@ -640,10 +1135,8 @@ function useTourLogic(
     if (step.tab) onTabChange(step.tab);
     setTargetRect(null);
     setElementNotFound(false);
-    return resolveWithRetry(
-      step.targetSelector,
-      setTargetRect,
-      () => setElementNotFound(true),
+    return resolveWithRetry(step.targetSelector, setTargetRect, () =>
+      setElementNotFound(true),
     );
   }, [stepIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -674,23 +1167,42 @@ function useTourLogic(
   }, [stepIndex, step.awaitAction, step.targetSelector]);
 
   useEffect(
-    () => addListener(window, "keydown", makeKeyHandler(isFirst, isLast, onClose, setStepIndex)),
+    () =>
+      addListener(
+        window,
+        "keydown",
+        makeKeyHandler(isFirst, isLast, onClose, setStepIndex),
+      ),
     [isFirst, isLast, onClose, step.awaitAction],
   );
 
   const handleNext = useCallback(() => {
-    if (isLast) { onClose(); return; }
+    if (isLast) {
+      onClose();
+      return;
+    }
     setTargetRect(null);
-    setStepIndex(i => Math.min(i + 1, STEPS.length - 1));
+    setStepIndex((i) => Math.min(i + 1, STEPS.length - 1));
   }, [isLast, onClose]);
 
   const handlePrev = useCallback(() => {
     if (isFirst) return;
     setTargetRect(null);
-    setStepIndex(i => Math.max(i - 1, 0));
+    setStepIndex((i) => Math.max(i - 1, 0));
   }, [isFirst]);
 
-  return { step, stepIndex, isFirst, isLast, cardRef, targetRect, elementNotFound, handleNext, handlePrev, setStepIndex };
+  return {
+    step,
+    stepIndex,
+    isFirst,
+    isLast,
+    cardRef,
+    targetRect,
+    elementNotFound,
+    handleNext,
+    handlePrev,
+    setStepIndex,
+  };
 }
 
 // ─── Keyframes ────────────────────────────────────────────────────────────────
@@ -711,26 +1223,63 @@ interface TourOverlayProps {
   onStepChange: (step: number) => void;
 }
 
-export const TourOverlay: React.FC<TourOverlayProps> = ({ onClose, onTabChange, initialStep, onStepChange }) => {
-  const { step, stepIndex, isFirst, isLast, cardRef, targetRect, elementNotFound, handleNext, handlePrev, setStepIndex } =
-    useTourLogic(onClose, onTabChange, initialStep, onStepChange);
+export const TourOverlay: React.FC<TourOverlayProps> = ({
+  onClose,
+  onTabChange,
+  initialStep,
+  onStepChange,
+}) => {
+  const {
+    step,
+    stepIndex,
+    isFirst,
+    isLast,
+    cardRef,
+    targetRect,
+    elementNotFound,
+    handleNext,
+    handlePrev,
+    setStepIndex,
+  } = useTourLogic(onClose, onTabChange, initialStep, onStepChange);
+  const [isDashboardCustomizePaused, setIsDashboardCustomizePaused] =
+    useState(false);
+
+  useEffect(() => {
+    const pause = () => {
+      if (step.id === "dashboard-customize") {
+        setIsDashboardCustomizePaused(true);
+      }
+    };
+    const resume = () => setIsDashboardCustomizePaused(false);
+    window.addEventListener("mousi9ti-dashboard-customize-start", pause);
+    window.addEventListener("mousi9ti-dashboard-customize-end", resume);
+    return () => {
+      window.removeEventListener("mousi9ti-dashboard-customize-start", pause);
+      window.removeEventListener("mousi9ti-dashboard-customize-end", resume);
+    };
+  }, [step.id]);
 
   // userOpenedModal: true when the user explicitly clicked "Back to guide"
   // from reveal mode. Resets to false whenever the step changes.
   const [userOpenedModal, setUserOpenedModal] = useState(false);
-  useEffect(() => { setUserOpenedModal(false); }, [stepIndex]);
+  useEffect(() => {
+    setUserOpenedModal(false);
+  }, [stepIndex]);
 
   // Reveal mode: step has a target AND the element was found visible in the DOM.
   // elementNotFound flips true after ~960ms of failed retries (e.g. desktop
   // sidebar elements on mobile), falling back to the full centered modal.
-  const revealMode = !!step.targetSelector && !userOpenedModal && !elementNotFound;
+  const revealMode =
+    !!step.targetSelector && !userOpenedModal && !elementNotFound;
 
   // Focus trap for the full modal (non-reveal mode)
   useEffect(() => {
     if (revealMode || !cardRef.current) return;
     const container = cardRef.current;
-    const focusableSelector = 'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-    const getFocusable = () => Array.from(container.querySelectorAll<HTMLElement>(focusableSelector));
+    const focusableSelector =
+      'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const getFocusable = () =>
+      Array.from(container.querySelectorAll<HTMLElement>(focusableSelector));
     getFocusable()[0]?.focus();
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
@@ -749,8 +1298,22 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({ onClose, onTabChange, 
     return () => document.removeEventListener("keydown", handler);
   }, [revealMode, stepIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  if (isDashboardCustomizePaused) {
+    return (
+      <div className="fixed bottom-4 left-1/2 z-[260] -translate-x-1/2 rounded-full border border-outline-variant/40 bg-surface px-4 py-2 font-mono text-xs text-on-surface shadow-lg">
+        Customize your dashboard, then click <strong>Done</strong> to continue
+        the tour.
+      </div>
+    );
+  }
+
   const spot = targetRect
-    ? { top: targetRect.top - SP_PAD, left: targetRect.left - SP_PAD, width: targetRect.width + SP_PAD * 2, height: targetRect.height + SP_PAD * 2 }
+    ? {
+        top: targetRect.top - SP_PAD,
+        left: targetRect.left - SP_PAD,
+        width: targetRect.width + SP_PAD * 2,
+        height: targetRect.height + SP_PAD * 2,
+      }
     : null;
 
   const handleRestart = () => {
@@ -804,7 +1367,10 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({ onClose, onTabChange, 
           className="bg-surface border-0 sm:border border-outline-variant/40 rounded-t-3xl sm:rounded-3xl shadow-[0_32px_96px_rgba(0,0,0,0.7)] overflow-hidden flex h-[85svh] sm:h-[min(540px,calc(100vh-2rem))]"
         >
           {/* Left sidebar — step list (desktop only) */}
-          <div style={{ width: 220, minWidth: 220 }} className="border-r border-outline-variant/20 bg-surface-container/50 hidden sm:flex h-full overflow-hidden">
+          <div
+            style={{ width: 220, minWidth: 220 }}
+            className="border-r border-outline-variant/20 bg-surface-container/50 hidden sm:flex h-full overflow-hidden"
+          >
             <TourSidebar
               stepIndex={stepIndex}
               onGoToStep={setStepIndex}

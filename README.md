@@ -6,9 +6,8 @@
 
 Mousi9ti is a browser-based music practice studio for guitar and piano players. It combines theory exploration, daily practice planning, timing tools, and progress tracking into one workspace for structured, repeatable practice.
 
-## Updated Feature Set
-
 ### Practice dashboard and workflow
+
 - Customizable dashboard with drag-and-drop widget layout
 - Quick access to metronome, timer, session tracker, random note drill, daily tasks, instrument views, and chord selector
 - Practice task system with date-based scheduling and completion rules
@@ -19,6 +18,7 @@ Mousi9ti is a browser-based music practice studio for guitar and piano players. 
 - Daily practice streak tracking and grace-day logic
 
 ### Music theory and instrument learning
+
 - Guitar fretboard explorer with tuning, fret count, note display modes, and fretboard styling options
 - Piano keyboard visualization for scales and chords
 - Scale library with root selection, scale categories, degree/interval naming, and playback directions
@@ -29,6 +29,7 @@ Mousi9ti is a browser-based music practice studio for guitar and piano players. 
 - Guitar tuning presets and default instrument configuration
 
 ### Practice tools
+
 - Precision metronome with tempo control, time signatures, click styles, and bar-cycle mode
 - Practice timer with configurable presets and completions
 - Random note drill with interval-based prompts and auto-advance options
@@ -37,12 +38,14 @@ Mousi9ti is a browser-based music practice studio for guitar and piano players. 
 - Progression playback, reverb, instrument settings, and saved progression library
 
 ### Analytics and retention
+
 - Session review and task attribution tracking
 - Detailed stats dashboard with weekly/monthly/all-time practice breakdowns
 - Practice activity charts for task, timer, metronome, custom, and session sources
 - Streak, task completion, and cumulative practice insights
 
 ### Data management and configuration
+
 - Export and import full backups or selective backup categories
 - Local browser storage for sessions, tasks, settings, saved selections, and layout state
 - Theme switching, master audio volume, and app-wide preferences
@@ -93,18 +96,18 @@ The app runs as a client-side web application. Practice data is stored in the br
 
 ## Available Scripts
 
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start the Vite development server on port 3000 |
-| `npm run build` | Create the production build in `dist/` |
-| `npm run preview` | Preview the production build locally |
-| `npm run lint` | Run the TypeScript compiler without emitting files |
-| `npm run clean` | Remove generated build output |
-| `npm run chords:export` | Export the chord library data |
-| `npm run chords:import` | Import chord data |
-| `npm run version:patch` | Bump the app version (patch) |
-| `npm run version:minor` | Bump the app version (minor) |
-| `npm run version:major` | Bump the app version (major) |
+| Command                 | Description                                        |
+| ----------------------- | -------------------------------------------------- |
+| `npm run dev`           | Start the Vite development server on port 3000     |
+| `npm run build`         | Create the production build in `dist/`             |
+| `npm run preview`       | Preview the production build locally               |
+| `npm run lint`          | Run the TypeScript compiler without emitting files |
+| `npm run clean`         | Remove generated build output                      |
+| `npm run chords:export` | Export the chord library data                      |
+| `npm run chords:import` | Import chord data                                  |
+| `npm run version:patch` | Bump the app version (patch)                       |
+| `npm run version:minor` | Bump the app version (minor)                       |
+| `npm run version:major` | Bump the app version (major)                       |
 
 ## Project Structure
 

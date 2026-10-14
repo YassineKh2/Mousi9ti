@@ -133,6 +133,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
         {/* Navigation Links */}
         <nav
+          data-tour="sidebar-nav"
           className={`flex-1 ${isSidebarCollapsed ? "px-2" : "px-4"} py-6 space-y-1.5 overflow-y-auto`}
         >
           {navItems.map((item) => {
@@ -140,6 +141,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             return (
               <button
                 key={item.id}
+                data-tour={`nav-item-${item.id}`}
                 onClick={() => onSelectTab(item.id)}
                 title={isSidebarCollapsed ? item.label : undefined}
                 className={`w-full flex items-center ${isSidebarCollapsed ? "justify-center px-0" : "px-4"} py-3 rounded text-left transition-all duration-200 group border-l-2 ${
@@ -168,6 +170,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           className={`${isSidebarCollapsed ? "p-2" : "p-4"} border-t border-outline-variant/30 space-y-3`}
         >
           <div
+            data-tour="sidebar-streak"
             className={`bg-surface-container-low border border-outline-variant/30 rounded-lg ${isSidebarCollapsed ? "p-1 flex justify-center" : "p-3.5 flex flex-col gap-1.5"}`}
           >
             {isSidebarCollapsed ? (

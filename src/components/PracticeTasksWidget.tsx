@@ -857,6 +857,7 @@ export const InlineTaskRowEditor: React.FC<InlineTaskRowEditorProps> = ({
 
 interface PracticeTasksWidgetProps {
   onOpenRoutine?: () => void;
+  onDismissTour?: () => void;
   onFinishDailyTasksOnboarding?: (
     quickStartInstrument: "guitar" | "piano" | null,
   ) => void;
@@ -898,6 +899,7 @@ export const getSavedPracticeTasks = (): PracticeTask[] => {
 
 export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
   onOpenRoutine,
+  onDismissTour,
   onFinishDailyTasksOnboarding,
   onQuickStartTasks,
   tasks: controlledTasks,
@@ -1343,6 +1345,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
           <button
             type="button"
             onClick={() => {
+              onDismissTour?.();
               setOnboardingCompletionBehavior(
                 timerPreferences?.completionBehavior ?? "ask",
               );

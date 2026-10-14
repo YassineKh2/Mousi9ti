@@ -455,7 +455,13 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
                               }
                               className="w-full h-full cursor-pointer hover:bg-outline-variant/10 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
                             >
-                              <span className="font-mono text-[9px] text-on-surface-variant/40">
+                              <span
+                                className={`w-6 h-6 rounded-full flex items-center justify-center font-mono text-[9px] font-bold shadow-md ${
+                                  isRoot
+                                    ? "bg-primary text-on-primary"
+                                    : "bg-inverse-surface text-inverse-on-surface"
+                                }`}
+                              >
                                 {noteName}
                               </span>
                             </div>

@@ -1795,7 +1795,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   return (
     <div className="routine-page space-y-6 pb-12 relative">
       {/* Top Banner: Weekly Schedule & Cadence */}
-      <div className="bg-surface-container border border-outline-variant/30 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-md">
+      <div data-tour="routine-schedule" className="bg-surface-container border border-outline-variant/30 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-md">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="font-mono text-base font-bold tracking-[0.2em] text-on-surface uppercase flex items-center gap-2">
@@ -1924,7 +1924,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       </div>
 
       {/* 7 Day Cards Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div data-tour="routine-days" className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {daysInWeek.map((day, index) => {
           const historyDate = getHistoryDateForDay(day.day);
           const dayTasks = getTasksForDate(day.tasks, historyDate, taskHistory);
@@ -2009,7 +2009,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       {/* Two-Column Grid: Daily Practice Goals & Practice Tracker Timer */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Daily Practice Goals */}
-        <div className="lg:col-span-7 bg-surface-container border border-outline-variant/30 rounded-xl p-5 shadow-md flex flex-col gap-4">
+        <div data-tour="routine-goals" className="lg:col-span-7 bg-surface-container border border-outline-variant/30 rounded-xl p-5 shadow-md flex flex-col gap-4">
           <div className="flex items-center justify-between pb-3 border-b border-outline-variant/20">
             <div>
               <h2 className="text-sm font-bold font-mono uppercase tracking-wider text-on-surface flex items-center gap-2">

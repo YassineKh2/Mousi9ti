@@ -1309,6 +1309,7 @@ export function App() {
               metronomeBarCycleMode={metronomeBarCycleMode}
               onBarCycleModeChange={setMetronomeBarCycleMode}
               onOpenRoutine={() => setActiveTab("routine")}
+              onDismissTour={isTourOpen ? handleCloseTour : undefined}
               onFinishDailyTasksOnboarding={(instrument) => {
                 setQuickStartInstrument(instrument ?? "none");
                 setActiveTab("routine");
