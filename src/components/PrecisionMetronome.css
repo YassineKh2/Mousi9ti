@@ -221,6 +221,16 @@
   fill: var(--pm-accent);
 }
 
+.precision-metro__weight-control {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.precision-metro__weight-control:active {
+  cursor: grabbing;
+}
+
 .precision-metro__weight-line {
   fill: var(--pm-ink);
   opacity: 0.75;
@@ -565,14 +575,11 @@
   width: 20px;
   height: 20px;
   place-items: center;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  font-size: 10px;
 }
 
 .precision-metro__tap svg {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
 }
 
 @media (max-width: 780px) {

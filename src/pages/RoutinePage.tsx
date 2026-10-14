@@ -1404,7 +1404,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
               rect: e.currentTarget.getBoundingClientRect(),
             });
           }}
-          className={`inline-flex max-w-full min-w-0 items-center gap-1 whitespace-normal break-words px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-mono font-bold align-middle shadow-sm cursor-pointer transition-colors ${badgeClass} ${task.completed ? "line-through" : ""}`}
+          className={`inline-flex max-w-full min-w-0 items-center gap-1 whitespace-normal break-words px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-mono font-bold align-middle shadow-sm cursor-pointer transition-colors ${badgeClass} ${settings.taskTagsColored ? `task-tag-badge--${tool}` : ""} ${task.completed ? "line-through" : ""}`}
           title="Click to edit badge settings"
         >
           <Icon size={12} className="shrink-0" />

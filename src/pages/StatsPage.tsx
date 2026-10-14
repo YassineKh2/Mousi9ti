@@ -13,9 +13,15 @@ import {
   getSavedTaskAttributions,
 } from "../lib/storage";
 import { getSavedCustomTags } from "../lib/customTaskTags";
+import {
+  formatDurationLabel,
+  MENTION_REGEX,
+  parseParams,
+} from "../utils/taskMentions";
 import { isTaskVisibleOnDate } from "../lib/taskDates";
 import { isPracticeDayComplete } from "../lib/practiceDays";
 import { CalendarRangePicker } from "../components/CalendarRangePicker";
+import { useSettingsContext } from "../contexts/SettingsContext";
 import {
   Bar,
   BarChart,
@@ -32,6 +38,7 @@ import {
   YAxis,
 } from "recharts";
 import {
+  Activity,
   BarChart3,
   Calendar,
   CheckCircle2,
@@ -40,9 +47,15 @@ import {
   ChevronRight,
   Clock,
   Flame,
+  Gauge,
+  Hash,
   ListChecks,
+  Music,
+  Sliders,
+  Compass,
   Tag,
   Target,
+  Zap,
 } from "lucide-react";
 
 interface StatsPageProps {
@@ -173,6 +186,7 @@ function genericToActivity(activity: PracticeActivity): AnalyticsActivity {
 }
 
 export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
+  const settings = useSettingsContext();
   const [range, setRange] = useState<Range>("week");
   const [isRangeOpen, setIsRangeOpen] = useState(false);
   const rangePickerRef = useRef<HTMLDivElement>(null);
@@ -553,6 +567,99 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     name.startsWith("@custom(") && name.endsWith(")")
       ? name.slice(8, -1)
       : null;
+  const activityTagStyles: Record<string, string> = {
+    scale: "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20",
+    chord: "bg-violet-500/20 text-violet-300 border border-violet-500/40 hover:bg-violet-500/25",
+    timer: "bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/25",
+    time: "bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/25",
+    custom: "bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-500/25",
+    tuning: "bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/25",
+    key: "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/25",
+    technique: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25",
+    bpm: "bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/25",
+    exercise: "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/25",
+    metronome: "bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/25",
+    random: "bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/25",
+  };
+  const renderActivityText = (value?: string) => {
+    const text = value?.trim() || "-";
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    MENTION_REGEX.lastIndex = 0;
+
+    while ((match = MENTION_REGEX.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(
+          <span key={`text-${lastIndex}`}>
+            {text.slice(lastIndex, match.index)}
+          </span>,
+        );
+      }
+
+      const tool = match[2].toLowerCase();
+      const params = match[3] || "";
+      let Icon = Activity;
+      const badgeClass = settings.taskTagsColored
+        ? activityTagStyles[tool] || activityTagStyles.custom
+        : "border border-outline-variant/40 bg-surface-container-high text-on-surface-variant";
+
+      if (tool === "scale") Icon = Music;
+      else if (tool === "chord") Icon = Hash;
+      else if (tool === "timer" || tool === "time") Icon = Clock;
+      else if (tool === "custom") Icon = Tag;
+      else if (tool === "tuning") Icon = Sliders;
+      else if (tool === "key") Icon = Compass;
+      else if (tool === "technique") Icon = Zap;
+      else if (tool === "bpm") Icon = Gauge;
+      else if (tool === "exercise") Icon = Target;
+
+      let label = tool;
+      const parsed = parseParams(tool, params);
+      if (tool === "metronome") label = `${parsed.bpm} BPM · ${parsed.signature}`;
+      else if (tool === "scale") label = parsed.label || `${parsed.root} ${parsed.type}`;
+      else if (tool === "chord") label = parsed.label || `${parsed.root} ${parsed.type}`;
+      else if (tool === "timer" || tool === "time") {
+        label = formatDurationLabel(parsed.minutes);
+      } else if (tool === "custom") label = parsed.text || "Custom";
+      else if (tool === "tuning") label = parsed.tuning || "Tuning";
+      else if (tool === "key") label = parsed.key || "Key";
+      else if (tool === "technique") label = parsed.technique || "Technique";
+      else if (tool === "bpm") label = `${parsed.bpm} BPM · ${parsed.signature}`;
+      else if (tool === "exercise") label = parsed.exercise || "Exercise";
+      else if (tool === "random") {
+        const modeLabels: Record<string, string> = {
+          both: "all notes",
+          sharps: "sharp notes",
+          flats: "flat notes",
+          naturals: "natural notes",
+        };
+        label = `random (${modeLabels[parsed.accidentalMode] || "all notes"})${parsed.autoAdvance ? ` · auto advance for ${parsed.interval}` : ""}`;
+      }
+
+      parts.push(
+        <span
+          key={`mention-${match.index}`}
+          className={`inline-flex max-w-full min-w-0 items-center gap-1 whitespace-normal break-words px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-mono font-bold align-middle shadow-sm transition-colors ${badgeClass} ${settings.taskTagsColored ? `task-tag-badge--${tool}` : ""}`}
+          style={
+            settings.taskTagsColored
+              ? undefined
+              : { backgroundColor: "var(--color-surface-container-high)" }
+          }
+        >
+          <Icon size={12} className="shrink-0" />
+          <span className="min-w-0 break-words">{label}</span>
+        </span>,
+      );
+      lastIndex = MENTION_REGEX.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push(<span key={`text-${lastIndex}`}>{text.slice(lastIndex)}</span>);
+    }
+
+    return <span className="whitespace-normal break-words">{parts}</span>;
+  };
   const renderAreaName = (name: string) => {
     const label = tagLabel(name);
     return label === null ? (
@@ -579,6 +686,21 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
   )
     .filter(([name]) => tagLabel(name) !== null)
     .sort((a, b) => b[1].seconds - a[1].seconds);
+  const customPracticeSeconds = customActivities.reduce(
+    (sum, activity) => sum + activity.countedDurationSeconds,
+    0,
+  );
+  const customActivityMaxSeconds = Math.max(
+    1,
+    ...customRows.map(([, value]) => value.seconds),
+  );
+  const customTaskMaxSeconds = Math.max(
+    1,
+    ...taskRows.map(([, value]) => value.seconds),
+  );
+  const topCustomActivity = customRows[0];
+  const customTimeShare = (seconds: number) =>
+    Math.round((seconds / Math.max(1, customPracticeSeconds)) * 100);
   const customAnalyticsPageSize = 8;
   const customAnalyticsPageCount = Math.max(
     1,
@@ -951,22 +1073,10 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
       </div>
 
       <div className="stats-breakdown-grid grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <section className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-4">
+        <section className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-4 flex flex-col">
           <h2 className="font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
             Peak vs Average BPM
           </h2>
-          {dailyBpmData.length > 0 && (
-            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-on-surface-variant">
-              <span className="inline-flex items-center gap-2 font-mono">
-                <i className="h-2 w-2 rounded-full bg-[var(--color-secondary)]" />{" "}
-                Peak BPM
-              </span>
-              <span className="inline-flex items-center gap-2 font-mono">
-                <i className="h-2 w-2 rounded-full bg-[var(--color-primary)]" />{" "}
-                Average BPM
-              </span>
-            </div>
-          )}
           <div className="flex h-64 min-w-0 flex-col">
             {dailyBpmData.length ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -1009,6 +1119,18 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
               </p>
             )}
           </div>
+          {dailyBpmData.length > 0 && (
+            <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 pt-2 text-[10px] font-mono text-on-surface-variant">
+              <span className="inline-flex items-center gap-2">
+                <i className="h-2 w-2 rounded-full bg-[var(--color-secondary)]" />
+                Peak BPM
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <i className="h-2 w-2 rounded-full bg-[var(--color-primary)]" />
+                Average BPM
+              </span>
+            </div>
+          )}
         </section>
         <section className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-4 flex flex-col">
           <h2 className="font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
@@ -1270,143 +1392,6 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
         </section>
       </div>
 
-      <section className="stats-custom-card stats-analytics-panel bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="stats-analytics-heading font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
-            <span className="stats-analytics-heading-icon">
-              <BarChart3 size={15} />
-            </span>
-            Custom Activities and Individual Task Analytics
-          </h2>
-          {customAnalyticsPageCount > 1 && (
-            <div className="flex items-center gap-2 font-mono text-xs text-on-surface-variant">
-              <button
-                type="button"
-                className="stats-log-page-button"
-                onClick={() =>
-                  setCustomAnalyticsPage((page) => Math.max(1, page - 1))
-                }
-                disabled={visibleCustomAnalyticsPage === 1}
-                aria-label="Previous custom analytics page"
-              >
-                <ChevronLeft size={15} />
-              </button>
-              <span>
-                Page {visibleCustomAnalyticsPage} of {customAnalyticsPageCount}
-              </span>
-              <button
-                type="button"
-                className="stats-log-page-button"
-                onClick={() =>
-                  setCustomAnalyticsPage((page) =>
-                    Math.min(customAnalyticsPageCount, page + 1),
-                  )
-                }
-                disabled={
-                  visibleCustomAnalyticsPage === customAnalyticsPageCount
-                }
-                aria-label="Next custom analytics page"
-              >
-                <ChevronRight size={15} />
-              </button>
-            </div>
-          )}
-        </div>
-        <div className="stats-analytics-grid grid grid-cols-1 lg:grid-cols-2 gap-6 mt-5">
-          <div className="stats-analytics-column">
-            {customRows.length ? (
-              visibleCustomRows.map(([name, value]) => (
-                <div key={name} className="stats-analytics-row font-mono">
-                  <span className="stats-analytics-row-icon stats-analytics-row-icon-custom">
-                    <BarChart3 size={15} />
-                  </span>
-                  <span className="stats-analytics-row-copy">
-                    <span className="stats-analytics-row-title">
-                      {tagLabel(name)}
-                    </span>
-                    <span className="stats-analytics-row-meta">
-                      {value.days.size} day{value.days.size === 1 ? "" : "s"} ·{" "}
-                      {value.sessions} session
-                      {value.sessions === 1 ? "" : "s"}
-                    </span>
-                  </span>
-                  <span className="stats-analytics-row-stat">
-                    {formatDuration(value.seconds)} · {daysSince(value.last)}d
-                  </span>
-                </div>
-              ))
-            ) : (
-              <p className="text-xs font-mono text-on-surface-variant">
-                Use @custom(Activity Name) in a task to track custom work.
-              </p>
-            )}
-          </div>
-          <div className="stats-analytics-column">
-            {taskRows.length ? (
-              visibleTaskRows.map(([name, value]) => (
-                <button
-                  key={name}
-                  onClick={() =>
-                    setSelectedTask(selectedTask === name ? null : name)
-                  }
-                  className="stats-analytics-row stats-analytics-row-button w-full text-left font-mono hover:bg-outline-variant/10"
-                >
-                  <span className="stats-analytics-row-icon stats-analytics-row-icon-task">
-                    <ListChecks size={15} />
-                  </span>
-                  <span className="stats-analytics-row-copy">
-                    <span className="stats-analytics-row-title">{name}</span>
-                    <span className="stats-analytics-row-meta">
-                      For{" "}
-                      {activities.find(
-                        (activity) =>
-                          (activity.task || activity.subject) === name,
-                      )?.area || "Task practice"}{" "}
-                      · {value.days.size} day
-                      {value.days.size === 1 ? "" : "s"}
-                    </span>
-                  </span>
-                  <span className="stats-analytics-row-stat">
-                    {formatDuration(value.seconds)} · {value.days.size}d
-                  </span>
-                </button>
-              ))
-            ) : (
-              <p className="text-xs font-mono text-on-surface-variant">
-                No task history yet.
-              </p>
-            )}
-          </div>
-        </div>
-        {selectedTask && (
-          <div className="mt-5 border-t border-outline-variant/30 pt-4 text-xs font-mono">
-            <h3 className="text-on-surface font-bold">{selectedTask}</h3>
-            <p className="text-on-surface-variant mt-2">
-              Total time {formatDuration(selectedTaskStats.seconds)} ·{" "}
-              {selectedTaskStats.days.size} practice days · average{" "}
-              {formatDuration(
-                selectedTaskStats.seconds /
-                  Math.max(1, selectedTaskActivities.length),
-              )}{" "}
-              · last{" "}
-              {dateLabel(
-                new Date(selectedTaskStats.last).toISOString().slice(0, 10),
-              )}
-            </p>
-            {selectedTaskStats.bpms.length > 0 && (
-              <p className="text-on-surface-variant">
-                BPM {Math.min(...selectedTaskStats.bpms)}–
-                {Math.max(...selectedTaskStats.bpms)} · average{" "}
-                {Math.round(
-                  selectedTaskStats.bpms.reduce((a, b) => a + b, 0) /
-                    selectedTaskStats.bpms.length,
-                )}
-              </p>
-            )}
-          </div>
-        )}
-      </section>
-
       <section className="stats-practice-log bg-surface-container border border-outline-variant/30 rounded-lg p-6 shadow-xl space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-mono text-xs font-bold text-on-surface uppercase tracking-wider">
@@ -1463,8 +1448,10 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                   <td className="py-3 px-3 text-on-surface-variant">
                     {activity.date}
                   </td>
-                  <td className="py-3 px-3 text-on-surface max-w-[220px] truncate">
-                    {activity.task || activity.subject || activity.area}
+                  <td className="py-3 px-3 text-on-surface max-w-[220px] align-top">
+                    {renderActivityText(
+                      activity.task || activity.subject || activity.area,
+                    )}
                   </td>
                   <td className="py-3 px-3 text-primary">{activity.source}</td>
                   <td className="py-3 px-3 text-on-surface">{activity.area}</td>

@@ -286,7 +286,7 @@ const getMentionSuggestions = (
       {
         name: "technique",
         label: "@technique",
-        subLabel: "Guitar technique (Legato, Picking...)",
+        subLabel: "Technique (Legato, Picking...)",
       },
       { name: "bpm", label: "@bpm", subLabel: "Target tempo BPM" },
       {
@@ -1096,8 +1096,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
       else if (tool === "chord") label = p.label || `${p.root} ${p.type}`;
       else if (tool === "timer" || tool === "time") {
         label = formatDurationLabel(p.minutes);
-      }
-      else if (tool === "custom") label = p.text || "Custom";
+      } else if (tool === "custom") label = p.text || "Custom";
       else if (tool === "tuning") label = p.tuning || "Tuning";
       else if (tool === "key") label = p.key || "Key";
       else if (tool === "technique") label = p.technique || "Technique";
@@ -1129,7 +1128,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
               rect: e.currentTarget.getBoundingClientRect(),
             });
           }}
-          className={`inline-flex max-w-full min-w-0 items-center gap-1 whitespace-normal break-words px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-mono font-bold align-middle shadow-sm cursor-pointer transition-colors ${badgeClass} ${task.completed ? "line-through" : ""}`}
+          className={`inline-flex max-w-full min-w-0 items-center gap-1 whitespace-normal break-words px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-mono font-bold align-middle shadow-sm cursor-pointer transition-colors ${badgeClass} ${settings.taskTagsColored ? `task-tag-badge--${tool}` : ""} ${task.completed ? "line-through" : ""}`}
         >
           <Icon size={12} className="shrink-0" />
           <span className="min-w-0 break-words">{label}</span>
@@ -1867,9 +1866,7 @@ export const DropdownEditor: React.FC<{
     initial.bpm ? String(initial.bpm) : "120",
   );
   const [signature, setSignature] = useState(initial.signature || "4/4");
-  const [minutesStr, setMinutesStr] = useState(
-    active.params || "5",
-  );
+  const [minutesStr, setMinutesStr] = useState(active.params || "5");
   const [randomMode, setRandomMode] = useState(
     initial.accidentalMode || "both",
   );

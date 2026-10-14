@@ -3,13 +3,17 @@ import { it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { StatsPage } from "./StatsPage";
-import { Session, TaskTimeAttribution } from "../types";
+import { SettingsContext } from "../contexts/SettingsContext";
+import { AppSettings, Session, TaskTimeAttribution } from "../types";
 
 const durationSeconds = 600;
+const settings = (taskTagsColored = false) =>
+  ({ taskTagsColored }) as AppSettings;
 
 function renderWithAttribution(
   source: TaskTimeAttribution["source"],
   attributedDurationSeconds = 240,
+  taskTagsColored = false,
 ) {
   const endTime = Date.now();
   const startTime = endTime - durationSeconds * 1000;
@@ -55,16 +59,18 @@ function renderWithAttribution(
   } as Storage;
   try {
     return renderToStaticMarkup(
-      <StatsPage
-        sessions={[session]}
-        streak={{
-          currentStreak: 1,
-          longestStreak: 1,
-          lastVisitDate: session.date,
-          graceDaysUsed: 0,
-          history: [],
-        }}
-      />,
+      <SettingsContext.Provider value={settings(taskTagsColored)}>
+        <StatsPage
+          sessions={[session]}
+          streak={{
+            currentStreak: 1,
+            longestStreak: 1,
+            lastVisitDate: session.date,
+            graceDaysUsed: 0,
+            history: [],
+          }}
+        />
+      </SettingsContext.Provider>,
     );
   } finally {
     globalThis.localStorage = originalStorage;
@@ -79,6 +85,7 @@ for (const source of ["automatic", "manual"] as const) {
       html.indexOf("Practice Sources"),
       html.indexOf("Trends"),
     );
+    assert.doesNotMatch(html, /Practice Coach/);
     assert.doesNotMatch(html, /Practice Focus \/ Breakdown/);
     assert.doesNotMatch(
       analytics,
@@ -93,6 +100,41 @@ for (const source of ["automatic", "manual"] as const) {
     assert.match(html, />10m</);
   });
 }
+
+it("renders custom tags gray in the Practice Log when gray tags are selected", () => {
+  const html = renderWithAttribution("automatic", 240);
+  const practiceLog = html.slice(
+    html.indexOf('<table class="stats-practice-log-table'),
+    html.indexOf("</table>"),
+  );
+
+  assert.match(
+    practiceLog,
+    /border-outline-variant\/40 bg-surface-container-high text-on-surface-variant[^"]*"/,
+  );
+  assert.match(
+    practiceLog,
+    /style="background-color:var\(--color-surface-container-high\)"/,
+  );
+  assert.match(practiceLog, /class="[^"]*shrink-0[^"]*"/);
+  assert.match(practiceLog, />Solo<\/span>/);
+  assert.doesNotMatch(practiceLog, /@custom\(Solo\)/);
+});
+
+it("renders custom tags in color in the Practice Log when colored tags are selected", () => {
+  const html = renderWithAttribution("automatic", 240, true);
+  const practiceLog = html.slice(
+    html.indexOf('<table class="stats-practice-log-table'),
+    html.indexOf("</table>"),
+  );
+
+  assert.match(
+    practiceLog,
+    /bg-teal-500\/20 text-teal-300 border border-teal-500\/40 hover:bg-teal-500\/25[^"]*task-tag-badge--custom[^"]*"/,
+  );
+  assert.match(practiceLog, /class="[^"]*shrink-0[^"]*"/);
+  assert.match(practiceLog, />Solo<\/span>/);
+});
 
 it("hides practice sources that round to zero minutes", () => {
   const html = renderWithAttribution("automatic", 0);
@@ -118,16 +160,18 @@ it("shows bottom empty states when the selected dates have no chart data", () =>
 
   try {
     const html = renderToStaticMarkup(
-      <StatsPage
-        sessions={[]}
-        streak={{
-          currentStreak: 0,
-          longestStreak: 0,
-          lastVisitDate: new Date().toISOString().slice(0, 10),
-          graceDaysUsed: 0,
-          history: [],
-        }}
-      />,
+      <SettingsContext.Provider value={settings()}>
+        <StatsPage
+          sessions={[]}
+          streak={{
+            currentStreak: 0,
+            longestStreak: 0,
+            lastVisitDate: new Date().toISOString().slice(0, 10),
+            graceDaysUsed: 0,
+            history: [],
+          }}
+        />
+      </SettingsContext.Provider>,
     );
     const bpm = html.slice(
       html.indexOf("Peak vs Average BPM"),
@@ -220,16 +264,18 @@ it("counts task completions and in-progress tasks once within the Monday-based w
 
   try {
     const html = renderToStaticMarkup(
-      <StatsPage
-        sessions={[]}
-        streak={{
-          currentStreak: 0,
-          longestStreak: 0,
-          lastVisitDate: today,
-          graceDaysUsed: 0,
-          history: [],
-        }}
-      />,
+      <SettingsContext.Provider value={settings()}>
+        <StatsPage
+          sessions={[]}
+          streak={{
+            currentStreak: 0,
+            longestStreak: 0,
+            lastVisitDate: today,
+            graceDaysUsed: 0,
+            history: [],
+          }}
+        />
+      </SettingsContext.Provider>,
     );
     const completionHeading = html.indexOf("Task Completion");
     const completion = html.slice(
@@ -290,26 +336,24 @@ it("paginates analytics and limits individual tasks to custom activities", () =>
 
   try {
     const html = renderToStaticMarkup(
-      <StatsPage
-        sessions={[]}
-        streak={{
-          currentStreak: 0,
-          longestStreak: 0,
-          lastVisitDate: date,
-          graceDaysUsed: 0,
-          history: [],
-        }}
-      />,
-    );
-    const analytics = html.slice(
-      html.indexOf("Custom Activities and Individual Task Analytics"),
-      html.indexOf("Practice Log"),
+      <SettingsContext.Provider value={settings()}>
+        <StatsPage
+          sessions={[]}
+          streak={{
+            currentStreak: 0,
+            longestStreak: 0,
+            lastVisitDate: date,
+            graceDaysUsed: 0,
+            history: [],
+          }}
+        />
+      </SettingsContext.Provider>,
     );
 
-    assert.match(analytics, /Page 1 of 2/);
-    assert.match(analytics, /Custom task 1/);
-    assert.doesNotMatch(analytics, /Custom task 9/);
-    assert.doesNotMatch(analytics, /Standard scales/);
+    assert.doesNotMatch(html, /Practice Coach/);
+    assert.doesNotMatch(html, /YOUR FOCUS/);
+    assert.doesNotMatch(html, /PRACTICE HEALTH/);
+    assert.doesNotMatch(html, /CUSTOM ACTIVITY LIST/);
   } finally {
     globalThis.localStorage = originalStorage;
   }

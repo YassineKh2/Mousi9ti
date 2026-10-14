@@ -119,12 +119,11 @@ export const formatDurationLabel = (minutes: number): string => {
   const totalSeconds = Math.round(minutes * 60);
   const wholeMinutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return [
-    wholeMinutes ? `${wholeMinutes}m` : "",
-    seconds ? `${seconds}s` : "",
-  ]
-    .filter(Boolean)
-    .join(" ") || "0s";
+  return (
+    [wholeMinutes ? `${wholeMinutes}m` : "", seconds ? `${seconds}s` : ""]
+      .filter(Boolean)
+      .join(" ") || "0s"
+  );
 };
 
 export const parseParams = (tool: string, params: string) => {
@@ -297,7 +296,7 @@ export const getMentionSuggestions = (
       {
         name: "technique",
         label: "@technique",
-        subLabel: "Guitar technique (Legato, Picking...)",
+        subLabel: "Technique (Legato, Picking...)",
       },
       { name: "bpm", label: "@bpm", subLabel: "Target tempo BPM" },
       {
@@ -312,7 +311,11 @@ export const getMentionSuggestions = (
         label: "@metronome",
         subLabel: "Metronome BPM & signature",
       },
-      { name: "timer", label: "@timer", subLabel: "Practice timer (minutes and seconds)" },
+      {
+        name: "timer",
+        label: "@timer",
+        subLabel: "Practice timer (minutes and seconds)",
+      },
       { name: "time", label: "@time", subLabel: "Planned task time (minutes)" },
       { name: "random", label: "@random", subLabel: "Random note settings" },
     ];

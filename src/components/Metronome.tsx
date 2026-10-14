@@ -143,6 +143,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
   const [tempoInput, setTempoInput] = useState(String(bpm));
   const precisionArmRef = useRef<SVGGElement>(null);
   const precisionWeightRef = useRef<SVGGElement>(null);
+  const precisionWeightDragOffsetRef = useRef(0);
   const precisionLeftGlowRef = useRef<SVGCircleElement>(null);
   const precisionRightGlowRef = useRef<SVGCircleElement>(null);
   const precisionLeftLampRef = useRef<SVGCircleElement>(null);
@@ -516,6 +517,53 @@ export const Metronome: React.FC<MetronomeProps> = ({
     onBpmChange(newBpm);
   };
 
+  const getPrecisionArmPoint = (
+    event: React.PointerEvent<SVGGElement>,
+  ) => {
+    const arm = precisionArmRef.current;
+    const svg = arm?.ownerSVGElement;
+    const screenMatrix = arm?.getScreenCTM();
+    if (!arm || !svg || !screenMatrix) return null;
+
+    const point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    return point.matrixTransform(screenMatrix.inverse());
+  };
+
+  const updatePrecisionTempoFromPointer = (
+    event: React.PointerEvent<SVGGElement>,
+  ) => {
+    const armPoint = getPrecisionArmPoint(event);
+    if (!armPoint) return;
+
+    const weightY = armPoint.y - precisionWeightDragOffsetRef.current;
+    const nextBpm = Math.round(20 + ((weightY + 270) / 250) * 280);
+    onBpmChange(Math.max(20, Math.min(300, nextBpm)));
+  };
+
+  const handlePrecisionWeightKeyDown = (
+    event: React.KeyboardEvent<SVGGElement>,
+  ) => {
+    const keyAdjustments: Record<string, number> = {
+      ArrowUp: 1,
+      ArrowDown: -1,
+      PageUp: 10,
+      PageDown: -10,
+    };
+    const adjustment = keyAdjustments[event.key];
+    if (adjustment !== undefined) {
+      event.preventDefault();
+      adjustBpm(adjustment);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      onBpmChange(20);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      onBpmChange(300);
+    }
+  };
+
   if (variant === "precision") {
     const mark = precisionTempoMarks.find(
       ([threshold]) => bpm < threshold,
@@ -586,8 +634,8 @@ export const Metronome: React.FC<MetronomeProps> = ({
           <section className="precision-metro__pendulum">
             <svg
               viewBox="0 0 320 392"
-              role="img"
-              aria-label="Metronome pendulum swinging in time with the tempo"
+              role="group"
+              aria-label="Metronome pendulum"
             >
               <path
                 className="precision-metro__body"
@@ -684,8 +732,33 @@ export const Metronome: React.FC<MetronomeProps> = ({
                 </g>
                 <g
                   ref={precisionWeightRef}
+                  className="precision-metro__weight-control"
                   data-y={precisionDistance(bpm)}
                   transform={`translate(0 ${-precisionDistance(bpm)})`}
+                  role="slider"
+                  tabIndex={0}
+                  aria-label="Tempo"
+                  aria-valuemin={20}
+                  aria-valuemax={300}
+                  aria-valuenow={bpm}
+                  aria-valuetext={`${bpm} BPM`}
+                  aria-orientation="vertical"
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    const armPoint = getPrecisionArmPoint(event);
+                    if (armPoint) {
+                      precisionWeightDragOffsetRef.current =
+                        armPoint.y + precisionDistance(bpm);
+                    }
+                    updatePrecisionTempoFromPointer(event);
+                  }}
+                  onPointerMove={(event) => {
+                    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                      updatePrecisionTempoFromPointer(event);
+                    }
+                  }}
+                  onKeyDown={handlePrecisionWeightKeyDown}
                 >
                   <rect
                     className="precision-metro__weight"
@@ -888,7 +961,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
                 onClick={handleTapTempo}
               >
                 <span className="precision-metro__tap" aria-hidden="true">
-                  <Hand size={12} strokeWidth={2.25} />
+                  <Hand size={16} strokeWidth={2.25} />
                 </span>
                 Tap tempo
               </button>
@@ -1066,8 +1139,9 @@ export const Metronome: React.FC<MetronomeProps> = ({
         <div className="flex flex-wrap items-end gap-2 flex-1">
           <button
             onClick={handleTapTempo}
-            className="min-h-10 text-[10px] font-mono tracking-widest text-on-surface-variant border border-outline-variant/30 px-3.5 py-1.5 rounded hover:text-on-surface hover:border-primary/40 hover:bg-primary/5 active:scale-95 transition-all md:min-h-0"
+            className="inline-flex min-h-10 items-center gap-1.5 text-[10px] font-mono tracking-widest text-on-surface-variant border border-outline-variant/30 px-3.5 py-1.5 rounded hover:text-on-surface hover:border-primary/40 hover:bg-primary/5 active:scale-95 transition-all md:min-h-0"
           >
+            <Hand size={16} strokeWidth={2.25} aria-hidden="true" />
             TAP TEMPO
           </button>
 

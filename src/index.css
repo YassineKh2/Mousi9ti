@@ -5,6 +5,44 @@
   min-height: 31.25rem;
 }
 
+.light .task-tag-badge--chord {
+  color: #5b21b6;
+}
+
+.light .task-tag-badge--timer,
+.light .task-tag-badge--time {
+  color: #9a3412;
+}
+
+.light .task-tag-badge--custom {
+  color: #115e59;
+}
+
+.light .task-tag-badge--tuning {
+  color: #92400e;
+}
+
+.light .task-tag-badge--key {
+  color: #155e75;
+}
+
+.light .task-tag-badge--technique {
+  color: #166534;
+}
+
+.light .task-tag-badge--bpm,
+.light .task-tag-badge--metronome {
+  color: #9f1239;
+}
+
+.light .task-tag-badge--exercise {
+  color: #3730a3;
+}
+
+.light .task-tag-badge--random {
+  color: #075985;
+}
+
 .daily-practice-widget-content > .daily-practice-widget {
   position: absolute;
   inset: 0;
@@ -1174,12 +1212,49 @@
   border-radius: 999px;
 }
 
+.stats-analytics-summary-card {
+  display: grid;
+  min-width: 0;
+  gap: 0.35rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgb(116 153 207 / 12%);
+  border-radius: 0.55rem;
+  background: rgb(255 255 255 / 2%);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.stats-analytics-summary-card span {
+  color: #7f91ad;
+  font-size: 0.58rem;
+}
+
+.stats-analytics-summary-card strong {
+  overflow: hidden;
+  color: #dbe7f7;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .stats-analytics-grid {
   gap: 1.25rem !important;
 }
 
 .stats-analytics-column {
   min-width: 0;
+}
+
+.stats-analytics-column-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.4rem;
+  color: #9eb5d7;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 .stats-analytics-row {
@@ -1190,6 +1265,10 @@
   min-height: 3rem;
   border-bottom: 1px solid rgb(116 153 207 / 10%);
   color: #dbe7f7;
+}
+
+.stats-analytics-bar-row {
+  min-height: 3.6rem;
 }
 
 .stats-analytics-row:last-child {
@@ -1239,10 +1318,265 @@
   font-size: 0.55rem;
 }
 
+.stats-analytics-bar-track {
+  display: block;
+  width: 100%;
+  height: 0.2rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(148 163 184 / 14%);
+}
+
+.stats-analytics-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.stats-analytics-bar-fill-custom {
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+}
+
+.stats-analytics-bar-fill-task {
+  background: linear-gradient(90deg, #34d399, #a3e635);
+}
+
 .stats-analytics-row-stat {
   color: #a9c0ff;
   font-size: 0.62rem;
   white-space: nowrap;
+}
+
+.stats-coach-range-picker {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgb(148 163 184 / 18%);
+  border-radius: 999px;
+  background: rgb(15 23 42 / 35%);
+  padding: 0.15rem 0.45rem 0.15rem 0.35rem;
+}
+
+.stats-coach-range-select {
+  border: 0;
+  background: transparent;
+  color: #dbe7f7;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.62rem;
+  padding: 0.3rem 1.3rem 0.3rem 0.25rem;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #9eb5d7 50%),
+    linear-gradient(135deg, #9eb5d7 50%, transparent 50%);
+  background-position: calc(100% - 0.9rem) calc(50% - 0.125rem),
+    calc(100% - 0.65rem) calc(50% - 0.125rem);
+  background-size: 0.35rem 0.35rem, 0.35rem 0.35rem;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.stats-coach-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.stats-coach-summary-card {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgb(116 153 207 / 12%);
+  border-radius: 0.6rem;
+  background: rgb(255 255 255 / 2%);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.stats-coach-summary-card span {
+  color: #7f91ad;
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.stats-coach-summary-card strong {
+  color: #dbe7f7;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.stats-coach-panel {
+  min-width: 0;
+  border: 1px solid rgb(116 153 207 / 12%);
+  border-radius: 0.8rem;
+  background: rgb(255 255 255 / 1.5%);
+  padding: 0.9rem 0.95rem;
+}
+
+.stats-coach-panel-label {
+  color: #9eb5d7;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.stats-coach-focus-name {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: #dbe7f7;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-coach-progress-track {
+  width: 100%;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgb(148 163 184 / 14%);
+  overflow: hidden;
+}
+
+.stats-coach-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+}
+
+.stats-coach-progress-fill.subtle {
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+}
+
+.stats-coach-focus-score {
+  color: #a9c0ff;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.7rem;
+}
+
+.stats-coach-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(96 165 250 / 18%);
+  border-radius: 999px;
+  background: rgb(59 130 246 / 10%);
+  color: #dbe7f7;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.45rem 0.75rem;
+  transition: background 0.2s ease;
+}
+
+.stats-coach-action-button:hover {
+  background: rgb(59 130 246 / 18%);
+}
+
+.stats-coach-list-panel {
+  min-height: 17rem;
+}
+
+.stats-coach-list-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  gap: 0.9rem;
+  padding: 0.65rem 0.1rem;
+  border: 0;
+  border-bottom: 1px solid rgb(116 153 207 / 10%);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stats-coach-list-row:last-child {
+  border-bottom: 0;
+}
+
+.stats-coach-list-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.stats-coach-list-name {
+  color: #dbe7f7;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-coach-list-meta {
+  color: #7f91ad;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.56rem;
+  margin-top: 0.15rem;
+}
+
+.stats-coach-graph {
+  margin-top: 0.4rem;
+  color: #9ec6ff;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.stats-coach-list-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+  margin-top: 0.12rem;
+}
+
+.stats-coach-list-duration {
+  color: #a9c0ff;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.62rem;
+}
+
+.stats-coach-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.18rem 0.45rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stats-coach-status.active {
+  background: rgb(59 130 246 / 12%);
+  color: #9ec6ff;
+}
+
+.stats-coach-status.needs-attention {
+  background: rgb(251 191 36 / 12%);
+  color: #fbbf24;
+}
+
+.stats-coach-status.improving {
+  background: rgb(16 185 129 / 12%);
+  color: #34d399;
+}
+
+.stats-coach-status.neglected {
+  background: rgb(239 68 68 / 12%);
+  color: #f87171;
+}
+
+.stats-coach-session-minute {
+  min-width: 2.4rem;
+  color: #dbe7f7;
+  font-weight: 700;
 }
 
 .stats-page .text-on-surface {
@@ -1469,6 +1803,20 @@
 
 .light .stats-page .stats-analytics-heading,
 .light .stats-page .stats-analytics-row {
+  color: var(--color-on-surface);
+}
+
+.light .stats-page .stats-analytics-summary-card {
+  border-color: var(--stats-border);
+  background: color-mix(in srgb, var(--color-primary) 3%, transparent);
+}
+
+.light .stats-page .stats-analytics-summary-card span,
+.light .stats-page .stats-analytics-column-heading {
+  color: var(--color-on-surface-variant);
+}
+
+.light .stats-page .stats-analytics-summary-card strong {
   color: var(--color-on-surface);
 }
 
