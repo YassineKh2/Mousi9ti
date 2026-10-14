@@ -71,6 +71,60 @@ import {
   restoreAppBackup,
 } from "./lib/appBackup";
 
+const TAB_SEO: Record<
+  ActiveTab,
+  { title: string; description: string; h1: string }
+> = {
+  dashboard: {
+    title: "Mousi9ti — Music Practice Studio for Guitar & Piano",
+    description:
+      "Mousi9ti is a music practice studio for guitar and piano players with daily routines, theory tools, metronome, timer, scales, chords, and progress tracking.",
+    h1: "Your Music Practice Studio",
+  },
+  scales: {
+    title: "Guitar & Piano Scales | Mousi9ti",
+    description:
+      "Explore guitar and piano scales, root notes, intervals, and scale patterns with an interactive music theory workspace.",
+    h1: "Guitar & Piano Scales",
+  },
+  chords: {
+    title: "Guitar & Piano Chords | Mousi9ti",
+    description:
+      "Find guitar and piano chords, voicings, inversions, and chord progressions in one music practice workspace.",
+    h1: "Chord Library",
+  },
+  builder: {
+    title: "Chord Progression Builder | Mousi9ti",
+    description:
+      "Build and practice chord progressions, loop ideas, and arrangements with a flexible music builder for guitar and piano.",
+    h1: "Chord Progression Builder",
+  },
+  exercises: {
+    title: "Music Exercises & Practice Drills | Mousi9ti",
+    description:
+      "Practice music drills for rhythm, theory, technique, and ear training with focused daily exercises for musicians.",
+    h1: "Music Practice Exercises",
+  },
+  routine: {
+    title: "Daily Practice Routine | Mousi9ti",
+    description:
+      "Plan a daily music practice routine with task scheduling, timers, streak tracking, and focused sessions for guitar and piano work.",
+    h1: "Daily Practice Routine",
+  },
+  tools: {
+    title: "Metronome, Timer & Practice Tools | Mousi9ti",
+    description:
+      "Use a precision metronome, practice timer, random note drills, and other musician tools to sharpen timing and daily practice.",
+    h1: "Practice Tools",
+  },
+  stats: {
+    title: "Practice Statistics & Progress | Mousi9ti",
+    description:
+      "Review practice stats, weekly progress, streaks, and session history to stay consistent with your music routine.",
+    h1: "Practice Statistics",
+  },
+};
+
 const getPracticeTasksForDate = (date: Date): PracticeTask[] => {
   const savedSchedule = localStorage.getItem("mous9iti_weekly_schedule");
   if (savedSchedule) {
@@ -153,6 +207,42 @@ export function App() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [activeTab]);
+
+  useEffect(() => {
+    const pageMeta = TAB_SEO[activeTab];
+    const rootUrl = "https://mousi9ti.com/";
+
+    document.title = pageMeta.title;
+
+    const setMeta = (selector: string, value: string) => {
+      const target = document.head.querySelector(
+        selector,
+      ) as HTMLMetaElement | null;
+      if (target) {
+        target.setAttribute("content", value);
+      }
+    };
+
+    setMeta('meta[name="description"]', pageMeta.description);
+    setMeta('meta[property="og:title"]', pageMeta.title);
+    setMeta('meta[property="og:description"]', pageMeta.description);
+    setMeta('meta[name="twitter:title"]', pageMeta.title);
+    setMeta('meta[name="twitter:description"]', pageMeta.description);
+
+    const canonical = document.head.querySelector(
+      'link[rel="canonical"]',
+    ) as HTMLLinkElement | null;
+    if (canonical) {
+      canonical.href = rootUrl;
+    }
+
+    const ogUrl = document.head.querySelector(
+      'meta[property="og:url"]',
+    ) as HTMLMetaElement | null;
+    if (ogUrl) {
+      ogUrl.setAttribute("content", rootUrl);
+    }
   }, [activeTab]);
 
   // Settings & Theme
@@ -256,9 +346,8 @@ export function App() {
           ) as { day: string; tasks: PracticeTask[] }[];
           const codes = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
           return Array.isArray(schedule)
-            ? (schedule.find(
-                (day) => day.day === codes[new Date().getDay()],
-              )?.tasks ?? practiceTasks)
+            ? (schedule.find((day) => day.day === codes[new Date().getDay()])
+                ?.tasks ?? practiceTasks)
             : practiceTasks;
         } catch (error) {
           console.error("Failed to check routine task date boundaries", error);
@@ -452,10 +541,7 @@ export function App() {
     }
   };
 
-  const deletePracticeTask = (
-    taskId: string,
-    scope: "day" | "everywhere",
-  ) => {
+  const deletePracticeTask = (taskId: string, scope: "day" | "everywhere") => {
     const today = new Date();
     setPracticeTasks((tasks) => tasks.filter((task) => task.id !== taskId));
 
@@ -1291,8 +1377,13 @@ export function App() {
 
         {/* Main Content Area */}
         <main
+          aria-label="Mousi9ti music practice workspace"
           className={`flex-1 ${isSidebarCollapsed ? "lg:pl-20" : "lg:pl-72"} pt-4 pb-20 lg:pb-0 px-4 lg:px-8 max-w-[1600px] w-full mx-auto transition-[padding] duration-200`}
         >
+          <div className="sr-only">
+            <h1>{TAB_SEO[activeTab].h1}</h1>
+            <p>{TAB_SEO[activeTab].description}</p>
+          </div>
           {activeTab === "dashboard" && (
             <DashboardPage
               metronomeBpm={metronomeBpm}
