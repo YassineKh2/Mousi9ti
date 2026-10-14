@@ -1925,7 +1925,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 
       {/* 7 Day Cards Row */}
       <div data-tour="routine-days" className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        {daysInWeek.map((day, index) => {
+        {daysInWeek.map((day) => {
           const historyDate = getHistoryDateForDay(day.day);
           const dayTasks = getTasksForDate(day.tasks, historyDate, taskHistory);
           const { completed: completedCount, total: totalCount } =
@@ -1943,11 +1943,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
             <button
               key={day.day}
               onClick={() => setActiveDayCode(day.day)}
-              className={`text-left p-3.5 rounded-xl border flex flex-col justify-between gap-3 relative transition-all cursor-pointer ${
-                index === daysInWeek.length - 1
-                  ? "col-span-2 sm:col-span-1"
-                  : ""
-              } ${
+              className={`min-w-0 text-left p-3.5 rounded-xl border flex flex-col justify-between gap-3 relative transition-all cursor-pointer ${
                 isSelected
                   ? "bg-surface-container-high border-primary ring-1 ring-primary shadow-md"
                   : "bg-surface-container-low border-outline-variant/30 hover:bg-surface-container hover:border-outline-variant"

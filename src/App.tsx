@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  Suspense,
+  lazy,
+} from "react";
 import confetti from "canvas-confetti";
 import { SkipForward } from "lucide-react";
 import {
@@ -37,14 +44,46 @@ import {
   GlobalSearchResult,
 } from "./components/Navigation";
 import { SettingsModal } from "./components/SettingsModal";
-import { DashboardPage } from "./pages/DashboardPage";
-import { ScalesPage } from "./pages/ScalesPage";
-import { ChordsPage } from "./pages/ChordsPage";
-import { BuilderPage } from "./pages/BuilderPage";
-import { ExercisesPage } from "./pages/ExercisesPage";
-import { ToolsPage } from "./pages/ToolsPage";
-import { StatsPage } from "./pages/StatsPage";
-import { RoutinePage } from "./pages/RoutinePage";
+const DashboardPage = lazy(() =>
+  import("./pages/DashboardPage").then((module) => ({
+    default: module.DashboardPage,
+  })),
+);
+const ScalesPage = lazy(() =>
+  import("./pages/ScalesPage").then((module) => ({
+    default: module.ScalesPage,
+  })),
+);
+const ChordsPage = lazy(() =>
+  import("./pages/ChordsPage").then((module) => ({
+    default: module.ChordsPage,
+  })),
+);
+const BuilderPage = lazy(() =>
+  import("./pages/BuilderPage").then((module) => ({
+    default: module.BuilderPage,
+  })),
+);
+const ExercisesPage = lazy(() =>
+  import("./pages/ExercisesPage").then((module) => ({
+    default: module.ExercisesPage,
+  })),
+);
+const ToolsPage = lazy(() =>
+  import("./pages/ToolsPage").then((module) => ({
+    default: module.ToolsPage,
+  })),
+);
+const StatsPage = lazy(() =>
+  import("./pages/StatsPage").then((module) => ({
+    default: module.StatsPage,
+  })),
+);
+const RoutinePage = lazy(() =>
+  import("./pages/RoutinePage").then((module) => ({
+    default: module.RoutinePage,
+  })),
+);
 import { ALL_ROOT_NOTES, SCALES_DATABASE } from "./data/musicTheory";
 import {
   CHORD_TYPES_CATALOG,
@@ -1347,6 +1386,15 @@ export function App() {
     setSearchQuery("");
   };
 
+  const pageFallback = (
+    <div className="flex min-h-[40vh] items-center justify-center rounded-2xl border border-border/70 bg-surface/70 p-6 shadow-lg shadow-black/10">
+      <div className="flex items-center gap-3 text-sm font-medium text-on-surface/70">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary/50 border-t-primary" />
+        Loading workspace…
+      </div>
+    </div>
+  );
+
   return (
     <SettingsContext.Provider value={settings}>
       <div className="min-h-screen bg-background text-on-background flex flex-col antialiased selection:bg-primary/30 selection:text-on-surface">
@@ -1384,116 +1432,118 @@ export function App() {
             <h1>{TAB_SEO[activeTab].h1}</h1>
             <p>{TAB_SEO[activeTab].description}</p>
           </div>
-          {activeTab === "dashboard" && (
-            <DashboardPage
-              metronomeBpm={metronomeBpm}
-              onBpmChange={setMetronomeBpm}
-              streak={streak}
-              activeSessionDuration={activeSessionDuration}
-              isSessionActive={isSessionActive}
-              onToggleSession={handleToggleSession}
-              onPauseSession={handlePauseSession}
-              onResumeSession={handleResumeSession}
-              onEndSession={handleEndSession}
-              onLogBpm={handleLogBpm}
-              settings={settings}
-              onUpdateSettings={handleUpdateSettings}
-              timer={timer}
-              metronomeIsPlaying={metronomeIsPlaying}
-              onMetronomePlayingChange={setMetronomeIsPlaying}
-              metronomeBarCycleMode={metronomeBarCycleMode}
-              onBarCycleModeChange={setMetronomeBarCycleMode}
-              onOpenRoutine={() => setActiveTab("routine")}
-              onDismissTour={isTourOpen ? handleCloseTour : undefined}
-              onFinishDailyTasksOnboarding={(instrument) => {
-                setQuickStartInstrument(instrument ?? "none");
-                setActiveTab("routine");
-              }}
-              onQuickStartTasks={(instrument, tasks) => {
-                handleUpdateSettings({
-                  defaultInstrument: instrument,
-                  taskInstrumentFilter: instrument,
-                });
-                setPracticeTasks(tasks);
-              }}
-              practiceTasks={practiceTasks}
-              activeTaskId={activeTaskId}
-              timerPreferences={timerPreferences}
-              onStartDailyTasks={startDailyTasks}
-              isDailyRoutineActive={isDailyRoutineActive}
-              onPauseDailyTasks={handlePauseDailyTasks}
-              onResumeDailyTasks={handleResumeDailyTasks}
-              onMakeTaskActive={makeTaskActive}
-              onTogglePracticeTask={togglePracticeTask}
-              onPracticeTasksChange={setPracticeTasks}
-              onDeletePracticeTask={deletePracticeTask}
-              onSetTaskManualDuration={setTaskManualDuration}
-              onUpdateTimerPreferences={updateTimerPreferences}
-              onTaskTimerStarted={(taskId) => {
-                timedTaskIdRef.current = taskId;
-              }}
-            />
-          )}
+          <Suspense fallback={pageFallback}>
+            {activeTab === "dashboard" && (
+              <DashboardPage
+                metronomeBpm={metronomeBpm}
+                onBpmChange={setMetronomeBpm}
+                streak={streak}
+                activeSessionDuration={activeSessionDuration}
+                isSessionActive={isSessionActive}
+                onToggleSession={handleToggleSession}
+                onPauseSession={handlePauseSession}
+                onResumeSession={handleResumeSession}
+                onEndSession={handleEndSession}
+                onLogBpm={handleLogBpm}
+                settings={settings}
+                onUpdateSettings={handleUpdateSettings}
+                timer={timer}
+                metronomeIsPlaying={metronomeIsPlaying}
+                onMetronomePlayingChange={setMetronomeIsPlaying}
+                metronomeBarCycleMode={metronomeBarCycleMode}
+                onBarCycleModeChange={setMetronomeBarCycleMode}
+                onOpenRoutine={() => setActiveTab("routine")}
+                onDismissTour={isTourOpen ? handleCloseTour : undefined}
+                onFinishDailyTasksOnboarding={(instrument) => {
+                  setQuickStartInstrument(instrument ?? "none");
+                  setActiveTab("routine");
+                }}
+                onQuickStartTasks={(instrument, tasks) => {
+                  handleUpdateSettings({
+                    defaultInstrument: instrument,
+                    taskInstrumentFilter: instrument,
+                  });
+                  setPracticeTasks(tasks);
+                }}
+                practiceTasks={practiceTasks}
+                activeTaskId={activeTaskId}
+                timerPreferences={timerPreferences}
+                onStartDailyTasks={startDailyTasks}
+                isDailyRoutineActive={isDailyRoutineActive}
+                onPauseDailyTasks={handlePauseDailyTasks}
+                onResumeDailyTasks={handleResumeDailyTasks}
+                onMakeTaskActive={makeTaskActive}
+                onTogglePracticeTask={togglePracticeTask}
+                onPracticeTasksChange={setPracticeTasks}
+                onDeletePracticeTask={deletePracticeTask}
+                onSetTaskManualDuration={setTaskManualDuration}
+                onUpdateTimerPreferences={updateTimerPreferences}
+                onTaskTimerStarted={(taskId) => {
+                  timedTaskIdRef.current = taskId;
+                }}
+              />
+            )}
 
-          {activeTab === "scales" && (
-            <ScalesPage
-              initialScaleTarget={pendingScaleSearch}
-              onInitialScaleHandled={() => setPendingScaleSearch(null)}
-              settings={settings}
-            />
-          )}
+            {activeTab === "scales" && (
+              <ScalesPage
+                initialScaleTarget={pendingScaleSearch}
+                onInitialScaleHandled={() => setPendingScaleSearch(null)}
+                settings={settings}
+              />
+            )}
 
-          {activeTab === "chords" && (
-            <ChordsPage
-              initialChordTarget={pendingChordSearch}
-              onInitialChordHandled={() => setPendingChordSearch(null)}
-              settings={settings}
-            />
-          )}
+            {activeTab === "chords" && (
+              <ChordsPage
+                initialChordTarget={pendingChordSearch}
+                onInitialChordHandled={() => setPendingChordSearch(null)}
+                settings={settings}
+              />
+            )}
 
-          {activeTab === "builder" && <BuilderPage settings={settings} />}
+            {activeTab === "builder" && <BuilderPage settings={settings} />}
 
-          {activeTab === "exercises" && (
-            <ExercisesPage
-              onStartExercisePractice={handleStartExercisePractice}
-              initialExerciseId={pendingExerciseSearch}
-              onInitialExerciseHandled={() => setPendingExerciseSearch(null)}
-            />
-          )}
+            {activeTab === "exercises" && (
+              <ExercisesPage
+                onStartExercisePractice={handleStartExercisePractice}
+                initialExerciseId={pendingExerciseSearch}
+                onInitialExerciseHandled={() => setPendingExerciseSearch(null)}
+              />
+            )}
 
-          {activeTab === "routine" && (
-            <RoutinePage
-              timer={timer}
-              streak={streak}
-              practiceTasks={practiceTasks}
-              onPracticeTasksChange={setPracticeTasks}
-              quickStartInstrument={quickStartInstrument}
-              onQuickStartSetupHandled={() => setQuickStartInstrument(null)}
-              activeSessionDuration={activeSessionDuration}
-              isSessionActive={isSessionActive}
-              onToggleSession={handleToggleSession}
-              onEndSession={handleEndSession}
-            />
-          )}
+            {activeTab === "routine" && (
+              <RoutinePage
+                timer={timer}
+                streak={streak}
+                practiceTasks={practiceTasks}
+                onPracticeTasksChange={setPracticeTasks}
+                quickStartInstrument={quickStartInstrument}
+                onQuickStartSetupHandled={() => setQuickStartInstrument(null)}
+                activeSessionDuration={activeSessionDuration}
+                isSessionActive={isSessionActive}
+                onToggleSession={handleToggleSession}
+                onEndSession={handleEndSession}
+              />
+            )}
 
-          {activeTab === "tools" && (
-            <ToolsPage
-              metronomeBpm={metronomeBpm}
-              onBpmChange={setMetronomeBpm}
-              onLogBpm={handleLogBpm}
-              settings={settings}
-              onUpdateSettings={handleUpdateSettings}
-              timer={timer}
-              metronomeIsPlaying={metronomeIsPlaying}
-              onMetronomePlayingChange={setMetronomeIsPlaying}
-              metronomeBarCycleMode={metronomeBarCycleMode}
-              onBarCycleModeChange={setMetronomeBarCycleMode}
-            />
-          )}
+            {activeTab === "tools" && (
+              <ToolsPage
+                metronomeBpm={metronomeBpm}
+                onBpmChange={setMetronomeBpm}
+                onLogBpm={handleLogBpm}
+                settings={settings}
+                onUpdateSettings={handleUpdateSettings}
+                timer={timer}
+                metronomeIsPlaying={metronomeIsPlaying}
+                onMetronomePlayingChange={setMetronomeIsPlaying}
+                metronomeBarCycleMode={metronomeBarCycleMode}
+                onBarCycleModeChange={setMetronomeBarCycleMode}
+              />
+            )}
 
-          {activeTab === "stats" && (
-            <StatsPage sessions={sessions} streak={streak} />
-          )}
+            {activeTab === "stats" && (
+              <StatsPage sessions={sessions} streak={streak} />
+            )}
+          </Suspense>
         </main>
 
         {timedTaskAdvanceToast && (

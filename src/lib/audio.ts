@@ -1,6 +1,3 @@
-import { Soundfont, Soundfont2 } from "smplr";
-import { SoundFont2 } from "soundfont2";
-
 // Web Audio API Sound Engine for Metronome, Guitar & Piano Synthesis
 
 type MetronomeSubdivision = "quarter" | "eighth" | "sixteenth" | "triplet";
@@ -57,6 +54,21 @@ class AudioEngine {
 
   constructor() {
     // AudioContext will be lazily initialized upon first user gesture
+  }
+
+  private async resolveSoundfontModules() {
+    const [{ Soundfont, Soundfont2 }, soundfont2Module] = await Promise.all([
+      import("smplr"),
+      import("soundfont2"),
+    ]);
+
+    return {
+      Soundfont: Soundfont ?? (soundfont2Module as any).Soundfont,
+      Soundfont2: Soundfont2 ?? (soundfont2Module as any).Soundfont2,
+      SoundFont2:
+        (soundfont2Module as any).SoundFont2 ??
+        (soundfont2Module as any).default?.SoundFont2,
+    };
   }
 
   private notifyMetronomeStateListeners() {
@@ -165,12 +177,6 @@ class AudioEngine {
 
       this.highpassFilter.connect(this.compressor);
       this.compressor.connect(this.ctx.destination);
-
-      // Auto-load default guitar & piano soundfonts on first context init
-      if (!this.defaultSoundfontsRequested) {
-        this.defaultSoundfontsRequested = true;
-        this.loadSoundfonts();
-      }
     }
 
     if (this.ctx.state === "suspended") {
@@ -297,10 +303,12 @@ class AudioEngine {
     if (!this.ctx) return;
 
     this.isSoundfontLoading = true;
+    this.defaultSoundfontsRequested = true;
+
     try {
+      const { Soundfont } = await this.resolveSoundfontModules();
       const destination = this.compressor || this.ctx.destination;
 
-      // Always load the defaults if not already loaded (dry destination)
       if (!this.guitarInstrument) {
         this.guitarInstrument = Soundfont(this.ctx as any, {
           instrument: guitarSource,
@@ -308,6 +316,7 @@ class AudioEngine {
         });
         await this.guitarInstrument.ready;
       }
+
       if (!this.pianoInstrument) {
         this.pianoInstrument = Soundfont(this.ctx as any, {
           instrument: pianoSource,
@@ -322,6 +331,14 @@ class AudioEngine {
     }
   }
 
+  public async ensureDefaultSoundfontsLoaded() {
+    if (this.defaultSoundfontsRequested && this.guitarInstrument && this.pianoInstrument) {
+      return;
+    }
+
+    await this.loadSoundfonts();
+  }
+
   public async loadBuilderSoundfont(source: string | File) {
     if (!this.ctx) this.getContext();
     if (!this.ctx) return;
@@ -330,6 +347,7 @@ class AudioEngine {
     const isUploadedFile = typeof source !== "string";
     const sourceUrl = isUploadedFile ? URL.createObjectURL(source) : source;
     try {
+      const { Soundfont, Soundfont2, SoundFont2 } = await this.resolveSoundfontModules();
       // Builder instrument uses masterGain (gets reverb)
       const destination =
         this.masterGain || this.compressor || this.ctx.destination;
@@ -402,6 +420,9 @@ class AudioEngine {
   ) {
     if (this.isMuted) return;
     const ctx = this.getContext();
+    if (!this.guitarInstrument && !useBuilderInst) {
+      void this.ensureDefaultSoundfontsLoaded();
+    }
     const startTime = ctx.currentTime + timeOffset + 0.02;
 
     const instToUse = useBuilderInst
@@ -497,6 +518,9 @@ class AudioEngine {
   ) {
     if (this.isMuted) return;
     const ctx = this.getContext();
+    if (!this.pianoInstrument && !useBuilderInst) {
+      void this.ensureDefaultSoundfontsLoaded();
+    }
     const startTime = ctx.currentTime + timeOffset + 0.02;
 
     const instToUse = useBuilderInst
