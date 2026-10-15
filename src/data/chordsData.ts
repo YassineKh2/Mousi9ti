@@ -834,6 +834,388 @@ export function getChordVoicings(
     }
   }
 
+  if (root === "A" && typeKey === "maj7") {
+    const screenshotVoicings: GuitarVoicing[] = [
+      {
+        name: "Amaj7 Open",
+        positionLabel: "Open Position",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 2, 1, 2, 0],
+        fingers: [null, null, 2, 1, 3, null],
+        baseFret: 1,
+      },
+      {
+        name: "Amaj7 Open Partial Barre (No 5th)",
+        positionLabel: "Open Position / Partial Barre / No 5th",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 2, 2, 2, 4],
+        fingers: [null, null, 1, 1, 1, 3],
+        baseFret: 1,
+        barre: { fret: 2, fromString: 2, toString: 4, finger: 1 },
+      },
+      {
+        name: "Amaj7 4th Position Open A",
+        positionLabel: "4th Position / Open A",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 6, 6, 5, 4],
+        fingers: [null, null, 3, 4, 2, 1],
+        baseFret: 4,
+      },
+      {
+        name: "Amaj7 5th Position Open A and E",
+        positionLabel: "5th Position / Open A and E",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 6, 6, 5, 0],
+        fingers: [null, null, 2, 3, 1, null],
+        baseFret: 5,
+      },
+      {
+        name: "Amaj7 5th Position Full Barre",
+        positionLabel: "5th Position / Full Barre",
+        rootString: "Root: 6th String",
+        frets: [5, 7, 6, 6, 5, 5],
+        fingers: [1, 4, 2, 3, 1, 1],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 0, toString: 5, finger: 1 },
+      },
+      {
+        name: "Amaj7 5th Position Open E",
+        positionLabel: "5th Position / Open E Partial Barre",
+        rootString: "Root: 6th String",
+        frets: [5, 7, 6, 6, 5, 0],
+        fingers: [1, 4, 2, 3, 1, null],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 0, toString: 4, finger: 1 },
+      },
+      {
+        name: "Amaj7 7th Position Top Four Strings",
+        positionLabel: "7th Position / Top Four Strings",
+        rootString: "Root: 4th String",
+        frets: [null, null, 7, 9, 9, 9],
+        fingers: [null, null, 1, 2, 3, 4],
+        baseFret: 7,
+      },
+      {
+        name: "Amaj7 7th Position Open A",
+        positionLabel: "7th Position / Open A",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 7, 9, 9, 9],
+        fingers: [null, null, 1, 2, 3, 4],
+        baseFret: 7,
+      },
+    ];
+
+    screenshotVoicings.forEach((variation) => {
+      const existing = voicings.find(
+        (voicing) => voicing.frets.join(",") === variation.frets.join(","),
+      );
+      if (existing) {
+        Object.assign(existing, variation);
+      } else {
+        voicings.push({
+          ...variation,
+          category: "variation",
+          isFundamental: false,
+        });
+      }
+    });
+
+    const eShape = voicings.find(
+      (voicing) =>
+        voicing.frets.join(",") === [5, null, 6, 6, 5, null].join(","),
+    );
+    if (eShape) {
+      eShape.fingers = [1, null, 3, 4, 2, null];
+      eShape.baseFret = 5;
+    }
+  }
+
+  if (root === "A" && typeKey === "7") {
+    const screenshotVoicings: GuitarVoicing[] = [
+      {
+        name: "A7 Open",
+        positionLabel: "Open Position",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 2, 0, 2, 0],
+        fingers: [null, null, 1, null, 2, null],
+        baseFret: 1,
+      },
+      {
+        name: "A7 Open High G",
+        positionLabel: "Open Position / High G",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 2, 0, 2, 3],
+        fingers: [null, null, 1, null, 2, 3],
+        baseFret: 1,
+      },
+      {
+        name: "A7 Open Partial Barre",
+        positionLabel: "Open Position / Partial Barre",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 2, 2, 2, 3],
+        fingers: [null, null, 1, 1, 1, 2],
+        baseFret: 1,
+        barre: { fret: 2, fromString: 2, toString: 4, finger: 1 },
+      },
+      {
+        name: "A7 4th Position Open G and E",
+        positionLabel: "4th Position / Open G and E",
+        rootString: "Root: 6th String",
+        frets: [5, 4, 5, 0, 5, 0],
+        fingers: [2, 1, 3, null, 4, null],
+        baseFret: 4,
+      },
+      {
+        name: "A7 5th Position Open A and E",
+        positionLabel: "5th Position / Open A and E",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 5, 6, 5, 0],
+        fingers: [null, null, 1, 3, 2, null],
+        baseFret: 5,
+      },
+      {
+        name: "A7 5th Position Open A and E Low Root",
+        positionLabel: "5th Position / Open A and E Low Root",
+        rootString: "Root: 6th String",
+        frets: [5, 0, 5, 6, 5, 0],
+        fingers: [1, null, 2, 3, 4, null],
+        baseFret: 5,
+      },
+      {
+        name: "A7 5th Position Open A Partial Barre",
+        positionLabel: "5th Position / Open A Partial Barre",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 5, 6, 5, 5],
+        fingers: [null, null, 1, 2, 1, 1],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 2, toString: 5, finger: 1 },
+      },
+      {
+        name: "A7 (E-Shape)",
+        positionLabel: "5th Position / E-Shape",
+        rootString: "Root: 6th String",
+        frets: [5, 7, 5, 6, 5, 5],
+        fingers: [1, 3, 1, 2, 1, 1],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 0, toString: 5, finger: 1 },
+      },
+    ];
+
+    screenshotVoicings.forEach((variation) => {
+      const existing = voicings.find(
+        (voicing) => voicing.frets.join(",") === variation.frets.join(","),
+      );
+      if (existing) {
+        Object.assign(existing, variation);
+      } else {
+        voicings.push({
+          ...variation,
+          category: "variation",
+          isFundamental: false,
+        });
+      }
+    });
+
+    const dShape = voicings.find(
+      (voicing) =>
+        voicing.frets.join(",") === [null, null, 7, 9, 8, 9].join(","),
+    );
+    if (dShape) {
+      dShape.fingers = [null, null, 1, 3, 2, 4];
+    }
+  }
+
+  if (root === "A" && typeKey === "minor") {
+    const screenshotVoicings: GuitarVoicing[] = [
+      {
+        name: "Am Open Minor",
+        positionLabel: "Open Position",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 2, 2, 1, 0],
+        fingers: [null, null, 2, 3, 1, null],
+        baseFret: 1,
+      },
+      {
+        name: "Am 5th Position Open A",
+        positionLabel: "5th Position / Open A Partial Barre",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 7, 5, 5, 5],
+        fingers: [null, null, 3, 1, 1, 1],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 3, toString: 5, finger: 1 },
+      },
+      {
+        name: "Am 5th Position Top Four Strings",
+        positionLabel: "5th Position / Top Four Strings",
+        rootString: "Root: 4th String",
+        frets: [null, null, 7, 5, 5, 5],
+        fingers: [null, null, 3, 1, 1, 1],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 3, toString: 5, finger: 1 },
+      },
+      {
+        name: "Am (E-Shape)",
+        positionLabel: "5th Position / E-Shape",
+        rootString: "Root: 6th String",
+        frets: [5, 7, 7, 5, 5, 5],
+        fingers: [1, 3, 4, 1, 1, 1],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 0, toString: 5, finger: 1 },
+      },
+      {
+        name: "Am 5th Position Open A and E",
+        positionLabel: "5th Position / Open A and E Partial Barre",
+        rootString: "Root: 6th String",
+        frets: [5, 0, 7, 5, 5, 0],
+        fingers: [1, null, 3, 2, 2, null],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 3, toString: 4, finger: 2 },
+      },
+      {
+        name: "Am 5th Position Open Strings Muted Low E",
+        positionLabel: "5th Position / Open A and E Muted Low E",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 7, 5, 5, 0],
+        fingers: [null, null, 3, 1, 2, null],
+        baseFret: 5,
+      },
+      {
+        name: "Am 5th Position Top Strings Open E",
+        positionLabel: "5th Position / Top Strings Open E",
+        rootString: "Root: 4th String",
+        frets: [null, null, 7, 5, 5, 0],
+        fingers: [null, null, 3, 1, 2, null],
+        baseFret: 5,
+      },
+      {
+        name: "Am 5th Position Open E",
+        positionLabel: "5th Position / Open E Partial Barre",
+        rootString: "Root: 6th String",
+        frets: [5, 7, 7, 5, 5, 0],
+        fingers: [1, 3, 4, 1, 1, null],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 0, toString: 4, finger: 1 },
+      },
+    ];
+
+    screenshotVoicings.forEach((variation) => {
+      const existing = voicings.find(
+        (voicing) => voicing.frets.join(",") === variation.frets.join(","),
+      );
+      if (existing) {
+        Object.assign(existing, variation);
+      } else {
+        voicings.push({
+          ...variation,
+          category: "variation",
+          isFundamental: false,
+        });
+      }
+    });
+
+    const dShape = voicings.find(
+      (voicing) =>
+        voicing.frets.join(",") === [null, null, 7, 9, 10, 8].join(","),
+    );
+    if (dShape) {
+      dShape.fingers = [null, null, 1, 3, 4, 2];
+    }
+  }
+
+  if (root === "A" && typeKey === "major") {
+    const screenshotVoicings: GuitarVoicing[] = [
+      {
+        name: "A Open Major",
+        positionLabel: "Open Position",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 2, 2, 2, 0],
+        fingers: [null, null, 1, 2, 3, null],
+        baseFret: 1,
+      },
+      {
+        name: "A Major (E-Shape)",
+        positionLabel: "5th Position / E-Shape",
+        rootString: "Root: 6th String",
+        frets: [5, 7, 7, 6, 5, 5],
+        fingers: [1, 3, 4, 2, 1, 1],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 0, toString: 5, finger: 1 },
+      },
+      {
+        name: "A Major 5th Position Open A",
+        positionLabel: "5th Position / Open A Partial Barre",
+        rootString: "Root: 6th String",
+        frets: [5, 0, 7, 6, 5, 5],
+        fingers: [1, null, 4, 3, 2, 2],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 4, toString: 5, finger: 2 },
+      },
+      {
+        name: "A Major 5th Position Muted Low E",
+        positionLabel: "5th Position / Open A Muted Low E",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 7, 6, 5, 5],
+        fingers: [null, null, 4, 3, 1, 2],
+        baseFret: 5,
+      },
+      {
+        name: "A Major 5th Position Top Four Strings",
+        positionLabel: "5th Position / Top Four Strings",
+        rootString: "Root: 4th String",
+        frets: [null, null, 7, 6, 5, 5],
+        fingers: [null, null, 4, 3, 1, 2],
+        baseFret: 5,
+      },
+      {
+        name: "A Major 5th Position Open A and E",
+        positionLabel: "5th Position / Open A and E",
+        rootString: "Root: 6th String",
+        frets: [5, 0, 7, 6, 5, 0],
+        fingers: [1, null, 4, 3, 2, null],
+        baseFret: 5,
+      },
+      {
+        name: "A Major 5th Position Open Strings Muted Low E",
+        positionLabel: "5th Position / Open A and E Muted Low E",
+        rootString: "Root: 5th String",
+        frets: [null, 0, 7, 6, 5, 0],
+        fingers: [null, null, 3, 2, 1, null],
+        baseFret: 5,
+      },
+      {
+        name: "A Major 5th Position Top Strings Open E",
+        positionLabel: "5th Position / Top Strings Open E",
+        rootString: "Root: 4th String",
+        frets: [null, null, 7, 6, 5, 0],
+        fingers: [null, null, 3, 2, 1, null],
+        baseFret: 5,
+      },
+    ];
+
+    screenshotVoicings.forEach((variation) => {
+      const existing = voicings.find(
+        (voicing) => voicing.frets.join(",") === variation.frets.join(","),
+      );
+      if (existing) {
+        Object.assign(existing, variation);
+      } else {
+        voicings.push({
+          ...variation,
+          category: "variation",
+          isFundamental: false,
+        });
+      }
+    });
+
+    const dShape = voicings.find(
+      (voicing) =>
+        voicing.frets.join(",") === [null, null, 7, 9, 10, 9].join(","),
+    );
+    if (dShape) {
+      dShape.fingers = [null, null, 1, 2, 4, 3];
+    }
+  }
+
   if (root === "Bb" && typeKey === "7#9") {
     const screenshotVoicings: GuitarVoicing[] = [
       {
