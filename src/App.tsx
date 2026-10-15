@@ -232,6 +232,9 @@ export function App() {
 
   // Navigation
   const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
+  const [toolsInitialTool, setToolsInitialTool] = useState<
+    "custom-chord" | null
+  >(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(
     () => localStorage.getItem("Mousi9ti_sidebar_collapsed") === "true",
   );
@@ -1637,6 +1640,10 @@ export function App() {
               <ChordsPage
                 initialChordTarget={pendingChordSearch}
                 onInitialChordHandled={() => setPendingChordSearch(null)}
+                onOpenCustomChord={() => {
+                  setToolsInitialTool("custom-chord");
+                  setActiveTab("tools");
+                }}
                 settings={settings}
               />
             )}
@@ -1687,6 +1694,8 @@ export function App() {
                 onMetronomePlayingChange={setMetronomeIsPlaying}
                 metronomeBarCycleMode={metronomeBarCycleMode}
                 onBarCycleModeChange={setMetronomeBarCycleMode}
+                initialTool={toolsInitialTool}
+                onInitialToolHandled={() => setToolsInitialTool(null)}
               />
             )}
 

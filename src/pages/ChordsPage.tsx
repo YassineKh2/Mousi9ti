@@ -31,12 +31,14 @@ import { audioEngine } from "../lib/audio";
 interface ChordsPageProps {
   initialChordTarget?: { chordType: string; root: NoteName } | null;
   onInitialChordHandled?: () => void;
+  onOpenCustomChord?: () => void;
   settings: AppSettings;
 }
 
 export const ChordsPage: React.FC<ChordsPageProps> = ({
   initialChordTarget,
   onInitialChordHandled,
+  onOpenCustomChord,
   settings,
 }) => {
   const [selectedRoot, setSelectedRoot] = useState<NoteName>("E");
@@ -286,7 +288,10 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
   return (
     <div className="space-y-8 pb-12 pt-4">
       {/* Search and Instrument Toggle Bar */}
-      <div data-tour="chords-search" className="flex flex-col items-stretch gap-2 bg-surface-container-low rounded-lg p-2 border border-outline-variant/30 sm:flex-row sm:items-center sm:gap-4">
+      <div
+        data-tour="chords-search"
+        className="flex flex-col items-stretch gap-2 bg-surface-container-low rounded-lg p-2 border border-outline-variant/30 sm:flex-row sm:items-center sm:gap-4"
+      >
         <div className="relative flex min-w-0 flex-1 items-center">
           <Search
             size={16}
@@ -361,7 +366,10 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
 
       <div className="flex flex-col lg:flex-row gap-6 items-start w-full max-w-full">
         {/* Left Sidebar: Filters */}
-        <div data-tour="chords-filters" className="w-full lg:w-72 flex flex-col gap-4 shrink-0">
+        <div
+          data-tour="chords-filters"
+          className="w-full lg:w-72 flex flex-col gap-4 shrink-0"
+        >
           {/* Root Note Panel */}
           <div className="rounded-xl border border-outline-variant/30 bg-surface-container-low p-4 sm:p-5">
             <span className="text-xs font-mono text-on-surface-variant tracking-[0.2em] uppercase font-bold block mb-4">
@@ -680,10 +688,21 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
                 from this collection.
               </p>
 
+              <p className="text-on-surface-variant text-sm mb-4 leading-relaxed">
+                You can create your own chords in the{" "}
+                <button
+                  type="button"
+                  onClick={onOpenCustomChord}
+                  className="cursor-pointer text-primary font-semibold underline"
+                >
+                  Custom Chord Builder
+                </button>{" "}
+                saved chords will appear here.
+              </p>
+
               <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
                 If you find a mistake or a missing chord, feel free to contact
-                me at
-                <br />
+                me at{" "}
                 <a
                   href="mailto:yassinekhemiri.dev@gmail.com"
                   className="text-primary font-semibold underline break-all"

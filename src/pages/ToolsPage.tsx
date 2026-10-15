@@ -32,6 +32,8 @@ interface ToolsPageProps {
   onMetronomePlayingChange?: (playing: boolean) => void;
   metronomeBarCycleMode?: boolean;
   onBarCycleModeChange?: (enabled: boolean) => void;
+  initialTool?: "custom-chord" | null;
+  onInitialToolHandled?: () => void;
 }
 
 export const ToolsPage: React.FC<ToolsPageProps> = ({
@@ -45,13 +47,21 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
   onMetronomePlayingChange,
   metronomeBarCycleMode,
   onBarCycleModeChange,
+  initialTool,
+  onInitialToolHandled,
 }) => {
   const [activeTool, setActiveTool] = useState<
     "timer" | "metronome" | "circle" | "tuner" | "ear" | "custom-chord"
-  >("timer");
+  >(initialTool ?? "timer");
   const [selectedTuning, setSelectedTuning] = useState(GUITAR_TUNINGS[0]);
   const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
   const toolMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!initialTool) return;
+    setActiveTool(initialTool);
+    onInitialToolHandled?.();
+  }, [initialTool, onInitialToolHandled]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -136,7 +146,10 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* Header & Sub-tool Navigation Tabs */}
-      <div data-tour="tools-tabs" className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 flex flex-col gap-4 shadow-xl">
+      <div
+        data-tour="tools-tabs"
+        className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 flex flex-col gap-4 shadow-xl"
+      >
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant/10">
           <div>
             <h1 className="font-mono text-base font-bold tracking-[0.2em] text-on-surface uppercase flex items-center gap-2">
@@ -161,7 +174,10 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
                   {activeTool === "ear" && "Interval Ear Trainer"}
                   {activeTool === "custom-chord" && "Custom Chord Builder"}
                 </span>
-                <ChevronDown size={18} className={`text-on-surface-variant transition-transform duration-200 ${isToolMenuOpen ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  size={18}
+                  className={`text-on-surface-variant transition-transform duration-200 ${isToolMenuOpen ? "rotate-180" : ""}`}
+                />
               </button>
 
               {/* Mobile Dropdown Menu */}
@@ -169,12 +185,42 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
                 <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-surface border border-outline-variant/40 rounded-xl p-2 shadow-2xl dropdown-menu-enter">
                   <div className="flex flex-col gap-1">
                     {[
-                      { id: "timer", label: "Practice Timer", desc: "Track your daily practice sessions", icon: Clock },
-                      { id: "metronome", label: "Metronome", desc: "Precision tempo and timing practice", icon: TimerReset },
-                      { id: "custom-chord", label: "Custom Chord Builder", desc: "Create & visualize chord shapes", icon: Wrench },
-                      { id: "circle", label: "Circle of Fifths", desc: "Explore key signatures & harmony", icon: Compass },
-                      { id: "tuner", label: "Pitch Reference Tuner", desc: "Acoustic guitar pitch references", icon: Radio },
-                      { id: "ear", label: "Interval Ear Trainer", desc: "Recognize musical intervals by ear", icon: Sparkles },
+                      {
+                        id: "timer",
+                        label: "Practice Timer",
+                        desc: "Track your daily practice sessions",
+                        icon: Clock,
+                      },
+                      {
+                        id: "metronome",
+                        label: "Metronome",
+                        desc: "Precision tempo and timing practice",
+                        icon: TimerReset,
+                      },
+                      {
+                        id: "custom-chord",
+                        label: "Custom Chord Builder",
+                        desc: "Create & visualize chord shapes",
+                        icon: Wrench,
+                      },
+                      {
+                        id: "circle",
+                        label: "Circle of Fifths",
+                        desc: "Explore key signatures & harmony",
+                        icon: Compass,
+                      },
+                      {
+                        id: "tuner",
+                        label: "Pitch Reference Tuner",
+                        desc: "Acoustic guitar pitch references",
+                        icon: Radio,
+                      },
+                      {
+                        id: "ear",
+                        label: "Interval Ear Trainer",
+                        desc: "Recognize musical intervals by ear",
+                        icon: Sparkles,
+                      },
                     ].map((tool) => {
                       const isSelected = activeTool === tool.id;
                       const Icon = tool.icon;
@@ -184,7 +230,8 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
                           onClick={() => {
                             setActiveTool(tool.id as any);
                             setIsToolMenuOpen(false);
-                            if (tool.id === "ear" && !earInterval) startNewEarChallenge();
+                            if (tool.id === "ear" && !earInterval)
+                              startNewEarChallenge();
                           }}
                           className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-all ${
                             isSelected
@@ -193,15 +240,26 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-md ${isSelected ? "bg-primary/20 text-primary" : "bg-surface-container text-on-surface-variant"}`}>
+                            <div
+                              className={`p-2 rounded-md ${isSelected ? "bg-primary/20 text-primary" : "bg-surface-container text-on-surface-variant"}`}
+                            >
                               <Icon size={16} />
                             </div>
                             <div className="flex flex-col">
-                              <span className="font-mono text-sm">{tool.label}</span>
-                              <span className="text-[10px] font-mono opacity-70">{tool.desc}</span>
+                              <span className="font-mono text-sm">
+                                {tool.label}
+                              </span>
+                              <span className="text-[10px] font-mono opacity-70">
+                                {tool.desc}
+                              </span>
                             </div>
                           </div>
-                          {isSelected && <Check size={16} className="text-primary shrink-0 ml-2" />}
+                          {isSelected && (
+                            <Check
+                              size={16}
+                              className="text-primary shrink-0 ml-2"
+                            />
+                          )}
                         </button>
                       );
                     })}
