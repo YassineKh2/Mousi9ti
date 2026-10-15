@@ -93,7 +93,9 @@ import {
 import { GlobalSessionToast } from "./components/GlobalSessionToast";
 import { SettingsContext } from "./contexts/SettingsContext";
 import { TourOverlay } from "./components/TourOverlay";
-import { getSavedPracticeTasks } from "./components/PracticeTasksWidget";
+import {
+  getSavedPracticeTasks,
+} from "./components/PracticeTasksWidget";
 import {
   deleteTaskFromSchedule,
   getTaskDateKey,
@@ -1453,10 +1455,13 @@ export function App() {
                 metronomeBarCycleMode={metronomeBarCycleMode}
                 onBarCycleModeChange={setMetronomeBarCycleMode}
                 onOpenRoutine={() => setActiveTab("routine")}
-                onDismissTour={isTourOpen ? handleCloseTour : undefined}
+                onDismissTour={() => {
+                  window.dispatchEvent(new Event("mousi9ti-task-setup-start"));
+                }}
                 onFinishDailyTasksOnboarding={(instrument) => {
                   setQuickStartInstrument(instrument ?? "none");
                   setActiveTab("routine");
+                  window.dispatchEvent(new Event("mousi9ti-task-setup-ready"));
                 }}
                 onQuickStartTasks={(instrument, tasks) => {
                   handleUpdateSettings({
@@ -1522,6 +1527,15 @@ export function App() {
                 isSessionActive={isSessionActive}
                 onToggleSession={handleToggleSession}
                 onEndSession={handleEndSession}
+                timerPreferences={timerPreferences}
+                onUpdateTimerPreferences={updateTimerPreferences}
+                onQuickStartTasks={(instrument, tasks) => {
+                  handleUpdateSettings({
+                    defaultInstrument: instrument,
+                    taskInstrumentFilter: instrument,
+                  });
+                  setPracticeTasks(tasks);
+                }}
               />
             )}
 

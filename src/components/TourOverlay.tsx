@@ -98,7 +98,7 @@ const STEPS: TourStep[] = [
     id: "practice-tasks",
     title: "Daily Practice Goals",
     description:
-      "Keep today's practice goals close at hand. Check off tasks as you work through your routine.",
+      "Keep today's practice goals close at hand. Click Get started to set up your tasks. The tour pauses while you complete setup and arrange your goals; click Resume tour when you are done.",
     targetSelector: "[data-dashboard-widget='practice-tasks']",
     tab: "dashboard",
   },
@@ -246,7 +246,7 @@ const STEPS: TourStep[] = [
     id: "routine-goals",
     title: "Daily Goals & Task Tags",
     description:
-      "Add and complete daily goals. Use tags such as @scale, @chord, @tuning, @bpm, or @timer to capture practice settings; automatic dashboard setup can apply recognized tags. Set how long a goal stays active.",
+      "Click Start tasks to complete the task guide and add your practice goals. The tour pauses so you can finish setup and arrange all your tasks, then click Resume tour. Use tags such as @scale, @chord, @bpm, or @timer to capture practice settings.",
     targetSelector: "[data-tour='routine-goals']",
     tab: "routine",
   },
@@ -1114,6 +1114,7 @@ function useTourLogic(
   onTabChange: (tab: ActiveTab) => void,
   initialStep: number,
   onStepChange: (step: number) => void,
+  isPaused: boolean,
 ) {
   const [stepIndex, setStepIndex] = useState(() =>
     initialStep >= 0 && initialStep < STEPS.length ? initialStep : 0,
@@ -1162,18 +1163,20 @@ function useTourLogic(
   }, [step.targetSelector]);
 
   useEffect(() => {
-    if (!step.awaitAction || !step.targetSelector) return;
+    if (isPaused || !step.awaitAction || !step.targetSelector) return;
     return attachClickAdvance(step.targetSelector, setStepIndex);
-  }, [stepIndex, step.awaitAction, step.targetSelector]);
+  }, [stepIndex, step.awaitAction, step.targetSelector, isPaused]);
 
   useEffect(
-    () =>
-      addListener(
+    () => {
+      if (isPaused) return;
+      return addListener(
         window,
         "keydown",
         makeKeyHandler(isFirst, isLast, onClose, setStepIndex),
-      ),
-    [isFirst, isLast, onClose, step.awaitAction],
+      );
+    },
+    [isFirst, isLast, onClose, step.awaitAction, isPaused],
   );
 
   const handleNext = useCallback(() => {
@@ -1229,6 +1232,10 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
   initialStep,
   onStepChange,
 }) => {
+  const [isDashboardCustomizePaused, setIsDashboardCustomizePaused] =
+    useState(false);
+  const [taskSetupStage, setTaskSetupStage] = useState<"guide" | "tasks" | null>(null);
+  const isPaused = isDashboardCustomizePaused || taskSetupStage !== null;
   const {
     step,
     stepIndex,
@@ -1240,9 +1247,21 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
     handleNext,
     handlePrev,
     setStepIndex,
-  } = useTourLogic(onClose, onTabChange, initialStep, onStepChange);
-  const [isDashboardCustomizePaused, setIsDashboardCustomizePaused] =
-    useState(false);
+  } = useTourLogic(onClose, onTabChange, initialStep, onStepChange, isPaused);
+
+  useEffect(() => {
+    const start = () => setTaskSetupStage("guide");
+    const ready = () => setTaskSetupStage("tasks");
+    const cancel = () => setTaskSetupStage(null);
+    window.addEventListener("mousi9ti-task-setup-start", start);
+    window.addEventListener("mousi9ti-task-setup-ready", ready);
+    window.addEventListener("mousi9ti-task-setup-cancel", cancel);
+    return () => {
+      window.removeEventListener("mousi9ti-task-setup-start", start);
+      window.removeEventListener("mousi9ti-task-setup-ready", ready);
+      window.removeEventListener("mousi9ti-task-setup-cancel", cancel);
+    };
+  }, []);
 
   useEffect(() => {
     const pause = () => {
@@ -1274,7 +1293,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
 
   // Focus trap for the full modal (non-reveal mode)
   useEffect(() => {
-    if (revealMode || !cardRef.current) return;
+    if (isPaused || revealMode || !cardRef.current) return;
     const container = cardRef.current;
     const focusableSelector =
       'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
@@ -1296,7 +1315,24 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [revealMode, stepIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [revealMode, stepIndex, isPaused]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (taskSetupStage) {
+    return taskSetupStage === "tasks" ? (
+      <div role="status" className="fixed bottom-20 lg:bottom-4 left-1/2 z-[260] -translate-x-1/2 flex w-max max-w-[calc(100%-2rem)] items-center gap-3 rounded-full border border-outline-variant/40 bg-surface px-4 py-2 font-mono text-xs text-on-surface shadow-lg">
+        <span className="min-w-0">Add or edit your tasks, then click <strong>Resume tour</strong> to continue.</span>
+        <button type="button" onClick={() => {
+          setTaskSetupStage(null);
+          handleNext();
+        }} className="inline-flex shrink-0 items-center gap-1 font-semibold text-primary hover:underline">
+          Resume tour <ArrowRight size={14} />
+        </button>
+        <button type="button" onClick={onClose} aria-label="Close tour" title="Close tour" className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface">
+          <X size={14} />
+        </button>
+      </div>
+    ) : null;
+  }
 
   if (isDashboardCustomizePaused) {
     return (

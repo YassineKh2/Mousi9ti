@@ -31,7 +31,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { AppSettings, NoteName, PracticeTask, TaskActivity } from "../types";
+import { AppSettings, NoteName, PracticeTask, TaskActivity, UserTimerPreferences } from "../types";
 import {
   ALL_ROOT_NOTES,
   SCALES_DATABASE,
@@ -61,6 +61,7 @@ import {
 import {
   DropdownEditor,
   InlineTaskRowEditor,
+  PracticeTasksWidget,
 } from "../components/PracticeTasksWidget";
 import { TaskDeleteDialog } from "../components/TaskDeleteDialog";
 import { useTimer } from "../lib/useTimer";
@@ -1110,6 +1111,9 @@ const getWeekStart = (date: Date) => {
   return weekStart;
 };
 interface RoutinePageProps {
+  timerPreferences?: UserTimerPreferences;
+  onUpdateTimerPreferences?: (preferences: Partial<UserTimerPreferences>) => void;
+  onQuickStartTasks?: (instrument: "guitar" | "piano", tasks: PracticeTask[]) => void;
   timer?: ReturnType<typeof useTimer>;
   streak?: StreakData;
   practiceTasks?: PracticeTask[];
@@ -1123,6 +1127,9 @@ interface RoutinePageProps {
 }
 
 export const RoutinePage: React.FC<RoutinePageProps> = ({
+  timerPreferences,
+  onUpdateTimerPreferences,
+  onQuickStartTasks,
   timer: propTimer,
   streak: propStreak,
   practiceTasks,
@@ -1135,6 +1142,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   onEndSession = () => {},
 }) => {
   const settings = useSettingsContext();
+  const needsTaskSetup = Boolean(timerPreferences && !timerPreferences.hasSeenDailyTasksOnboarding && practiceTasks?.length === 0);
   const internalTimer = useTimer();
   const timer = propTimer || internalTimer;
   const [taskHistory, setTaskHistory] = useState<TaskActivity[]>(
@@ -1232,7 +1240,10 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       settings.defaultInstrument === "piano"
         ? DEFAULT_PIANO_WEEKLY_SCHEDULE
         : DEFAULT_WEEKLY_SCHEDULE;
-    if (quickStartInstrument === "none") {
+    if (
+      quickStartInstrument !== "guitar" &&
+      quickStartInstrument !== "piano"
+    ) {
       schedule = schedule.map((day) => ({ ...day, tasks: [] }));
     }
     if (saved) {
@@ -2027,6 +2038,23 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
           </div>
 
           {/* Tasks List */}
+          {needsTaskSetup ? (
+            <PracticeTasksWidget
+              startupLayout="routine"
+              tasks={practiceTasks}
+              timerPreferences={timerPreferences}
+              onUpdateTimerPreferences={onUpdateTimerPreferences}
+              onDismissTour={() => window.dispatchEvent(new Event("mousi9ti-task-setup-start"))}
+              onQuickStartTasks={(instrument, tasks) => {
+                const schedule = instrument === "piano" ? DEFAULT_PIANO_WEEKLY_SCHEDULE : DEFAULT_WEEKLY_SCHEDULE;
+                setWeeklySchedule(schedule.map((day) => day.day === getTodayCode() ? { ...day, tasks } : day));
+                onQuickStartTasks?.(instrument, tasks);
+              }}
+              onFinishDailyTasksOnboarding={() => {
+                window.dispatchEvent(new Event("mousi9ti-task-setup-ready"));
+              }}
+            />
+          ) : <>
           <div className="flex flex-col gap-2.5 min-h-[300px] overflow-y-auto max-h-[360px] custom-scrollbar pr-1">
             {activeDayTasks.length === 0 ? (
               <div className="text-center py-12 text-on-surface-variant text-sm font-mono">
@@ -2280,6 +2308,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
             Type <strong className="text-primary">@</strong> for tags (custom,
             tuning, scale, chord, bpm, timer...)
           </div>
+          </>}
         </div>
 
         {/* Right Column: Practice Stopwatch Timer & Active Day Summary */}
