@@ -264,7 +264,9 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
                     <text
                       x={endpointX}
                       y={y + 3.5}
-                      fill={isRoot ? "var(--color-on-secondary)" : textInDotColor}
+                      fill={
+                        isRoot ? "var(--color-on-secondary)" : textInDotColor
+                      }
                       fontSize={textSize}
                       fontFamily="sans-serif"
                       textAnchor="middle"
