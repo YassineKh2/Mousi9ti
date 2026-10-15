@@ -254,34 +254,27 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
                 const endpointX = margin.left + stringIdx * stringSpacing;
 
                 return (
-                  <circle
-                    key={`barre-end-${stringIdx}`}
-                    cx={endpointX}
-                    cy={y}
-                    r={dotRadius}
-                    fill={isRoot ? "var(--color-secondary)" : dotColor}
-                  />
+                  <g key={`barre-end-${stringIdx}`}>
+                    <circle
+                      cx={endpointX}
+                      cy={y}
+                      r={dotRadius}
+                      fill={isRoot ? "var(--color-secondary)" : dotColor}
+                    />
+                    <text
+                      x={endpointX}
+                      y={y + 3.5}
+                      fill={isRoot ? "var(--color-on-secondary)" : textInDotColor}
+                      fontSize={textSize}
+                      fontFamily="sans-serif"
+                      textAnchor="middle"
+                      fontWeight="bold"
+                    >
+                      {barre.finger}
+                    </text>
+                  </g>
                 );
               })}
-              {(() => {
-                const openSemi = NOTE_SEMITONES[tuning.strings[barre.fromString]];
-                const isRoot =
-                  (openSemi + barre.fret) % 12 === NOTE_SEMITONES[root];
-
-                return (
-                  <text
-                    x={fromX}
-                    y={y + 3.5}
-                    fill={isRoot ? "var(--color-on-secondary)" : textInDotColor}
-                    fontSize={textSize}
-                    fontFamily="sans-serif"
-                    textAnchor="middle"
-                    fontWeight="bold"
-                  >
-                    {barre.finger}
-                  </text>
-                );
-              })()}
             </g>
           );
         })}
@@ -337,7 +330,7 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
             const isRoot = currentSemi === NOTE_SEMITONES[root];
 
             // Skip drawing individual dot if it is covered by the barre
-            const isCoveredByBarre = barreEntries.some(
+            const coveringBarre = barreEntries.find(
               (barre) =>
                 barre &&
                 barre.fret === fret &&
@@ -345,7 +338,13 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
                 stringIdx <= Math.max(barre.fromString, barre.toString),
             );
 
-            if (isCoveredByBarre) {
+            if (coveringBarre) {
+              if (
+                stringIdx === coveringBarre.fromString ||
+                stringIdx === coveringBarre.toString
+              ) {
+                return null;
+              }
               // We might still want to highlight if it's a root note under the barre,
               // but standard diagrams usually just leave the barre solid.
               if (isRoot) {
