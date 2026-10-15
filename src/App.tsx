@@ -667,12 +667,12 @@ export function App() {
       `reviewed-task-session-${now}`;
     replaceTaskAttributionsForSession(
       sessionId,
-      Object.entries(durations).map(([taskId, minutes]) => ({
+      Object.entries(durations).map(([taskId, seconds]) => ({
         id: `reviewed-${sessionId}-${taskId}`,
         sessionId,
         practiceSessionId: sessionReview?.practiceSessionId,
         taskId,
-        durationSeconds: Math.max(0, minutes * 60),
+        durationSeconds: Math.max(0, seconds),
         startedAt: now,
         endedAt: now,
         source: "manual",
@@ -687,7 +687,7 @@ export function App() {
               ...task,
               manuallyConfirmedDurationSeconds: Math.max(
                 0,
-                durations[task.id] * 60,
+                durations[task.id],
               ),
             }
           : task,

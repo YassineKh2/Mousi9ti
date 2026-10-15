@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Check, X } from "lucide-react";
 import { PracticeTask } from "../types";
-import { MENTION_REGEX, parseParams } from "../utils/taskMentions";
+import {
+  formatDurationLabel,
+  MENTION_REGEX,
+  parseParams,
+} from "../utils/taskMentions";
 import { getTaskDurationSeconds } from "../lib/storage";
 
 interface SessionReviewModalProps {
@@ -45,9 +49,9 @@ const renderTaskLabel = (task: PracticeTask) => {
           : tool === "chord"
             ? parsed.label || `${parsed.root} ${parsed.type}`
             : tool === "timer"
-              ? `${parsed.minutes}m`
+              ? formatDurationLabel(Number(parsed.minutes))
               : tool === "time"
-                ? `${parsed.minutes}m`
+                ? formatDurationLabel(Number(parsed.minutes))
                 : tool === "custom"
                   ? parsed.text || "Custom"
                   : tool === "tuning"
@@ -93,21 +97,26 @@ export const SessionReviewModal: React.FC<SessionReviewModalProps> = ({
   const initialDurations = useMemo(
     () =>
       Object.fromEntries(
-        tasks.map((task) => [
-          task.id,
-          String(
-            Math.ceil(
-              (attributedSeconds[task.id] ||
-                getTaskDurationSeconds(task.text) ||
-                0) / 60,
+        tasks.map((task) => {
+          const seconds = Math.max(
+            0,
+            Math.round(
+              attributedSeconds[task.id] ?? getTaskDurationSeconds(task.text),
             ),
-          ),
-        ]),
+          );
+          return [
+            task.id,
+            {
+              minutes: String(Math.floor(seconds / 60)),
+              seconds: String(seconds % 60),
+            },
+          ];
+        }),
       ),
     [attributedSeconds, tasks],
   );
   const [durations, setDurations] =
-    useState<Record<string, string>>(initialDurations);
+    useState<Record<string, { minutes: string; seconds: string }>>(initialDurations);
   const initializedInputs = useRef(new Set<string>());
 
   useEffect(() => {
@@ -117,7 +126,8 @@ export const SessionReviewModal: React.FC<SessionReviewModalProps> = ({
   if (!isOpen) return null;
 
   const assignedSeconds = Object.values(durations).reduce<number>(
-    (total, minutes) => total + Math.max(0, Number(minutes) || 0) * 60,
+    (total, duration) =>
+      total + (Number(duration.minutes) || 0) * 60 + (Number(duration.seconds) || 0),
     0,
   );
   const unassignedSeconds = Math.max(
@@ -187,9 +197,9 @@ export const SessionReviewModal: React.FC<SessionReviewModalProps> = ({
             </p>
           ) : (
             tasks.map((task) => (
-              <label
+              <div
                 key={task.id}
-                className="flex items-center gap-3 rounded border border-outline-variant/30 bg-surface-container-low p-3"
+                className="flex flex-wrap items-center gap-2 rounded border border-outline-variant/30 bg-surface-container-low p-3"
               >
                 <span className="min-w-0 flex-1 text-sm text-on-surface">
                   {renderTaskLabel(task)}
@@ -197,13 +207,16 @@ export const SessionReviewModal: React.FC<SessionReviewModalProps> = ({
                 <span className="text-[10px] text-on-surface-variant">
                   Recorded
                 </span>
-                <input
+                {(["minutes", "seconds"] as const).map((unit) => (
+                  <label key={unit} className="inline-flex items-center gap-1">
+                    <input
                   type="text"
                   inputMode="numeric"
-                  value={durations[task.id] ?? 0}
+                  value={durations[task.id]?.[unit] ?? "0"}
                   onFocus={(event) => {
-                    if (initializedInputs.current.has(task.id)) return;
-                    initializedInputs.current.add(task.id);
+                    const inputId = `${task.id}-${unit}`;
+                    if (initializedInputs.current.has(inputId)) return;
+                    initializedInputs.current.add(inputId);
                     const input = event.currentTarget;
                     requestAnimationFrame(() => {
                       input.setSelectionRange(
@@ -225,14 +238,21 @@ export const SessionReviewModal: React.FC<SessionReviewModalProps> = ({
                   onChange={(event) =>
                     setDurations((current) => ({
                       ...current,
-                      [task.id]: event.target.value.replace(/\D/g, ""),
+                      [task.id]: {
+                        ...current[task.id],
+                        [unit]: event.target.value.replace(/\D/g, ""),
+                      },
                     }))
                   }
-                  className="w-16 rounded border border-outline-variant/40 bg-surface-container-lowest px-2 py-1 text-right font-mono text-sm text-on-surface [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  aria-label={`Recorded minutes for ${task.text}`}
+                  className="w-12 rounded border border-outline-variant/40 bg-surface-container-lowest px-2 py-1 text-right font-mono text-sm text-on-surface [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  aria-label={`Recorded ${unit} for ${task.text}`}
                 />
-                <span className="text-xs text-on-surface-variant">min</span>
-              </label>
+                    <span className="text-xs text-on-surface-variant">
+                      {unit === "minutes" ? "min" : "sec"}
+                    </span>
+                  </label>
+                ))}
+              </div>
             ))
           )}
         </div>
@@ -256,9 +276,10 @@ export const SessionReviewModal: React.FC<SessionReviewModalProps> = ({
             onClick={() => {
               onSave(
                 Object.fromEntries(
-                  Object.entries(durations).map(([taskId, minutes]) => [
+                  Object.entries(durations).map(([taskId, duration]) => [
                     taskId,
-                    Number(minutes) || 0,
+                    (Number(duration.minutes) || 0) * 60 +
+                      (Number(duration.seconds) || 0),
                   ]),
                 ),
               );

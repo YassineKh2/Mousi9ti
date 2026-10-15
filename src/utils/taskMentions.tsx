@@ -177,6 +177,25 @@ export const formatDurationLabel = (minutes: number): string => {
   );
 };
 
+export const getDurationSuggestions = (query: string) => {
+  const minutes = parseDurationMinutes(query);
+  if (query.trim() && minutes !== undefined) {
+    if (minutes > MAX_TIMER_DURATION_MINUTES) return [];
+    return [{
+      label: formatDurationLabel(minutes),
+      value: query.trim(),
+      subLabel: "Duration",
+    }];
+  }
+  return ["1", "2", "3", "5", "10", "15", "20", "30"]
+    .filter((value) => !query || value.startsWith(query))
+    .map((value) => ({
+      label: `${value} Minutes`,
+      value,
+      subLabel: "Duration",
+    }));
+};
+
 export const parseParams = (tool: string, params: string) => {
   const parts = params ? params.split(",").map((p) => p.trim()) : [];
   if (tool === "metronome") {
@@ -336,19 +355,9 @@ export const getMentionSuggestions = (
         subLabel: "Custom note (type anything)",
       },
       {
-        name: "tuning",
-        label: "@tuning",
-        subLabel: "Guitar tuning (Drop D, DADGAD...)",
-      },
-      {
         name: "key",
         label: "@key",
         subLabel: "Musical key (A Minor, C Major...)",
-      },
-      {
-        name: "technique",
-        label: "@technique",
-        subLabel: "Technique (Legato, Picking...)",
       },
       { name: "bpm", label: "@bpm", subLabel: "Target tempo BPM" },
       {
@@ -369,6 +378,16 @@ export const getMentionSuggestions = (
         subLabel: "Practice timer (minutes and seconds)",
       },
       { name: "time", label: "@time", subLabel: "Planned task time (minutes)" },
+      {
+        name: "technique",
+        label: "@technique",
+        subLabel: "Technique (Legato, Picking...)",
+      },
+      {
+        name: "tuning",
+        label: "@tuning",
+        subLabel: "Guitar tuning (Drop D, DADGAD...)",
+      },
       { name: "random", label: "@random", subLabel: "Random note settings" },
     ];
     return tools
@@ -616,26 +635,9 @@ export const getMentionSuggestions = (
             subLabel: "Time sig",
           }));
       }
-    } else if (ctx.tool === "timer") {
+    } else if (ctx.tool === "timer" || ctx.tool === "time") {
       if (ctx.paramIndex === 0) {
-        const baseList = ["1", "2", "3", "5", "10", "15", "20", "30"];
-        const numMatch = ctx.query.match(/\d+/);
-        if (numMatch) {
-          const strVal = parseInt(numMatch[0], 10).toString();
-          if (!baseList.includes(strVal)) baseList.unshift(strVal);
-        }
-        return baseList
-          .filter(
-            (m) =>
-              ctx.query === "" ||
-              m.startsWith(ctx.query) ||
-              (numMatch && m === parseInt(numMatch[0], 10).toString()),
-          )
-          .map((m) => ({
-            label: `${m} Minutes`,
-            value: m,
-            subLabel: "Duration",
-          }));
+        return getDurationSuggestions(ctx.query);
       }
     }
   }
@@ -689,7 +691,8 @@ export const applyMentionSuggestion = (
     const beforeParam = currentText.slice(0, currentCursor - ctx.query.length);
     let isLast = false;
     if (ctx.tool === "metronome" && ctx.paramIndex === 1) isLast = true;
-    if (ctx.tool === "timer" && ctx.paramIndex === 0) isLast = true;
+    if ((ctx.tool === "timer" || ctx.tool === "time") && ctx.paramIndex === 0)
+      isLast = true;
 
     const suffix = isLast ? ") " : ",";
 

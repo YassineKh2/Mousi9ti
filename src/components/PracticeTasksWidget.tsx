@@ -45,6 +45,7 @@ import {
   getTaskExerciseSuggestions,
   getMentionSuggestions as getCategorizedMentionSuggestions,
   formatDurationLabel,
+  getDurationSuggestions,
   MAX_TIMER_DURATION_MINUTES,
   parseDurationMinutes,
 } from "../utils/taskMentions";
@@ -279,19 +280,9 @@ const getMentionSuggestions = (
         subLabel: "Custom note (type anything)",
       },
       {
-        name: "tuning",
-        label: "@tuning",
-        subLabel: "Guitar tuning (Drop D, DADGAD...)",
-      },
-      {
         name: "key",
         label: "@key",
         subLabel: "Musical key (A Minor, C Major...)",
-      },
-      {
-        name: "technique",
-        label: "@technique",
-        subLabel: "Technique (Legato, Picking...)",
       },
       { name: "bpm", label: "@bpm", subLabel: "Target tempo BPM" },
       {
@@ -307,6 +298,16 @@ const getMentionSuggestions = (
         subLabel: "Metronome BPM & signature",
       },
       { name: "timer", label: "@timer", subLabel: "Practice timer (minutes)" },
+      {
+        name: "technique",
+        label: "@technique",
+        subLabel: "Technique (Legato, Picking...)",
+      },
+      {
+        name: "tuning",
+        label: "@tuning",
+        subLabel: "Guitar tuning (Drop D, DADGAD...)",
+      },
       { name: "random", label: "@random", subLabel: "Random note settings" },
     ];
     return tools
@@ -498,27 +499,9 @@ const getMentionSuggestions = (
             subLabel: "Time sig",
           }));
       }
-    } else if (ctx.tool === "timer") {
+    } else if (ctx.tool === "timer" || ctx.tool === "time") {
       if (ctx.paramIndex === 0) {
-        const baseList = ["1", "2", "3", "5", "10", "15", "20", "30"];
-        const numMatch = ctx.query.match(/\d+/);
-        if (numMatch) {
-          const strVal = parseInt(numMatch[0], 10).toString();
-          if (!baseList.includes(strVal)) baseList.unshift(strVal);
-        }
-        return baseList
-          .filter(
-            (m) =>
-              Number(m) <= MAX_TIMER_DURATION_MINUTES &&
-              (ctx.query === "" ||
-                m.startsWith(ctx.query) ||
-                (numMatch && m === parseInt(numMatch[0], 10).toString())),
-          )
-          .map((m) => ({
-            label: `${m} Minutes`,
-            value: m,
-            subLabel: "Duration",
-          }));
+        return getDurationSuggestions(ctx.query);
       }
     } else if (ctx.tool === "random") {
       if (ctx.paramIndex === 0) {
