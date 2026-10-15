@@ -82,7 +82,7 @@ const STEPS: TourStep[] = [
     id: "session",
     title: "Practice Session",
     description:
-      "Start a session to track your full practice time. Log & Finish opens a review of task time in minutes and seconds. You can leave time for general practice without assigning it to a task. Save & finish session confirms the log; closing with X leaves the session paused without finishing it.",
+      "Start a session to track your full practice time. Log & Finish opens a review of task time in minutes and seconds. You can leave time for general practice without assigning it to a task. Save & finish session confirms the log, closing with X leaves the session paused without finishing it.",
     targetSelector: "[data-dashboard-widget='session']",
     tab: "dashboard",
   },
@@ -98,7 +98,7 @@ const STEPS: TourStep[] = [
     id: "practice-tasks",
     title: "Daily Practice Goals",
     description:
-      "Keep today's practice goals close at hand. Starting or checking off one task counts toward your streak; completing every planned task marks the practice day complete. Click Get started to set up your tasks. The tour pauses during setup; click Resume tour when you are done.",
+      "Keep today's practice goals close at hand. Starting or checking off one task counts toward your streak, completing every planned task marks the practice day complete. Click Get started to set up your tasks. The tour pauses during setup, click Resume tour when you are done.",
     targetSelector: "[data-dashboard-widget='practice-tasks']",
     tab: "dashboard",
   },
@@ -123,7 +123,7 @@ const STEPS: TourStep[] = [
     id: "streak",
     title: "Practice Streak",
     description:
-      "Starting or completing at least one task earns streak credit for the day, only once per day. A streak tracks showing up to practice; a completed practice day means you finished all planned tasks. Starting a task does not check it off or complete the practice day.",
+      "Starting or completing at least one task earns streak credit for the day, only once per day. A streak tracks showing up to practice, a completed practice day means you finished all planned tasks. Starting a task does not check it off or complete the practice day.",
     targetSelector: "[data-tour='sidebar-streak']",
     tab: "dashboard",
   },
@@ -131,7 +131,7 @@ const STEPS: TourStep[] = [
     id: "dashboard-customize",
     title: "Customize Dashboard",
     description:
-      "Click Customize to rearrange or hide widgets. The tour will pause while you edit; click Done to continue the tour.",
+      "Click Customize to rearrange or hide widgets. The tour will pause while you edit, click Done to continue the tour.",
     targetSelector: "[data-tour='dashboard-customize']",
     tab: "dashboard",
     awaitAction: true,
@@ -288,7 +288,7 @@ const STEPS: TourStep[] = [
     id: "stats-metrics",
     title: "Practice Analytics",
     description:
-      "Review practice totals, streaks, completed practice days, and BPM progress. Your streak counts days when you started or completed at least one task; completed practice days require all planned tasks to be finished. These track consistency and daily goal completion separately.",
+      "Review practice totals, streaks, completed practice days, and BPM progress. Your streak counts days when you started or completed at least one task, completed practice days require all planned tasks to be finished. These track consistency and daily goal completion separately.",
     targetSelector: "[data-tour='stats-metrics']",
     tab: "stats",
   },

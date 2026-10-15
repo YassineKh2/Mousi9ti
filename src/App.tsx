@@ -1379,11 +1379,156 @@ export function App() {
     setSearchQuery("");
   };
 
+  const skeletonBlock = (className: string) => (
+    <div className={`rounded-md bg-on-surface/10 ${className}`} />
+  );
+  const skeletonPanel = (className: string) => (
+    <div className={`space-y-3 ${className}`}>
+      {skeletonBlock("h-3 w-1/3")}
+      {skeletonBlock("h-3 w-2/3")}
+      {skeletonBlock("h-16 w-full")}
+    </div>
+  );
+  const skeletonToolbar = (
+    <div className="flex flex-wrap items-center gap-3">
+      {skeletonBlock("h-9 w-28 rounded-lg")}
+      {skeletonBlock("h-9 w-24 rounded-lg")}
+      {skeletonBlock("h-9 w-20 rounded-lg")}
+    </div>
+  );
+  const skeletonTitle = skeletonBlock("h-7 w-40 sm:w-56");
+  const pageSkeletons: Record<ActiveTab, React.ReactNode> = {
+    dashboard: (
+      <div className="space-y-5">
+        <div className="flex items-center justify-between gap-4">
+          {skeletonTitle}
+          {skeletonToolbar}
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {skeletonPanel("h-52")}
+          {skeletonPanel("h-52")}
+          {skeletonPanel("h-52")}
+          {skeletonPanel("h-64 md:col-span-2")}
+          {skeletonPanel("h-64")}
+        </div>
+      </div>
+    ),
+    scales: (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {skeletonTitle}
+          {skeletonToolbar}
+        </div>
+        {skeletonPanel("h-48")}
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {skeletonPanel("h-72")}
+          {skeletonPanel("h-72")}
+        </div>
+      </div>
+    ),
+    chords: (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {skeletonTitle}
+          {skeletonToolbar}
+        </div>
+        {skeletonBlock("h-11 w-full rounded-lg")}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
+          {skeletonPanel("h-64")}
+          <div className="space-y-4">
+            {skeletonPanel("h-56")}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {skeletonPanel("h-48")}
+              {skeletonPanel("h-48")}
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+    builder: (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {skeletonTitle}
+          {skeletonToolbar}
+        </div>
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
+          {skeletonPanel("min-h-[26rem]")}
+          {skeletonPanel("min-h-[26rem]")}
+        </div>
+      </div>
+    ),
+    exercises: (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {skeletonTitle}
+          {skeletonToolbar}
+        </div>
+        {skeletonBlock("h-10 w-full rounded-lg")}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.2fr)]">
+          {skeletonPanel("h-[30rem]")}
+          {skeletonPanel("h-[30rem]")}
+        </div>
+      </div>
+    ),
+    routine: (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {skeletonTitle}
+          {skeletonToolbar}
+        </div>
+        {skeletonPanel("h-24")}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
+          {Array.from({ length: 7 }, (_, index) => (
+            <React.Fragment key={index}>{skeletonPanel("h-28")}</React.Fragment>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          {skeletonPanel("h-80")}
+          {skeletonPanel("h-80")}
+        </div>
+      </div>
+    ),
+    tools: (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {skeletonTitle}
+          {skeletonToolbar}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {Array.from({ length: 5 }, (_, index) => (
+            <React.Fragment key={index}>
+              {skeletonBlock("h-9 w-24 rounded-lg")}
+            </React.Fragment>
+          ))}
+        </div>
+        {skeletonPanel("min-h-[32rem]")}
+      </div>
+    ),
+    stats: (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {skeletonTitle}
+          {skeletonToolbar}
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+          {Array.from({ length: 5 }, (_, index) => (
+            <React.Fragment key={index}>{skeletonPanel("h-28")}</React.Fragment>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {skeletonPanel("h-72")}
+          {skeletonPanel("h-72")}
+          {skeletonPanel("h-80 lg:col-span-2")}
+        </div>
+        {skeletonPanel("h-64")}
+      </div>
+    ),
+  };
   const pageFallback = (
-    <div className="flex min-h-[40vh] items-center justify-center rounded-2xl border border-border/70 bg-surface/70 p-6 shadow-lg shadow-black/10">
-      <div className="flex items-center gap-3 text-sm font-medium text-on-surface/70">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary/50 border-t-primary" />
-        Loading workspace…
+    <div aria-busy="true" className="min-h-[40vh]">
+      <span className="sr-only">Loading workspace…</span>
+      <div aria-hidden="true" className="animate-pulse">
+        {pageSkeletons[activeTab]}
       </div>
     </div>
   );
