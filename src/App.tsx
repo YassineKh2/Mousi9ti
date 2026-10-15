@@ -93,9 +93,7 @@ import {
 import { GlobalSessionToast } from "./components/GlobalSessionToast";
 import { SettingsContext } from "./contexts/SettingsContext";
 import { TourOverlay } from "./components/TourOverlay";
-import {
-  getSavedPracticeTasks,
-} from "./components/PracticeTasksWidget";
+import { getSavedPracticeTasks } from "./components/PracticeTasksWidget";
 import {
   deleteTaskFromSchedule,
   getTaskDateKey,
@@ -320,6 +318,7 @@ export function App() {
     nextTaskName: string;
   } | null>(null);
   const [sessionReview, setSessionReview] = useState<{
+    pendingSession: Session;
     practiceSessionId: string;
     globalDurationSeconds: number;
     tasks: PracticeTask[];
@@ -542,7 +541,10 @@ export function App() {
     }
     const task = practiceTasks.find((item) => item.id === taskId);
     if (task?.completed) return;
-    if (task) recordTaskActivity(task, "started");
+    if (task) {
+      recordTaskActivity(task, "started");
+      setStreak(getSavedStreak());
+    }
     setActiveTaskId(taskId);
     if (taskId) localStorage.setItem("Mousi9ti_active_task_id", taskId);
     else localStorage.removeItem("Mousi9ti_active_task_id");
@@ -553,6 +555,7 @@ export function App() {
     if (!task) return;
     const completed = !task.completed;
     setTaskCompletion(task, completed);
+    setStreak(getSavedStreak());
     setPracticeTasks((current) =>
       current.map((item) =>
         item.id === taskId
@@ -685,10 +688,7 @@ export function App() {
         Object.prototype.hasOwnProperty.call(durations, task.id)
           ? {
               ...task,
-              manuallyConfirmedDurationSeconds: Math.max(
-                0,
-                durations[task.id],
-              ),
+              manuallyConfirmedDurationSeconds: Math.max(0, durations[task.id]),
             }
           : task,
       ),
@@ -697,7 +697,7 @@ export function App() {
   };
 
   const openSessionReview = useCallback(
-    (globalDurationSeconds: number, practiceSessionId: string) => {
+    (pendingSession: Session) => {
       const sessionId = localStorage.getItem("Mousi9ti_task_session_id");
       const sessionAttributions = getSavedTaskAttributions().filter(
         (attribution) =>
@@ -712,8 +712,9 @@ export function App() {
         return totals;
       }, {});
       setSessionReview({
-        practiceSessionId,
-        globalDurationSeconds,
+        pendingSession,
+        practiceSessionId: pendingSession.id,
+        globalDurationSeconds: pendingSession.durationSeconds,
         tasks: practiceTasks,
         attributedSeconds,
       });
@@ -952,8 +953,8 @@ export function App() {
 
   // End and Log Practice Session
   const handleEndSession = useCallback(() => {
-    setIsDailyRoutineActive(false);
     if (activeSessionDuration === 0) {
+      setIsDailyRoutineActive(false);
       // Nothing to log, just clean up
       localStorage.removeItem("Mousi9ti_session_is_active");
       localStorage.removeItem("Mousi9ti_session_start_time");
@@ -985,24 +986,14 @@ export function App() {
       completed: true,
     };
 
-    openSessionReview(activeSessionDuration, newSession.id);
-    saveSession(newSession);
-    setSessions(getSavedSessions());
-    setStreak(getSavedStreak());
-
-    // Celebrate streak completion with confetti!
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-    });
-
-    localStorage.removeItem("Mousi9ti_session_is_active");
+    openSessionReview(newSession);
+    localStorage.setItem("Mousi9ti_session_is_active", "false");
     localStorage.removeItem("Mousi9ti_session_start_time");
-    localStorage.removeItem("Mousi9ti_session_accumulated");
+    localStorage.setItem(
+      "Mousi9ti_session_accumulated",
+      activeSessionDuration.toString(),
+    );
     setIsSessionActive(false);
-    setActiveSessionDuration(0);
-    setCurrentSessionBpms([]);
   }, [
     activeSessionDuration,
     currentSessionBpms,
@@ -1637,7 +1628,22 @@ export function App() {
             attributedSeconds={sessionReview.attributedSeconds}
             onClose={() => setSessionReview(null)}
             onSave={(durations) => {
+              saveSession(sessionReview.pendingSession);
               saveReviewedTaskDurations(durations);
+              setSessions(getSavedSessions());
+              setStreak(getSavedStreak());
+              setIsDailyRoutineActive(false);
+              localStorage.removeItem("Mousi9ti_session_is_active");
+              localStorage.removeItem("Mousi9ti_session_start_time");
+              localStorage.removeItem("Mousi9ti_session_accumulated");
+              setIsSessionActive(false);
+              setActiveSessionDuration(0);
+              setCurrentSessionBpms([]);
+              confetti({
+                particleCount: 80,
+                spread: 70,
+                origin: { y: 0.6 },
+              });
             }}
           />
         )}

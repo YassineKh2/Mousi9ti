@@ -82,7 +82,7 @@ const STEPS: TourStep[] = [
     id: "session",
     title: "Practice Session",
     description:
-      "Start a session to log practice time. Ending it saves the session and contributes to your practice history.",
+      "Start a session to track your full practice time. Log & Finish opens a review of task time in minutes and seconds. You can leave time for general practice without assigning it to a task. Save & finish session confirms the log; closing with X leaves the session paused without finishing it.",
     targetSelector: "[data-dashboard-widget='session']",
     tab: "dashboard",
   },
@@ -98,7 +98,7 @@ const STEPS: TourStep[] = [
     id: "practice-tasks",
     title: "Daily Practice Goals",
     description:
-      "Keep today's practice goals close at hand. Click Get started to set up your tasks. The tour pauses while you complete setup and arrange your goals; click Resume tour when you are done.",
+      "Keep today's practice goals close at hand. Starting or checking off one task counts toward your streak; completing every planned task marks the practice day complete. Click Get started to set up your tasks. The tour pauses during setup; click Resume tour when you are done.",
     targetSelector: "[data-dashboard-widget='practice-tasks']",
     tab: "dashboard",
   },
@@ -123,7 +123,7 @@ const STEPS: TourStep[] = [
     id: "streak",
     title: "Practice Streak",
     description:
-      "Track consecutive practice days from the sidebar. Your stats page also shows your longer-term consistency.",
+      "Starting or completing at least one task earns streak credit for the day, only once per day. A streak tracks showing up to practice; a completed practice day means you finished all planned tasks. Starting a task does not check it off or complete the practice day.",
     targetSelector: "[data-tour='sidebar-streak']",
     tab: "dashboard",
   },
@@ -246,7 +246,7 @@ const STEPS: TourStep[] = [
     id: "routine-goals",
     title: "Daily Goals & Task Tags",
     description:
-      "Click Start tasks to complete the task guide and add your practice goals. The tour pauses so you can finish setup and arrange all your tasks, then click Resume tour. Use tags such as @scale, @chord, @bpm, or @timer to capture practice settings.",
+      "Click Start tasks to complete the task guide and add your practice goals, then click Resume tour. Use @scale, @chord, @bpm, or @timer for practice settings. Timer durations accept seconds, such as @timer(20s), or mixed times like @timer(1m 20s). Typing @t puts Timer first and Tuning last.",
     targetSelector: "[data-tour='routine-goals']",
     tab: "routine",
   },
@@ -288,7 +288,7 @@ const STEPS: TourStep[] = [
     id: "stats-metrics",
     title: "Practice Analytics",
     description:
-      "Review practice totals, streaks, and BPM progress, with charts that help you track consistency over time.",
+      "Review practice totals, streaks, completed practice days, and BPM progress. Your streak counts days when you started or completed at least one task; completed practice days require all planned tasks to be finished. These track consistency and daily goal completion separately.",
     targetSelector: "[data-tour='stats-metrics']",
     tab: "stats",
   },
@@ -1167,17 +1167,14 @@ function useTourLogic(
     return attachClickAdvance(step.targetSelector, setStepIndex);
   }, [stepIndex, step.awaitAction, step.targetSelector, isPaused]);
 
-  useEffect(
-    () => {
-      if (isPaused) return;
-      return addListener(
-        window,
-        "keydown",
-        makeKeyHandler(isFirst, isLast, onClose, setStepIndex),
-      );
-    },
-    [isFirst, isLast, onClose, step.awaitAction, isPaused],
-  );
+  useEffect(() => {
+    if (isPaused) return;
+    return addListener(
+      window,
+      "keydown",
+      makeKeyHandler(isFirst, isLast, onClose, setStepIndex),
+    );
+  }, [isFirst, isLast, onClose, step.awaitAction, isPaused]);
 
   const handleNext = useCallback(() => {
     if (isLast) {
@@ -1234,7 +1231,9 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
 }) => {
   const [isDashboardCustomizePaused, setIsDashboardCustomizePaused] =
     useState(false);
-  const [taskSetupStage, setTaskSetupStage] = useState<"guide" | "tasks" | null>(null);
+  const [taskSetupStage, setTaskSetupStage] = useState<
+    "guide" | "tasks" | null
+  >(null);
   const isPaused = isDashboardCustomizePaused || taskSetupStage !== null;
   const {
     step,
@@ -1319,15 +1318,31 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
 
   if (taskSetupStage) {
     return taskSetupStage === "tasks" ? (
-      <div role="status" className="fixed bottom-20 lg:bottom-4 left-1/2 z-[260] -translate-x-1/2 flex w-max max-w-[calc(100%-2rem)] items-center gap-3 rounded-full border border-outline-variant/40 bg-surface px-4 py-2 font-mono text-xs text-on-surface shadow-lg">
-        <span className="min-w-0">Add or edit your tasks, then click <strong>Resume tour</strong> to continue.</span>
-        <button type="button" onClick={() => {
-          setTaskSetupStage(null);
-          handleNext();
-        }} className="inline-flex shrink-0 items-center gap-1 font-semibold text-primary hover:underline">
+      <div
+        role="status"
+        className="fixed bottom-20 lg:bottom-4 left-1/2 z-[260] -translate-x-1/2 flex w-max max-w-[calc(100%-2rem)] items-center gap-3 rounded-full border border-outline-variant/40 bg-surface px-4 py-2 font-mono text-xs text-on-surface shadow-lg"
+      >
+        <span className="min-w-0">
+          Add or edit your tasks, then click <strong>Resume tour</strong> to
+          continue.
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setTaskSetupStage(null);
+            handleNext();
+          }}
+          className="inline-flex shrink-0 items-center gap-1 font-semibold text-primary hover:underline"
+        >
           Resume tour <ArrowRight size={14} />
         </button>
-        <button type="button" onClick={onClose} aria-label="Close tour" title="Close tour" className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close tour"
+          title="Close tour"
+          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+        >
           <X size={14} />
         </button>
       </div>

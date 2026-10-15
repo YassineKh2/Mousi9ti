@@ -561,7 +561,9 @@ export function recordTaskActivity(
       STORAGE_KEYS.TASK_ACTIVITIES,
       JSON.stringify(activities),
     );
-    if (kind === "completed") recordPracticeDay(activity.date, 0);
+    if (kind === "started" || kind === "completed") {
+      recordPracticeDay(activity.date, 0);
+    }
   } catch (e) {
     console.error("Failed to record task activity", e);
   }

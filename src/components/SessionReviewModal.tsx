@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Check, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  Clock3,
+  Coffee,
+  ListChecks,
+  X,
+} from "lucide-react";
 import { PracticeTask } from "../types";
 import {
   formatDurationLabel,
@@ -116,7 +123,9 @@ export const SessionReviewModal: React.FC<SessionReviewModalProps> = ({
     [attributedSeconds, tasks],
   );
   const [durations, setDurations] =
-    useState<Record<string, { minutes: string; seconds: string }>>(initialDurations);
+    useState<Record<string, { minutes: string; seconds: string }>>(
+      initialDurations,
+    );
   const initializedInputs = useRef(new Set<string>());
 
   useEffect(() => {
@@ -127,7 +136,9 @@ export const SessionReviewModal: React.FC<SessionReviewModalProps> = ({
 
   const assignedSeconds = Object.values(durations).reduce<number>(
     (total, duration) =>
-      total + (Number(duration.minutes) || 0) * 60 + (Number(duration.seconds) || 0),
+      total +
+      (Number(duration.minutes) || 0) * 60 +
+      (Number(duration.seconds) || 0),
     0,
   );
   const unassignedSeconds = Math.max(
@@ -135,142 +146,213 @@ export const SessionReviewModal: React.FC<SessionReviewModalProps> = ({
     globalDurationSeconds - assignedSeconds,
   );
   const differenceSeconds = assignedSeconds - globalDurationSeconds;
+  const taskShare =
+    globalDurationSeconds > 0
+      ? Math.min(100, (assignedSeconds / globalDurationSeconds) * 100)
+      : 0;
 
   return (
     <div
-      className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="session-review-title"
     >
-      <div className="w-full max-w-lg rounded-xl border border-outline-variant/40 bg-surface-container p-5 shadow-2xl">
-        <div className="mb-4 flex items-start justify-between gap-4">
+      <div className="flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-outline-variant/40 bg-surface-container font-mono shadow-2xl">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline-variant/25 px-5 py-5 sm:px-7">
           <div>
             <h2
               id="session-review-title"
-              className="font-mono text-sm font-bold uppercase tracking-[0.16em] text-on-surface"
+              className="font-mono text-base font-bold text-on-surface"
             >
               Review practice session
             </h2>
-            <p className="mt-1 text-xs text-on-surface-variant">
-              Task times were calculated automatically based on the global timer
-              and the time each task was active.
-            </p>
-            <p className="mt-1 text-[11px] text-on-surface-variant">
-              Review or edit them before saving. The global timer remains
-              separate from task-attributed time.
+            <p className="mt-1 text-sm text-on-surface-variant">
+              A little structure. Room for general practice.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface"
             aria-label="Close review"
+            title="Close review"
           >
             <X size={17} />
           </button>
         </div>
 
-        <div className="mb-4 grid grid-cols-2 gap-2 text-sm">
-          <div className="rounded border border-outline-variant/30 bg-surface-container-low p-3">
-            <div className="text-[10px] uppercase tracking-wider text-on-surface-variant">
-              Global timer
-            </div>
-            <div className="mt-1 font-mono font-bold text-primary">
-              {formatDuration(globalDurationSeconds)}
-            </div>
-          </div>
-          <div className="rounded border border-outline-variant/30 bg-surface-container-low p-3">
-            <div className="text-[10px] uppercase tracking-wider text-on-surface-variant">
-              Unassigned
-            </div>
-            <div className="mt-1 font-mono font-bold text-on-surface">
-              {formatDuration(unassignedSeconds)}
-            </div>
-          </div>
-        </div>
-
-        <div className="max-h-[45vh] space-y-2 overflow-y-auto pr-1">
-          {tasks.length === 0 ? (
-            <p className="py-4 text-center text-sm text-on-surface-variant">
-              No tasks were involved in this session.
-            </p>
-          ) : (
-            tasks.map((task) => (
-              <div
-                key={task.id}
-                className="flex flex-wrap items-center gap-2 rounded border border-outline-variant/30 bg-surface-container-low p-3"
-              >
-                <span className="min-w-0 flex-1 text-sm text-on-surface">
-                  {renderTaskLabel(task)}
-                </span>
-                <span className="text-[10px] text-on-surface-variant">
-                  Recorded
-                </span>
-                {(["minutes", "seconds"] as const).map((unit) => (
-                  <label key={unit} className="inline-flex items-center gap-1">
-                    <input
-                  type="text"
-                  inputMode="numeric"
-                  value={durations[task.id]?.[unit] ?? "0"}
-                  onFocus={(event) => {
-                    const inputId = `${task.id}-${unit}`;
-                    if (initializedInputs.current.has(inputId)) return;
-                    initializedInputs.current.add(inputId);
-                    const input = event.currentTarget;
-                    requestAnimationFrame(() => {
-                      input.setSelectionRange(
-                        input.value.length,
-                        input.value.length,
-                      );
-                    });
-                  }}
-                  onKeyDown={(event) => {
-                    if (
-                      event.key.length === 1 &&
-                      !/[0-9]/.test(event.key) &&
-                      !event.ctrlKey &&
-                      !event.metaKey
-                    ) {
-                      event.preventDefault();
-                    }
-                  }}
-                  onChange={(event) =>
-                    setDurations((current) => ({
-                      ...current,
-                      [task.id]: {
-                        ...current[task.id],
-                        [unit]: event.target.value.replace(/\D/g, ""),
-                      },
-                    }))
-                  }
-                  className="w-12 rounded border border-outline-variant/40 bg-surface-container-lowest px-2 py-1 text-right font-mono text-sm text-on-surface [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  aria-label={`Recorded ${unit} for ${task.text}`}
-                />
-                    <span className="text-xs text-on-surface-variant">
-                      {unit === "minutes" ? "min" : "sec"}
-                    </span>
-                  </label>
-                ))}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <section
+            aria-label="Session time breakdown"
+            className="border-b border-outline-variant/25 bg-surface-container-low px-5 py-5 sm:px-7 sm:py-6"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-on-surface-variant">
+                <Clock3 size={16} aria-hidden="true" />
+                Full session <span className="text-xs">(global timer)</span>
               </div>
-            ))
+              <strong className="font-mono text-2xl tabular-nums text-on-surface">
+                {formatDuration(globalDurationSeconds)}
+              </strong>
+            </div>
+            <div
+              className="mt-5 flex h-2.5 overflow-hidden rounded-sm bg-secondary/25"
+              role="img"
+              aria-label={`${formatDuration(assignedSeconds)} assigned to tasks; ${formatDuration(unassignedSeconds)} general practice`}
+            >
+              <div
+                className="h-full bg-primary transition-[width] duration-200"
+                style={{ width: `${taskShare}%` }}
+              />
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-5">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-xs font-medium text-on-surface-variant">
+                  <ListChecks
+                    size={15}
+                    className="shrink-0 text-primary"
+                    aria-hidden="true"
+                  />
+                  Assigned to tasks
+                </div>
+                <strong className="mt-1.5 block break-all font-mono text-lg tabular-nums text-primary">
+                  {formatDuration(assignedSeconds)}
+                </strong>
+              </div>
+              <div className="min-w-0 border-l border-outline-variant/30 pl-5">
+                <div className="flex items-center gap-2 text-xs font-medium text-on-surface-variant">
+                  <Coffee
+                    size={15}
+                    className="shrink-0 text-secondary"
+                    aria-hidden="true"
+                  />
+                  General practice
+                </div>
+                <strong className="mt-1.5 block break-all font-mono text-lg tabular-nums text-secondary">
+                  {formatDuration(unassignedSeconds)}
+                </strong>
+              </div>
+            </div>
+            <p className="mt-4 text-xs leading-relaxed text-on-surface-variant">
+              You can leave time for general practice. Any session time not
+              assigned to a task stays in your full session total.
+            </p>
+          </section>
+
+          <section
+            aria-labelledby="session-tasks-title"
+            className="px-5 py-5 sm:px-7"
+          >
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h3
+                id="session-tasks-title"
+                className="text-sm font-semibold text-on-surface"
+              >
+                Task time
+              </h3>
+              <span className="font-mono text-xs text-on-surface-variant">
+                {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+              </span>
+            </div>
+            <div className="divide-y divide-outline-variant/20">
+              {tasks.length === 0 ? (
+                <p className="py-5 text-sm text-on-surface-variant">
+                  No tasks in this session. All of your time counts as general
+                  practice.
+                </p>
+              ) : (
+                tasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="grid grid-cols-1 items-center gap-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-5"
+                  >
+                    <span className="min-w-0 break-words text-sm leading-relaxed text-on-surface">
+                      {renderTaskLabel(task)}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="mr-auto text-xs text-on-surface-variant sm:hidden">
+                        Recorded time
+                      </span>
+                      {(["minutes", "seconds"] as const).map((unit) => (
+                        <label
+                          key={unit}
+                          className="inline-flex items-center gap-1"
+                        >
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={durations[task.id]?.[unit] ?? "0"}
+                            onFocus={(event) => {
+                              const inputId = `${task.id}-${unit}`;
+                              if (initializedInputs.current.has(inputId))
+                                return;
+                              initializedInputs.current.add(inputId);
+                              const input = event.currentTarget;
+                              requestAnimationFrame(() => {
+                                input.setSelectionRange(
+                                  input.value.length,
+                                  input.value.length,
+                                );
+                              });
+                            }}
+                            onKeyDown={(event) => {
+                              if (
+                                event.key.length === 1 &&
+                                !/[0-9]/.test(event.key) &&
+                                !event.ctrlKey &&
+                                !event.metaKey
+                              ) {
+                                event.preventDefault();
+                              }
+                            }}
+                            onChange={(event) =>
+                              setDurations((current) => ({
+                                ...current,
+                                [task.id]: {
+                                  ...current[task.id],
+                                  [unit]: event.target.value.replace(/\D/g, ""),
+                                },
+                              }))
+                            }
+                            className="h-10 w-14 rounded border border-outline-variant/40 bg-surface-container-lowest px-2 py-1 text-right font-mono text-sm tabular-nums text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                            aria-label={`Recorded ${unit} for ${task.text}`}
+                          />
+                          <span className="text-xs text-on-surface-variant">
+                            {unit === "minutes" ? "min" : "sec"}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+          {differenceSeconds > 0 && (
+            <div
+              role="status"
+              className="mx-5 mb-5 flex items-start gap-2 rounded border border-amber-500/30 bg-amber-500/10 p-3 text-xs leading-relaxed text-on-surface sm:mx-7"
+            >
+              <AlertTriangle
+                size={16}
+                className="shrink-0 text-amber-500"
+                aria-hidden="true"
+              />
+              <span>
+                Task time exceeds the full session by{" "}
+                {formatDuration(differenceSeconds)}. The global session total
+                will stay unchanged.
+              </span>
+            </div>
           )}
         </div>
 
-        <div className="mt-4 flex items-center justify-between border-t border-outline-variant/20 pt-4">
-          <span className="text-xs text-on-surface-variant">
-            Task total:{" "}
-            <strong className="text-on-surface">
-              {formatDuration(assignedSeconds)}
-            </strong>
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-outline-variant/25 bg-surface-container-low px-5 py-4 sm:px-7">
+          <span className="flex items-center gap-2 text-xs text-on-surface-variant">
+            <Clock3 size={14} aria-hidden="true" />
+            Full session total stays unchanged
           </span>
-          {differenceSeconds !== 0 && (
-            <span className="text-[10px] text-on-surface-variant">
-              {differenceSeconds > 0
-                ? "Task time is higher than the global timer."
-                : "Some global time remains unassigned."}
-            </span>
-          )}
           <button
             type="button"
             onClick={() => {
@@ -285,10 +367,10 @@ export const SessionReviewModal: React.FC<SessionReviewModalProps> = ({
               );
               onClose();
             }}
-            className="inline-flex items-center gap-2 rounded bg-primary px-3 py-2 text-xs font-bold text-on-primary hover:bg-primary/90"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90"
           >
             <Check size={14} />
-            Save changes
+            Save &amp; finish session
           </button>
         </div>
       </div>
