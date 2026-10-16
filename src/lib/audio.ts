@@ -31,6 +31,8 @@ class AudioEngine {
   private pianoInstrument: any = null;
   private builderInstrumentInstance: any = null;
   private defaultSoundfontsRequested = false;
+  private defaultSoundfontsLoadPromise: Promise<void> | null = null;
+  private builderSoundfontLoadPromise: Promise<void> | null = null;
   public isSoundfontLoading = false;
 
   // Metronome Scheduling State
@@ -299,36 +301,49 @@ class AudioEngine {
     guitarSource: string = "acoustic_guitar_nylon",
     pianoSource: string = "acoustic_grand_piano",
   ) {
+    if (this.guitarInstrument && this.pianoInstrument) {
+      return;
+    }
+
     if (!this.ctx) this.getContext();
     if (!this.ctx) return;
 
+    if (this.defaultSoundfontsLoadPromise) {
+      await this.defaultSoundfontsLoadPromise;
+      return;
+    }
+
     this.isSoundfontLoading = true;
     this.defaultSoundfontsRequested = true;
+    this.defaultSoundfontsLoadPromise = (async () => {
+      try {
+        const { Soundfont } = await this.resolveSoundfontModules();
+        const destination = this.compressor || this.ctx!.destination;
 
-    try {
-      const { Soundfont } = await this.resolveSoundfontModules();
-      const destination = this.compressor || this.ctx.destination;
+        if (!this.guitarInstrument) {
+          this.guitarInstrument = Soundfont(this.ctx as any, {
+            instrument: guitarSource,
+            destination,
+          });
+          await this.guitarInstrument.ready;
+        }
 
-      if (!this.guitarInstrument) {
-        this.guitarInstrument = Soundfont(this.ctx as any, {
-          instrument: guitarSource,
-          destination,
-        });
-        await this.guitarInstrument.ready;
+        if (!this.pianoInstrument) {
+          this.pianoInstrument = Soundfont(this.ctx as any, {
+            instrument: pianoSource,
+            destination,
+          });
+          await this.pianoInstrument.ready;
+        }
+      } catch (err) {
+        console.error("Failed to load default soundfonts:", err);
+      } finally {
+        this.isSoundfontLoading = false;
+        this.defaultSoundfontsLoadPromise = null;
       }
+    })();
 
-      if (!this.pianoInstrument) {
-        this.pianoInstrument = Soundfont(this.ctx as any, {
-          instrument: pianoSource,
-          destination,
-        });
-        await this.pianoInstrument.ready;
-      }
-    } catch (err) {
-      console.error("Failed to load default soundfonts:", err);
-    } finally {
-      this.isSoundfontLoading = false;
-    }
+    await this.defaultSoundfontsLoadPromise;
   }
 
   public async ensureDefaultSoundfontsLoaded() {
@@ -343,44 +358,54 @@ class AudioEngine {
     if (!this.ctx) this.getContext();
     if (!this.ctx) return;
 
+    if (this.builderSoundfontLoadPromise) {
+      await this.builderSoundfontLoadPromise;
+      return;
+    }
+
     this.isSoundfontLoading = true;
     const isUploadedFile = typeof source !== "string";
     const sourceUrl = isUploadedFile ? URL.createObjectURL(source) : source;
-    try {
-      const { Soundfont, Soundfont2, SoundFont2 } = await this.resolveSoundfontModules();
-      // Builder instrument uses masterGain (gets reverb)
-      const destination =
-        this.masterGain || this.compressor || this.ctx.destination;
+    this.builderSoundfontLoadPromise = (async () => {
+      try {
+        const { Soundfont, Soundfont2, SoundFont2 } = await this.resolveSoundfontModules();
+        // Builder instrument uses masterGain (gets reverb)
+        const destination =
+          this.masterGain || this.compressor || this.ctx!.destination;
 
-      if (isUploadedFile || source.toLowerCase().endsWith(".sf2")) {
-        this.builderInstrumentInstance = Soundfont2(this.ctx as any, {
-          url: sourceUrl,
-          createSoundfont: (data: ArrayBuffer) =>
-            new SoundFont2(new Uint8Array(data)),
-          destination,
-        });
-        await this.builderInstrumentInstance.ready;
-        if (
-          this.builderInstrumentInstance.instrumentNames &&
-          this.builderInstrumentInstance.instrumentNames.length > 0
-        ) {
-          this.builderInstrumentInstance.loadInstrument(
-            this.builderInstrumentInstance.instrumentNames[0],
-          );
+        if (isUploadedFile || source.toLowerCase().endsWith(".sf2")) {
+          this.builderInstrumentInstance = Soundfont2(this.ctx as any, {
+            url: sourceUrl,
+            createSoundfont: (data: ArrayBuffer) =>
+              new SoundFont2(new Uint8Array(data)),
+            destination,
+          });
+          await this.builderInstrumentInstance.ready;
+          if (
+            this.builderInstrumentInstance.instrumentNames &&
+            this.builderInstrumentInstance.instrumentNames.length > 0
+          ) {
+            this.builderInstrumentInstance.loadInstrument(
+              this.builderInstrumentInstance.instrumentNames[0],
+            );
+          }
+        } else {
+          this.builderInstrumentInstance = Soundfont(this.ctx as any, {
+            instrument: source,
+            destination,
+          });
+          await this.builderInstrumentInstance.ready;
         }
-      } else {
-        this.builderInstrumentInstance = Soundfont(this.ctx as any, {
-          instrument: source,
-          destination,
-        });
-        await this.builderInstrumentInstance.ready;
+      } catch (err) {
+        console.error("Failed to load builder soundfont:", err);
+      } finally {
+        if (isUploadedFile) URL.revokeObjectURL(sourceUrl);
+        this.isSoundfontLoading = false;
+        this.builderSoundfontLoadPromise = null;
       }
-    } catch (err) {
-      console.error("Failed to load builder soundfont:", err);
-    } finally {
-      if (isUploadedFile) URL.revokeObjectURL(sourceUrl);
-      this.isSoundfontLoading = false;
-    }
+    })();
+
+    await this.builderSoundfontLoadPromise;
   }
 
   // Convert Note Name + Octave to Frequency (Hz)
