@@ -48,6 +48,12 @@
   inset: 0;
 }
 
+@media (max-width: 47.99rem) {
+  .daily-practice-widget-startup {
+    min-height: 31.25rem;
+  }
+}
+
 @container (max-width: 24rem) {
   .daily-practice-widget {
     padding: 0.75rem;

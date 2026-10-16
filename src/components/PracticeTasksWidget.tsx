@@ -1189,6 +1189,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
 
   const finishOnboarding = (
     quickStartInstrument: "guitar" | "piano" | null = null,
+    notifyParentOnFinish = true,
   ) => {
     onUpdateTimerPreferences?.({
       completionBehavior: onboardingCompletionBehavior,
@@ -1199,7 +1200,9 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
       hasSeenTaskTimerOnboarding: true,
     });
     setOnboardingStep(null);
-    onFinishDailyTasksOnboarding?.(quickStartInstrument);
+    if (notifyParentOnFinish) {
+      onFinishDailyTasksOnboarding?.(quickStartInstrument);
+    }
   };
 
   if (tasks.length === 0 && !timerPreferences?.hasSeenDailyTasksOnboarding) {
@@ -1309,7 +1312,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
     };
 
     return (
-      <div className={startupLayout === "routine" ? "font-mono relative" : "font-mono bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex min-h-80 flex-col shadow-xl relative"}>
+      <div className={startupLayout === "routine" ? "font-mono relative" : "daily-practice-widget-startup font-mono bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex min-h-80 flex-col shadow-xl relative"}>
         {startupLayout === "widget" && <div className="flex items-center gap-2 border-b border-outline-variant/10 pb-3">
           <Target size={16} className="text-primary" />
           <span className="font-mono text-xs font-semibold text-on-surface">
@@ -1557,7 +1560,12 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                 {onboardingStep === steps.length - 1 ? (
                   <button
                     type="button"
-                    onClick={() => finishOnboarding(null)}
+                    onClick={() => {
+                      finishOnboarding(null, false);
+                      window.dispatchEvent(
+                        new Event("mousi9ti-task-setup-cancel"),
+                      );
+                    }}
                     className="rounded px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
                   >
                     No thanks
