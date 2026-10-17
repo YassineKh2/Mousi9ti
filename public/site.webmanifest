@@ -1,22 +1,22 @@
 {
-  "name": "Mousi9ti — Music Practice Studio",
+  "name": "Mousi9ti | Guitar & Piano Practice Studio",
   "short_name": "Mousi9ti",
-  "description": "Music practice studio for guitar and piano players with a fretboard, scales, chords, metronome, and routine tracking.",
+  "description": "Practice guitar and piano with Mousi9ti: explore chords and scales, use a precision metronome, build routines, and track your progress.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f0f0f",
   "theme_color": "#0f0f0f",
   "icons": [
     {
-      "src": "/Mousi9tiWhiteSmall.svg",
-      "sizes": "128x128",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/favicons/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/Mousi9tiWhite.svg",
+      "src": "/favicons/android-chrome-512x512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     }
   ]

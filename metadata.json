@@ -1,6 +1,6 @@
 {
-  "name": "Mousi9ti - Guitar & Piano Helper Studio",
-  "description": "A high-precision, information-dense guitar fretboard, metronome, scale & chord library, music theory drill, and practice analytics studio.",
+  "name": "Mousi9ti | Guitar & Piano Practice Studio",
+  "description": "Practice guitar and piano with Mousi9ti: explore chords and scales, use a precision metronome, build routines, and track your progress.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

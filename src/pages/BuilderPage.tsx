@@ -2442,7 +2442,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
                 </label>
                 <button
                   onClick={() => handlePreviewChord(selectedRoot, selectedType)}
-                  className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-semibold px-2 py-0.5 rounded hover:bg-primary/10 transition-colors"
+                  className="font-mono flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-semibold px-2 py-0.5 rounded hover:bg-primary/10 transition-colors"
                   title="Preview chord in selected instrument"
                 >
                   <Volume2 size={13} />

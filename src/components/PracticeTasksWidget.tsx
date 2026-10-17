@@ -1312,19 +1312,29 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
     };
 
     return (
-      <div className={startupLayout === "routine" ? "font-mono relative" : "daily-practice-widget-startup font-mono bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex min-h-80 flex-col shadow-xl relative"}>
-        {startupLayout === "widget" && <div className="flex items-center gap-2 border-b border-outline-variant/10 pb-3">
-          <Target size={16} className="text-primary" />
-          <span className="font-mono text-xs font-semibold text-on-surface">
-            Daily Practice Goals
-          </span>
-        </div>}
+      <div
+        className={
+          startupLayout === "routine"
+            ? "font-mono relative"
+            : "daily-practice-widget-startup font-mono bg-surface-container border border-outline-variant/30 rounded-lg p-5 flex min-h-80 flex-col shadow-xl relative"
+        }
+      >
+        {startupLayout === "widget" && (
+          <div className="flex items-center gap-2 border-b border-outline-variant/10 pb-3">
+            <Target size={16} className="text-primary" />
+            <span className="font-mono text-xs font-semibold text-on-surface">
+              Daily Practice Goals
+            </span>
+          </div>
+        )}
         <div className="flex flex-1 flex-col items-center justify-center px-3 py-7 text-center">
           <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
             <CalendarDays size={21} />
           </div>
           <h3 className="text-base font-semibold text-on-surface">
-            {startupLayout === "routine" ? "Set up your practice tasks" : "Make today yours"}
+            {startupLayout === "routine"
+              ? "Set up your practice tasks"
+              : "Make today yours"}
           </h3>
           <p className="mt-2 max-w-xs text-sm leading-relaxed text-on-surface-variant">
             {startupLayout === "routine"
@@ -1348,7 +1358,8 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
             }}
             className="mt-5 inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-container hover:text-on-primary-container"
           >
-            {startupLayout === "routine" ? "Start tasks" : "Get started"} <Play size={14} fill="currentColor" />
+            {startupLayout === "routine" ? "Start tasks" : "Get started"}{" "}
+            <Play size={14} fill="currentColor" />
           </button>
         </div>
 
@@ -1377,7 +1388,9 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                   type="button"
                   onClick={() => {
                     setOnboardingStep(null);
-                    window.dispatchEvent(new Event("mousi9ti-task-setup-cancel"));
+                    window.dispatchEvent(
+                      new Event("mousi9ti-task-setup-cancel"),
+                    );
                   }}
                   className="rounded p-1 text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
                   aria-label="Close onboarding"
@@ -2474,7 +2487,7 @@ export const DropdownEditor: React.FC<{
 
           {/* Dedicated BPM mention editor */}
           {active.tool === "bpm" && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 font-mono">
               <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">
                 Target BPM
               </label>
@@ -2674,7 +2687,7 @@ export const DropdownEditor: React.FC<{
 
           {(active.tool === "scale" || active.tool === "chord") && (
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">
+              <label className="font-mono text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">
                 {active.tool === "chord" ? "Search Chord" : "Search Scale"}
               </label>
               <div className="relative">
@@ -2830,7 +2843,7 @@ export const DropdownEditor: React.FC<{
                 className="bg-surface-container-lowest px-2 py-1.5 rounded text-sm text-on-surface border border-outline-variant/50 focus:border-primary outline-none font-mono"
                 autoFocus
               />
-              <span className="text-[10px] text-on-surface-variant">
+              <span className="text-[10px] text-on-surface-variant font-mono">
                 Maximum: 180 minutes
               </span>
             </div>
