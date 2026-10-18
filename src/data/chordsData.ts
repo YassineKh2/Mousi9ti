@@ -6422,7 +6422,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "major") {
     const dShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, null, 1, 3, 4, 3].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, null, 1, 3, 4, 3].join(","),
     );
     if (dShape) {
       dShape.fingers = [null, null, 1, 2, 4, 3];
@@ -6519,7 +6520,8 @@ export function getChordVoicings(
     }
 
     const dShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, null, 1, 3, 4, 2].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, null, 1, 3, 4, 2].join(","),
     );
     if (dShape) {
       dShape.fingers = [null, null, 1, 3, 4, 2];
@@ -6590,7 +6592,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "7") {
     const dShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, null, 1, 3, 2, 3].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, null, 1, 3, 2, 3].join(","),
     );
     if (dShape) {
       dShape.fingers = [null, null, 1, 3, 2, 4];
@@ -6765,7 +6768,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "min7") {
     const dShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, null, 1, 3, 2, 2].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, null, 1, 3, 2, 2].join(","),
     );
     if (dShape) {
       dShape.fingers = [null, null, 1, 4, 2, 3];
@@ -6863,7 +6867,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "dim") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 6, 7, 8, 7, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 6, 7, 8, 7, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 1, 2, 4, 3, null];
@@ -6964,7 +6969,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "dim7") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 6, 7, 5, 7, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 6, 7, 5, 7, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 2, 3, 1, 4, null];
@@ -7060,7 +7066,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "m7b5") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 6, 7, 6, 7, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 6, 7, 6, 7, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 1, 2, 1, 3, null];
@@ -7173,7 +7180,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "aug") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 6, 5, 4, 4, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 6, 5, 4, 4, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 4, 3, 1, 2, null];
@@ -7583,7 +7591,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "9") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 6, 5, 6, 6, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 6, 5, 6, 6, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 2, 1, 3, 3, null];
@@ -7694,7 +7703,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "11") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 6, 6, 6, 6, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 6, 6, 6, 6, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 1, 1, 1, 1, null];
@@ -7752,7 +7762,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "13") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 6, 5, 6, 8, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 6, 5, 6, 8, null].join(","),
     );
     if (aShape) {
       aShape.frets = [null, 6, 8, 6, 8, 8];
@@ -7833,7 +7844,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "6") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 6, 8, 5, 8, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 6, 8, 5, 8, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 2, 3, 1, 4, null];
@@ -7945,7 +7957,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "min6") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 6, 8, 5, 7, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 6, 8, 5, 7, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 2, 4, 1, 3, null];
@@ -8062,7 +8075,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "7b9") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 6, 5, 6, 5, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 6, 5, 6, 5, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 2, 1, 3, 1, null];
@@ -8082,7 +8096,8 @@ export function getChordVoicings(
 
   if (root === "Eb" && typeKey === "7#9") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 6, 5, 6, 7, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 6, 5, 6, 7, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 2, 1, 3, 4, null];
@@ -8210,7 +8225,8 @@ export function getChordVoicings(
     }
 
     const dShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, null, 2, 4, 5, 4].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, null, 2, 4, 5, 4].join(","),
     );
     if (dShape) {
       dShape.fingers = [null, null, 1, 2, 4, 3];
@@ -8298,7 +8314,8 @@ export function getChordVoicings(
     }
 
     const dShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, null, 2, 4, 5, 3].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, null, 2, 4, 5, 3].join(","),
     );
     if (dShape) {
       dShape.fingers = [null, null, 1, 3, 4, 2];
@@ -8388,7 +8405,8 @@ export function getChordVoicings(
     }
 
     const dShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, null, 2, 4, 3, 4].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, null, 2, 4, 3, 4].join(","),
     );
     if (dShape) {
       dShape.fingers = [null, null, 1, 3, 2, 4];
@@ -8563,7 +8581,8 @@ export function getChordVoicings(
     }
 
     const dShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, null, 2, 4, 3, 3].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, null, 2, 4, 3, 3].join(","),
     );
     if (dShape) {
       dShape.fingers = [null, null, 1, 4, 2, 3];
@@ -8637,7 +8656,8 @@ export function getChordVoicings(
 
   if (root === "E" && typeKey === "dim") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 7, 8, 9, 8, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 7, 8, 9, 8, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 1, 2, 4, 3, null];
@@ -8729,7 +8749,8 @@ export function getChordVoicings(
 
   if (root === "E" && typeKey === "dim7") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 7, 8, 6, 8, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 7, 8, 6, 8, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 2, 3, 1, 4, null];
@@ -8825,7 +8846,8 @@ export function getChordVoicings(
 
   if (root === "E" && typeKey === "m7b5") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 7, 8, 7, 8, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 7, 8, 7, 8, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 1, 2, 1, 3, null];
@@ -8921,7 +8943,8 @@ export function getChordVoicings(
 
   if (root === "E" && typeKey === "aug") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 7, 6, 5, 5, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 7, 6, 5, 5, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 4, 3, 1, 2, null];
@@ -9301,7 +9324,8 @@ export function getChordVoicings(
 
   if (root === "E" && typeKey === "9") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 7, 6, 7, 7, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 7, 6, 7, 7, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 2, 1, 3, 3, null];
@@ -9404,7 +9428,8 @@ export function getChordVoicings(
 
   if (root === "E" && typeKey === "11") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 7, 7, 7, 7, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 7, 7, 7, 7, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 1, 1, 1, 1, null];
@@ -9502,7 +9527,8 @@ export function getChordVoicings(
 
   if (root === "E" && typeKey === "13") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 7, 6, 7, 9, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 7, 6, 7, 9, null].join(","),
     );
     if (aShape) {
       aShape.frets = [null, 7, 6, 7, 7, 9];
@@ -9550,7 +9576,8 @@ export function getChordVoicings(
 
   if (root === "E" && typeKey === "6") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 7, 9, 6, 9, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 7, 9, 6, 9, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 2, 3, 1, 4, null];
@@ -9646,7 +9673,8 @@ export function getChordVoicings(
 
   if (root === "E" && typeKey === "min6") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 7, 9, 6, 8, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 7, 9, 6, 8, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 2, 4, 1, 3, null];
@@ -9743,7 +9771,8 @@ export function getChordVoicings(
 
   if (root === "E" && typeKey === "7b9") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 7, 6, 7, 6, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 7, 6, 7, 6, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 2, 1, 3, 1, null];
@@ -9840,7 +9869,8 @@ export function getChordVoicings(
 
   if (root === "E" && typeKey === "7#9") {
     const aShape = voicings.find(
-      (voicing) => voicing.frets.join(",") === [null, 7, 6, 7, 8, null].join(","),
+      (voicing) =>
+        voicing.frets.join(",") === [null, 7, 6, 7, 8, null].join(","),
     );
     if (aShape) {
       aShape.fingers = [null, 2, 1, 3, 4, null];
@@ -9926,6 +9956,87 @@ export function getChordVoicings(
         frets: [0, 5, 5, 0, 0, 4],
         fingers: [null, 2, 3, null, null, 1],
         baseFret: 4,
+        category: "variation",
+        isFundamental: false,
+      },
+    );
+  }
+
+  if (root === "F" && typeKey === "major") {
+    const miniShape = voicings.find(
+      (voicing) => voicing.frets.join(",") === [null, null, 3, 2, 1, 1].join(","),
+    );
+    if (miniShape) {
+      miniShape.fingers = [null, null, 4, 3, 1, 2];
+      miniShape.name = "F Major First Position Top Strings";
+      delete miniShape.barre;
+    }
+
+    const eShape = voicings.find(
+      (voicing) => voicing.frets.join(",") === [1, 3, 3, 2, 1, 1].join(","),
+    );
+    if (eShape) {
+      eShape.fingers = [1, 3, 4, 2, 1, 1];
+      eShape.barre = { fret: 1, fromString: 0, toString: 5, finger: 1 };
+    }
+
+    const aShape = voicings.find(
+      (voicing) => voicing.frets.join(",") === [null, 8, 10, 10, 10, 8].join(","),
+    );
+    if (aShape) {
+      aShape.fingers = [null, 1, 2, 3, 4, 1];
+      aShape.barre = { fret: 8, fromString: 1, toString: 5, finger: 1 };
+    }
+
+    const dShape = voicings.find(
+      (voicing) => voicing.frets.join(",") === [null, null, 3, 5, 6, 5].join(","),
+    );
+    if (dShape) {
+      dShape.fingers = [null, null, 1, 2, 4, 3];
+    }
+
+    voicings.push(
+      {
+        name: "F Major 5th Position",
+        positionLabel: "5th Position / Partial Barre",
+        rootString: "Root: 5th String",
+        frets: [null, 8, 7, 5, 6, 5],
+        fingers: [null, 4, 3, 1, 2, 1],
+        baseFret: 5,
+        barre: { fret: 5, fromString: 3, toString: 5, finger: 1 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "F Major First Position Open A",
+        positionLabel: "First Position / Open A / Partial Barre",
+        rootString: "Root: 6th String",
+        frets: [1, 0, 3, 2, 1, 1],
+        fingers: [1, null, 4, 3, 2, 2],
+        baseFret: 1,
+        barre: { fret: 1, fromString: 4, toString: 5, finger: 2 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "F Major 7th Position",
+        positionLabel: "7th Position / Partial Barre",
+        rootString: "Root: 5th String",
+        frets: [null, 8, 7, 10, 10, 8],
+        fingers: [null, 2, 1, 4, 4, 3],
+        baseFret: 7,
+        barre: { fret: 10, fromString: 3, toString: 4, finger: 4 },
+        category: "variation",
+        isFundamental: false,
+      },
+      {
+        name: "F Major 10th Position Open A",
+        positionLabel: "10th Position / Open A / Partial Barre",
+        rootString: "Root: 6th String",
+        frets: [13, 0, 10, 10, 10, 13],
+        fingers: [3, null, 1, 1, 1, 4],
+        baseFret: 10,
+        barre: { fret: 10, fromString: 2, toString: 4, finger: 1 },
         category: "variation",
         isFundamental: false,
       },
