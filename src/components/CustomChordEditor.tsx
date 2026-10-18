@@ -56,7 +56,7 @@ function createPianoVoicing(
     bassOctave: bass.octave,
     notes: notes.map((note) => ({
       ...note,
-      isRoot: note.note === root || note.isRoot,
+      isRoot: note.note === root,
     })),
     startOctave: Math.min(...notes.map((note) => note.octave), 3),
     octavesCount: 3,
@@ -144,8 +144,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
 
       const buttonRect = button.getBoundingClientRect();
       const isMobile = window.matchMedia("(max-width: 639px)").matches;
-      const viewportBottom =
-        window.innerHeight - (isMobile ? 72 : 8);
+      const viewportBottom = window.innerHeight - (isMobile ? 72 : 8);
       const isButtonVisible =
         buttonRect.bottom > 0 &&
         buttonRect.top < viewportBottom &&
@@ -172,10 +171,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
         top:
           side === "top"
             ? Math.max(8, buttonRect.top - promptHeight - 8)
-            : Math.min(
-                viewportBottom - promptHeight,
-                buttonRect.bottom + 8,
-              ),
+            : Math.min(viewportBottom - promptHeight, buttonRect.bottom + 8),
         left,
         arrowLeft: Math.min(
           promptWidth - 20,
@@ -910,9 +906,15 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
         </div>
 
         <div
-          className={`${editorInstrument === "piano" ? "xl:col-span-6 order-2" : "xl:col-span-5"} flex flex-col gap-6`}
+          className={`${editorInstrument === "piano" ? "xl:col-span-6 order-2 xl:h-full" : "xl:col-span-5"} flex flex-col gap-6`}
         >
-          <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 shadow-sm">
+          <div
+            className={`bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 shadow-sm ${
+              editorInstrument === "piano"
+                ? "xl:flex xl:flex-1 xl:flex-col"
+                : ""
+            }`}
+          >
             <h2 className="font-mono text-lg font-bold mb-4">Chord Identity</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -996,6 +998,49 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                 </div>
               )}
             </div>
+
+            {editorInstrument === "piano" && (
+              <div className="mt-6 border-t border-outline-variant/30 pt-5 xl:mt-auto xl:pt-6">
+                <div className="mb-3 flex items-baseline justify-between gap-3">
+                  <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-on-surface">
+                    Selected Piano Notes
+                  </h3>
+                  <span className="font-mono text-[10px] text-on-surface-variant">
+                    {pianoNotes.length}{" "}
+                    {pianoNotes.length === 1 ? "NOTE" : "NOTES"}
+                  </span>
+                </div>
+                {pianoNotes.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {pianoNotes.map((note) => (
+                      <span
+                        key={`${note.note}-${note.octave}`}
+                        className={`rounded-lg border px-3 py-2 font-mono text-sm font-bold ${
+                          note.note === root
+                            ? "border-primary/40 bg-primary/10 text-primary"
+                            : "border-outline-variant/30 bg-surface-container-highest text-on-surface"
+                        }`}
+                      >
+                        {note.note}
+                        <span className="ml-1 text-[10px] font-medium opacity-70">
+                          {note.octave}
+                        </span>
+                        {note.note === root && (
+                          <span className="ml-1.5 text-[9px] font-medium uppercase tracking-wide">
+                            Root
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-on-surface-variant">
+                    Select keys in the piano note designer to build this
+                    voicing.
+                  </p>
+                )}
+              </div>
+            )}
 
             {editorInstrument === "guitar" && (
               <>
@@ -1110,11 +1155,13 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
           className={`${editorInstrument === "piano" ? "flex" : "hidden"} order-first xl:col-span-12 bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 lg:p-10 flex-col items-center shadow-sm overflow-hidden`}
         >
           <div className="w-full">
-            <h2 className="text-xl font-bold mb-1">Piano Note Designer</h2>
+            <h2 className="text-xl font-mono font-bold mb-1">
+              Piano Note Designer
+            </h2>
             <p className="text-xs font-mono text-on-surface-variant mb-6">
               Click keys to add or remove notes from the custom piano voicing.
             </p>
-            <div className="h-[340px] w-full overflow-hidden">
+            <div className="w-full overflow-hidden">
               <PianoKeyboard
                 octaves={3}
                 startOctave={3}
@@ -1122,6 +1169,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                 displayMode="name"
                 autoCenterChord={false}
                 bare={true}
+                showPlayPitchHint={false}
                 exactVoicing={pianoNotes.map((note) => ({
                   noteName: note.note,
                   octave: note.octave,
@@ -1133,7 +1181,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
         </div>
 
         {editorInstrument === "piano" && (
-          <div className="order-3 xl:col-span-6 bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 shadow-sm flex flex-col items-center overflow-hidden">
+          <div className="order-3 xl:col-span-6 xl:h-full bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 shadow-sm flex flex-col items-center overflow-hidden">
             <div className="w-full flex items-center justify-between mb-3">
               <span className="font-mono text-sm font-bold uppercase tracking-wider text-on-surface">
                 {root}{" "}
@@ -1175,7 +1223,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
             No custom chords saved yet.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 font-mono">
             {customChords.map((chord) => (
               <div
                 key={chord.id}

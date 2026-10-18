@@ -31,6 +31,7 @@ interface PianoKeyboardProps {
   } | null;
   autoCenterChord?: boolean;
   bare?: boolean;
+  showPlayPitchHint?: boolean;
 }
 
 export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
@@ -48,6 +49,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   focusRange = null,
   autoCenterChord = true,
   bare = false,
+  showPlayPitchHint = true,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
@@ -603,10 +605,12 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 text-[10px] font-mono text-on-surface-variant">
-          <Volume2 size={13} className="text-primary" />
-          <span>Click any key to play pitch</span>
-        </div>
+        {showPlayPitchHint && (
+          <div className="flex items-center gap-1.5 text-[10px] font-mono text-on-surface-variant">
+            <Volume2 size={13} className="text-primary" />
+            <span>Click any key to play pitch</span>
+          </div>
+        )}
       </div>
     </div>
   );
