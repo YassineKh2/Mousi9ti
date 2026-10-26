@@ -55,10 +55,10 @@ export const ExercisesPage: React.FC<ExercisesPageProps> = ({
       <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-6 flex flex-col gap-5 shadow-xl">
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-outline-variant/30">
           <div>
-            <h1 className="font-mono text-base font-bold tracking-[0.2em] text-on-surface uppercase flex items-center gap-2">
+            <h2 className="font-mono text-base font-bold tracking-[0.2em] text-on-surface uppercase flex items-center gap-2">
               <Dumbbell size={18} className="text-primary" />
               Guitar Technique & Theory Drills
-            </h1>
+            </h2>
             <p className="text-xs text-on-surface-variant mt-1">
               Curated routines for finger independence, alternate picking,
               rhythm, and speed building

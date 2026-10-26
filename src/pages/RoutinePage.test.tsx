@@ -66,6 +66,38 @@ it("keeps custom tasks without adding a default routine", () => {
   assert.match(html, /My personal practice goal/);
 });
 
+it("exposes task completion controls with names and pressed state", () => {
+  const todayIndex = (new Date().getDay() + 6) % 7;
+  const schedule = Array.from({ length: 7 }, (_, index) => ({
+    day: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][index],
+    focusTheme: "Personal routine",
+    goalDurationMins: 30,
+    defaultBpm: 90,
+    modules: [],
+    tasks:
+      index === todayIndex
+        ? [
+            {
+              id: "task-incomplete",
+              text: "Practice scales",
+              completed: false,
+            },
+            {
+              id: "task-complete",
+              text: "Practice arpeggios",
+              completed: true,
+            },
+          ]
+        : [],
+  }));
+  const html = renderRoutine("guitar", undefined, [], JSON.stringify(schedule));
+
+  assert.match(html, /aria-label="Mark task complete: Practice scales"/);
+  assert.match(html, /aria-label="Mark task incomplete: Practice arpeggios"/);
+  assert.match(html, /aria-pressed="false"/);
+  assert.match(html, /aria-pressed="true"/);
+});
+
 it("preserves a saved schedule when no quick-start choice is pending", () => {
   const schedule = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
     (day) => ({

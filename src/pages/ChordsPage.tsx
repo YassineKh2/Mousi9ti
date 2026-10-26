@@ -231,7 +231,6 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
       if (initialChordTarget.instrumentView) {
         setInstrumentView(initialChordTarget.instrumentView);
       }
-      setSearchQuery("");
     }
     onInitialChordHandled?.();
   }, [initialChordTarget, onInitialChordHandled]);

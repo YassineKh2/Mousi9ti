@@ -94,7 +94,11 @@ import {
 } from "./data/chordsData";
 import { GlobalSessionToast } from "./components/GlobalSessionToast";
 import { SettingsContext } from "./contexts/SettingsContext";
-import { TourOverlay } from "./components/TourOverlay";
+const TourOverlay = lazy(() =>
+  import("./components/TourOverlay").then((module) => ({
+    default: module.TourOverlay,
+  })),
+);
 import { getSavedPracticeTasks } from "./components/PracticeTasksWidget";
 import {
   deleteTaskFromSchedule,
@@ -150,11 +154,7 @@ export function App() {
   };
 
   // Onboarding tour
-  const [isTourOpen, setIsTourOpen] = useState<boolean>(
-    () =>
-      window.location.pathname === "/" &&
-      localStorage.getItem("Mousi9ti_tour_done") !== "true",
-  );
+  const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
   // Kept in App so it survives TourOverlay unmount/remount — no reload needed to resume
   const [tourStep, setTourStep] = useState<number>(() => {
     const n = Number.parseInt(
@@ -199,15 +199,6 @@ export function App() {
   const [pendingExerciseSearch, setPendingExerciseSearch] = useState<
     string | null
   >(null);
-
-  useEffect(() => {
-    if (
-      route?.tab === "dashboard" &&
-      localStorage.getItem("Mousi9ti_tour_done") !== "true"
-    ) {
-      setIsTourOpen(true);
-    }
-  }, [route?.tab]);
 
   const setActiveTab = useCallback((tab: ActiveTab) => {
     const nextRoute = getPageRouteForTab(tab);
@@ -1706,8 +1697,8 @@ export function App() {
                 onInitialChordHandled={() => setPendingChordSearch(null)}
                 onChordRouteChange={handleChordRouteChange}
                 onOpenCustomChord={() => {
-                  setToolsInitialTool("custom-chord");
                   setActiveTab("tools");
+                  setToolsInitialTool("custom-chord");
                 }}
                 settings={settings}
               />
@@ -1876,12 +1867,14 @@ export function App() {
 
         {/* Onboarding Tour */}
         {isTourOpen && (
-          <TourOverlay
-            onClose={handleCloseTour}
-            onTabChange={setActiveTab}
-            initialStep={tourStep}
-            onStepChange={handleTourStepChange}
-          />
+          <Suspense fallback={null}>
+            <TourOverlay
+              onClose={handleCloseTour}
+              onTabChange={setActiveTab}
+              initialStep={tourStep}
+              onStepChange={handleTourStepChange}
+            />
+          </Suspense>
         )}
 
         {/* Global Persistent Timer Toast */}

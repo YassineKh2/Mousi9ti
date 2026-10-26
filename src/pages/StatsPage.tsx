@@ -467,12 +467,12 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
       date === today ? todayTasks?.map((task) => task.id) : undefined;
     const datedPlannedTaskIds = tasksByWeekday
       .get(weekday)
-      ?.filter((task) => isTaskVisibleOnDate(task, new Date(`${date}T12:00:00`)))
+      ?.filter((task) =>
+        isTaskVisibleOnDate(task, new Date(`${date}T12:00:00`)),
+      )
       .map((task) => task.id);
-    const dayTaskIds =
-      plannedTaskIds ??
-      datedPlannedTaskIds ??
-      [...(taskIdsByDate.get(date) || [])];
+    const dayTaskIds = plannedTaskIds ??
+      datedPlannedTaskIds ?? [...(taskIdsByDate.get(date) || [])];
     const hasGeneralTime = activities.some(
       (activity) =>
         activity.date === date &&
@@ -568,18 +568,27 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
       ? name.slice(8, -1)
       : null;
   const activityTagStyles: Record<string, string> = {
-    scale: "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20",
-    chord: "bg-violet-500/20 text-violet-300 border border-violet-500/40 hover:bg-violet-500/25",
-    timer: "bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/25",
+    scale:
+      "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20",
+    chord:
+      "bg-violet-500/20 text-violet-300 border border-violet-500/40 hover:bg-violet-500/25",
+    timer:
+      "bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/25",
     time: "bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/25",
-    custom: "bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-500/25",
-    tuning: "bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/25",
+    custom:
+      "bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-500/25",
+    tuning:
+      "bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/25",
     key: "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/25",
-    technique: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25",
+    technique:
+      "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25",
     bpm: "bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/25",
-    exercise: "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/25",
-    metronome: "bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/25",
-    random: "bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/25",
+    exercise:
+      "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/25",
+    metronome:
+      "bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/25",
+    random:
+      "bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/25",
   };
   const renderActivityText = (value?: string) => {
     const text = value?.trim() || "-";
@@ -616,16 +625,20 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
 
       let label = tool;
       const parsed = parseParams(tool, params);
-      if (tool === "metronome") label = `${parsed.bpm} BPM · ${parsed.signature}`;
-      else if (tool === "scale") label = parsed.label || `${parsed.root} ${parsed.type}`;
-      else if (tool === "chord") label = parsed.label || `${parsed.root} ${parsed.type}`;
+      if (tool === "metronome")
+        label = `${parsed.bpm} BPM · ${parsed.signature}`;
+      else if (tool === "scale")
+        label = parsed.label || `${parsed.root} ${parsed.type}`;
+      else if (tool === "chord")
+        label = parsed.label || `${parsed.root} ${parsed.type}`;
       else if (tool === "timer" || tool === "time") {
         label = formatDurationLabel(parsed.minutes);
       } else if (tool === "custom") label = parsed.text || "Custom";
       else if (tool === "tuning") label = parsed.tuning || "Tuning";
       else if (tool === "key") label = parsed.key || "Key";
       else if (tool === "technique") label = parsed.technique || "Technique";
-      else if (tool === "bpm") label = `${parsed.bpm} BPM · ${parsed.signature}`;
+      else if (tool === "bpm")
+        label = `${parsed.bpm} BPM · ${parsed.signature}`;
       else if (tool === "exercise") label = parsed.exercise || "Exercise";
       else if (tool === "random") {
         const modeLabels: Record<string, string> = {
@@ -655,7 +668,9 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     }
 
     if (lastIndex < text.length) {
-      parts.push(<span key={`text-${lastIndex}`}>{text.slice(lastIndex)}</span>);
+      parts.push(
+        <span key={`text-${lastIndex}`}>{text.slice(lastIndex)}</span>,
+      );
     }
 
     return <span className="whitespace-normal break-words">{parts}</span>;
@@ -950,10 +965,10 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     <div className="stats-page space-y-6 pb-12">
       <div className="flex flex-col gap-4 rounded-lg border border-outline-variant/30 bg-surface-container p-6 shadow-xl sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-mono text-base font-bold tracking-[0.2em] text-on-surface uppercase flex items-center gap-2">
+          <h2 className="font-mono text-base font-bold tracking-[0.2em] text-on-surface uppercase flex items-center gap-2">
             <BarChart3 size={18} className="text-primary" />
             Practice Analytics
-          </h1>
+          </h2>
           <p
             className="text-xs font-mono text-on-surface mt-1"
             style={{ color: "var(--color-on-surface)" }}
@@ -1193,8 +1208,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                 </div>
               </div>
               <p className="mt-auto text-[10px] font-mono text-on-surface-variant">
-                Breakdown shows how much time was spent on each practice
-                source.
+                Breakdown shows how much time was spent on each practice source.
               </p>
             </>
           ) : (

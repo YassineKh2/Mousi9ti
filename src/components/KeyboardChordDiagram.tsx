@@ -62,6 +62,7 @@ export const KeyboardChordDiagram: React.FC<KeyboardChordDiagramProps> = ({
   // Sound audition handler
   const handlePlaySound = (e: React.MouseEvent) => {
     e.stopPropagation();
+    onSelect?.();
     if (onPlay) {
       onPlay();
       return;
@@ -144,18 +145,15 @@ export const KeyboardChordDiagram: React.FC<KeyboardChordDiagramProps> = ({
 
   return (
     <div
-      className={`${compact ? "flex h-full w-full flex-col justify-center" : "bg-surface-container-low border rounded-xl p-4 sm:p-5 flex flex-col justify-between shadow-md transition-all cursor-pointer relative group select-none"} ${
+      role="group"
+      aria-label={`${chordName || root} piano chord, ${voicing.positionLabel || voicing.name}`}
+      className={`relative ${compact ? "flex h-full w-full flex-col justify-center" : "bg-surface-container-low border rounded-xl p-4 sm:p-5 flex flex-col justify-between shadow-md transition-all group select-none"} ${
         !compact && isSelected
           ? "border-primary ring-2 ring-primary/30 bg-primary/5"
           : !compact
             ? "border-outline-variant/30 hover:border-outline-variant/70 hover:shadow-lg"
             : ""
       } ${className}`}
-      onClick={(e) => {
-        if (onSelect) onSelect();
-        handlePlaySound(e);
-      }}
-      title="Click keyboard diagram to preview chord sound"
     >
       {/* Top Header */}
       {!compact && (
@@ -211,40 +209,54 @@ export const KeyboardChordDiagram: React.FC<KeyboardChordDiagramProps> = ({
                   key={`white-${key.octave}-${key.offset}`}
                   className="relative"
                 >
-                  <div
-                    onClick={(event) => {
-                      if (!onNoteToggle) return;
-                      event.stopPropagation();
-                      onNoteToggle(
-                        CHROMATIC_SHARPS[key.offset] as NoteName,
-                        key.octave,
-                      );
-                    }}
-                    className={`${keySize.white} rounded-b-md border-r border-l border-b border-outline-variant/30 flex flex-col justify-end items-center transition-all ${
-                      isRootKey
-                        ? "bg-primary text-on-primary font-black border-t-4 border-primary shadow-md z-10"
-                        : isChordKey
-                          ? "piano-chord-key bg-inverse-surface text-inverse-on-surface font-bold z-10"
-                          : "piano-inactive-key piano-white-inactive-key bg-surface-container-highest text-on-surface-variant/40 hover:bg-surface-bright"
-                    }`}
-                  >
-                    {isChordKey && (
-                      <span className="font-mono text-[10px] font-bold">
-                        {chordInfo.note}
-                      </span>
-                    )}
-                    {isChordKey && (
-                      <span
-                        className={`font-mono text-[8px] font-bold mt-1 ${
+                  {(() => {
+                    const KeyElement: React.ElementType = onNoteToggle
+                      ? "button"
+                      : "div";
+                    return (
+                      <KeyElement
+                        type={onNoteToggle ? "button" : undefined}
+                        onClick={(event) => {
+                          if (!onNoteToggle) return;
+                          event.stopPropagation();
+                          onNoteToggle(
+                            CHROMATIC_SHARPS[key.offset] as NoteName,
+                            key.octave,
+                          );
+                        }}
+                        aria-label={
+                          onNoteToggle
+                            ? `Toggle ${CHROMATIC_SHARPS[key.offset]}${key.octave} in chord`
+                            : undefined
+                        }
+                        aria-pressed={onNoteToggle ? isChordKey : undefined}
+                        className={`${keySize.white} appearance-none p-0 text-current rounded-b-md border-r border-l border-b border-outline-variant/30 flex flex-col justify-end items-center transition-all ${
                           isRootKey
-                            ? "w-3.5 h-3.5 rounded bg-primary text-on-primary"
-                            : "w-3.5 h-3.5 rounded bg-inverse-surface text-inverse-on-surface border border-outline-variant/40"
-                        } flex items-center justify-center`}
+                            ? "bg-primary text-on-primary font-black border-t-4 border-primary shadow-md z-10"
+                            : isChordKey
+                              ? "piano-chord-key bg-inverse-surface text-inverse-on-surface font-bold z-10"
+                              : "piano-inactive-key piano-white-inactive-key bg-surface-container-highest text-on-surface-variant/40 hover:bg-surface-bright"
+                        }`}
                       >
-                        {chordInfo.degree}
-                      </span>
-                    )}
-                  </div>
+                        {isChordKey && (
+                          <span className="font-mono text-[10px] font-bold">
+                            {chordInfo.note}
+                          </span>
+                        )}
+                        {isChordKey && (
+                          <span
+                            className={`font-mono text-[8px] font-bold mt-1 ${
+                              isRootKey
+                                ? "w-3.5 h-3.5 rounded bg-primary text-on-primary"
+                                : "w-3.5 h-3.5 rounded bg-inverse-surface text-inverse-on-surface border border-outline-variant/40"
+                            } flex items-center justify-center`}
+                          >
+                            {chordInfo.degree}
+                          </span>
+                        )}
+                      </KeyElement>
+                    );
+                  })()}
 
                   {hasBlack && (
                     <div className={`absolute top-0 z-30 ${keySize.offset}`}>
@@ -252,14 +264,26 @@ export const KeyboardChordDiagram: React.FC<KeyboardChordDiagramProps> = ({
                         const pitch = key.octave * 12 + hasBlack.semi;
                         const blackChordInfo = chordPitchMap.get(pitch);
                         const blackIsRoot = !!blackChordInfo?.isRoot;
+                        const KeyElement: React.ElementType = onNoteToggle
+                          ? "button"
+                          : "div";
                         return (
-                          <div
+                          <KeyElement
+                            type={onNoteToggle ? "button" : undefined}
                             onClick={(event) => {
                               if (!onNoteToggle) return;
                               event.stopPropagation();
                               onNoteToggle(hasBlack.note, key.octave);
                             }}
-                            className={`${keySize.black} rounded-b-md flex flex-col justify-end items-center transition-all ${
+                            aria-label={
+                              onNoteToggle
+                                ? `Toggle ${hasBlack.note}${key.octave} in chord`
+                                : undefined
+                            }
+                            aria-pressed={
+                              onNoteToggle ? !!blackChordInfo : undefined
+                            }
+                            className={`${keySize.black} appearance-none p-0 rounded-b-md flex flex-col justify-end items-center transition-all ${
                               blackIsRoot
                                 ? "bg-primary text-on-primary font-bold shadow-lg ring-1 ring-primary"
                                 : blackChordInfo
@@ -272,7 +296,7 @@ export const KeyboardChordDiagram: React.FC<KeyboardChordDiagramProps> = ({
                                 {blackChordInfo.note}
                               </span>
                             )}
-                          </div>
+                          </KeyElement>
                         );
                       })()}
                     </div>
@@ -306,11 +330,23 @@ export const KeyboardChordDiagram: React.FC<KeyboardChordDiagramProps> = ({
           <button
             type="button"
             onClick={handlePlaySound}
+            aria-label={`Play ${chordName || root}, ${voicing.positionLabel || voicing.name}`}
             className="text-xs text-primary hover:text-primary/80 font-bold px-2 py-0.5 rounded hover:bg-primary/10 transition-colors flex items-center gap-1 shrink-0"
           >
             <span>Audition</span>
           </button>
         </div>
+      )}
+
+      {compact && (
+        <button
+          type="button"
+          onClick={handlePlaySound}
+          aria-label={`Play ${chordName || root}, ${voicing.positionLabel || voicing.name}`}
+          className="absolute right-1 top-1 z-40 inline-flex h-8 w-8 items-center justify-center rounded bg-surface-container text-primary shadow"
+        >
+          <Volume2 size={16} aria-hidden="true" />
+        </button>
       )}
     </div>
   );

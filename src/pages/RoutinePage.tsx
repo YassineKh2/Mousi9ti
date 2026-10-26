@@ -2130,8 +2130,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                     return (
                       <div
                         key={task.id}
-                        onClick={() => toggleTaskCompleted(task.id)}
-                        className={`group flex w-full items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                        className={`group flex w-full items-start gap-3 p-3 rounded-lg border transition-all ${
                           task.completed
                             ? "bg-surface-container-low/50 border-outline-variant/20 opacity-75"
                             : "bg-surface-container-low border-outline-variant/30 hover:border-primary/50"
@@ -2139,10 +2138,9 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                       >
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleTaskCompleted(task.id);
-                          }}
+                          onClick={() => toggleTaskCompleted(task.id)}
+                          aria-label={`${task.completed ? "Mark task incomplete" : "Mark task complete"}: ${task.text}`}
+                          aria-pressed={task.completed}
                           className="text-on-surface-variant hover:text-primary transition-colors shrink-0"
                         >
                           {task.completed ? (

@@ -48,3 +48,30 @@ it("describes notes covered by a barre consistently with playback", () => {
   assert.match(html, /String 1 \(E\): fret 1, F4/);
   assert.match(html, /<svg aria-hidden="true"/);
 });
+
+it("limits compact guitar playback to a small named sound button", () => {
+  const html = renderToStaticMarkup(
+    <SettingsContext.Provider value={{} as AppSettings}>
+      <ChordDiagram
+        chordName="A minor"
+        root="A"
+        compact
+        voicing={
+          {
+            name: "Open position",
+            frets: [0, 0, 2, 2, 1, 0],
+          } as GuitarVoicing
+        }
+      />
+    </SettingsContext.Provider>,
+  );
+
+  assert.match(
+    html,
+    /<div[^>]*role="group" aria-label="A minor, Open position"/,
+  );
+  assert.equal((html.match(/<button\b/g) || []).length, 1);
+  assert.match(html, /aria-label="Play A minor, Open position"/);
+  assert.match(html, /<svg[^>]*class="lucide lucide-volume2 lucide-volume-2/);
+  assert.match(html, /<svg aria-hidden="true" viewBox=/);
+});

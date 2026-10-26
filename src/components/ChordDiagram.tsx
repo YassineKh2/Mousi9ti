@@ -1,4 +1,5 @@
 import React, { useId } from "react";
+import { Volume2 } from "lucide-react";
 import { GuitarVoicing, NoteName } from "../types";
 import { audioEngine } from "../lib/audio";
 import {
@@ -137,19 +138,25 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
     audioEngine.playChordArpeggio(notesToPlay, "guitar", 0.05);
   };
 
+  const DiagramContainer: React.ElementType = compact ? "div" : "button";
   return (
-    <button
-      type="button"
+    <DiagramContainer
+      type={compact ? undefined : "button"}
       className={
         compact
-          ? "flex h-full w-full flex-col items-center justify-center p-2"
+          ? "relative flex h-full w-full flex-col items-center justify-center p-2"
           : noBackground
             ? "group flex cursor-pointer flex-col items-center p-0 shadow-none"
             : "group flex cursor-pointer flex-col items-center rounded-xl border border-outline-variant/30 bg-surface-container-low p-4 shadow-lg transition-all hover:border-outline-variant/60 sm:p-6"
       }
-      onClick={handlePlayChord}
-      aria-label={`Play ${chordName || root}, ${voicing.positionLabel || voicing.name}`}
-      aria-describedby={descriptionId}
+      onClick={compact ? undefined : handlePlayChord}
+      role={compact ? "group" : undefined}
+      aria-label={
+        compact
+          ? `${chordName || root}, ${voicing.positionLabel || voicing.name}`
+          : `Play ${chordName || root}, ${voicing.positionLabel || voicing.name}`
+      }
+      aria-describedby={compact ? undefined : descriptionId}
       style={{
         textAlign: "inherit",
         ...(compact || noBackground ? { background: "none", border: 0 } : {}),
@@ -452,6 +459,20 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
             </text>
           ))}
       </svg>
-    </button>
+      {compact && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            handlePlayChord();
+          }}
+          aria-label={`Play ${chordName || root}, ${voicing.positionLabel || voicing.name}`}
+          aria-describedby={descriptionId}
+          className="absolute right-1 top-1 z-10 inline-flex h-8 w-8 items-center justify-center rounded bg-surface-container text-primary shadow-sm transition-colors hover:bg-surface-container-high focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <Volume2 size={16} aria-hidden="true" />
+        </button>
+      )}
+    </DiagramContainer>
   );
 };
