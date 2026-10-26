@@ -40,6 +40,71 @@ export function normalizeQuery(q: string): string {
     .trim();
 }
 
+const NOISE_TOKENS = new Set(["scale", "scales", "mode", "chord", "chords"]);
+
+function tokenMatch(qt: string, tt: string): number {
+  if (qt === tt) return 1;
+  if (tt.startsWith(qt)) return 0.9;
+  if (qt.length >= 3 && tt.includes(qt)) return 0.6;
+  if (qt.length >= 4) {
+    const maxDist = qt.length >= 7 ? 2 : 1;
+    if (levenshteinDistance(qt, tt) <= maxDist) return 0.75;
+    // Typo inside a partially typed word (e.g. "pentatnic" vs "pentatonic")
+    const prefix = tt.slice(0, qt.length);
+    if (levenshteinDistance(qt, prefix) <= maxDist) return 0.7;
+    if (tt.length > qt.length - 1) {
+      const shorter = tt.slice(0, qt.length - 1);
+      if (levenshteinDistance(qt, shorter) <= maxDist) return 0.65;
+    }
+  }
+  return 0;
+}
+
+// Typo-tolerant, word-order-independent score in 0..1 of a query against candidate phrases
+export function fuzzyPhraseScore(query: string, candidates: string[]): number {
+  const qTokens = normalizeQuery(query)
+    .split(" ")
+    .map((t) => (t === "m" ? "minor" : t))
+    .filter((t) => t && !NOISE_TOKENS.has(t));
+  if (qTokens.length === 0) return 0;
+
+  let best = 0;
+  for (const candidate of candidates) {
+    const cTokens = normalizeQuery(candidate)
+      .replace(/[()]/g, " ")
+      .split(" ")
+      .filter(Boolean);
+    if (cTokens.length === 0) continue;
+    const used = new Set<number>();
+    let total = 0;
+    let ok = true;
+    for (const qt of qTokens) {
+      let bestScore = 0;
+      let bestIdx = -1;
+      cTokens.forEach((tt, i) => {
+        if (used.has(i)) return;
+        const s = tokenMatch(qt, tt);
+        if (s > bestScore) {
+          bestScore = s;
+          bestIdx = i;
+        }
+      });
+      if (bestIdx < 0) {
+        ok = false;
+        break;
+      }
+      used.add(bestIdx);
+      total += bestScore;
+    }
+    if (!ok) continue;
+    let score = total / qTokens.length;
+    // Prefer candidates that are fully covered by the query
+    if (cTokens.length > qTokens.length) score *= 0.9;
+    best = Math.max(best, score);
+  }
+  return best;
+}
+
 // Extract root note and remainder from a query string (e.g. "cm" -> root: "C", rest: "m")
 export function extractRootAndRest(rawQuery: string): {
   root: NoteName | null;
@@ -47,6 +112,27 @@ export function extractRootAndRest(rawQuery: string): {
 } {
   const q = rawQuery.trim();
   if (!q) return { root: null, rest: "" };
+
+  // Handles "f#", "f sharp", "b flat", "bb", "g♯" and enharmonic spellings (G# -> Ab)
+  const m = q.match(/^([a-g])\s*(#|♯|sharp|♭|flat|b(?![a-z]))/i);
+  if (m) {
+    const letter = m[1].toUpperCase();
+    const isSharp = /^(#|♯|sharp)/i.test(m[2]);
+    const spelled = `${letter}${isSharp ? "#" : "b"}`;
+    const enharmonic: Record<string, NoteName> = {
+      "D#": "Eb",
+      "E#": "F",
+      "G#": "Ab",
+      "A#": "Bb",
+      "B#": "C",
+      Cb: "B",
+      Fb: "E",
+    };
+    const root = (enharmonic[spelled] ?? spelled) as NoteName;
+    if (ALL_ROOT_NOTES.includes(root)) {
+      return { root, rest: q.slice(m[0].length).trim() };
+    }
+  }
 
   // Check 2-char roots first (e.g. C#, Db, F#, Bb, etc.)
   if (q.length >= 2) {
@@ -268,12 +354,20 @@ export function searchChords(rawQuery: string, limit = 8): ChordSearchResult[] {
               }
             }
           }
-          score += bestAliasScore;
+          const f = fuzzyPhraseScore(
+            cleanRest,
+            [...aliases, nameLower].filter(Boolean),
+          );
+          bestAliasScore = Math.max(bestAliasScore, f * 55);
+          score = bestAliasScore > 0 ? score + bestAliasScore : 0;
         }
       } else {
         // General substring match
         if (fullCombined.includes(query) || shortCombined.includes(query)) {
           score += 25;
+        } else {
+          const f = fuzzyPhraseScore(query, [nameLower, ...aliases].filter(Boolean));
+          score += f * 20;
         }
       }
 
@@ -369,56 +463,32 @@ export function searchBaseScales(
       const aliases = SCALE_ALIASES[scale.id] || [scaleIdLower, nameLower];
 
       const fullCombined = `${rootLower} ${nameLower}`;
+      const candidates = [
+        ...aliases,
+        nameLower,
+        nameLower.replace(/\s*\([^)]*\)/, ""),
+        scaleIdLower.replace(/_/g, " "),
+      ];
       let score = 0;
 
       if (query === fullCombined) {
-        score += 120;
-      } else if (isRootMatch) {
-        score += 40;
-
-        if (!cleanRest) {
-          if (scale.id === "major") score += 30;
-          else if (scale.id === "natural_minor") score += 25;
-          else if (scale.id === "pentatonic_minor") score += 22;
-          else score += 10;
-        } else {
-          let bestAliasScore = 0;
-          for (const alias of aliases) {
-            if (alias === cleanRest) {
-              bestAliasScore = Math.max(bestAliasScore, 60);
-            } else if (alias.startsWith(cleanRest)) {
-              bestAliasScore = Math.max(bestAliasScore, 45);
-            } else if (alias.includes(cleanRest)) {
-              bestAliasScore = Math.max(bestAliasScore, 30);
-            } else {
-              // Typo tolerance: e.g. "mixoyidan" vs "mixolydian"
-              const dist = levenshteinDistance(cleanRest, alias);
-              if (dist === 1 && cleanRest.length >= 4) {
-                bestAliasScore = Math.max(bestAliasScore, 50);
-              } else if (dist <= 2 && cleanRest.length >= 6) {
-                bestAliasScore = Math.max(bestAliasScore, 35);
-              }
-            }
-          }
-          score += bestAliasScore;
-        }
+        score = 120;
       } else {
-        // Query without matching root explicitly (e.g. user types "mixoyidan" or "blues")
-        for (const alias of aliases) {
-          if (alias === query) {
-            score += 35;
-          } else if (alias.startsWith(query)) {
-            score += 25;
+        // Interpretation 1: query starts with a root ("am pentatonic", "c minor pent")
+        if (isRootMatch) {
+          if (!cleanRest) {
+            if (scale.id === "major") score = 70;
+            else if (scale.id === "natural_minor") score = 65;
+            else if (scale.id === "pentatonic_minor") score = 62;
+            else score = 50;
           } else {
-            const dist = levenshteinDistance(query, alias);
-            if (dist <= 2 && query.length >= 5) {
-              score += 20;
-            }
+            const f = fuzzyPhraseScore(cleanRest, candidates);
+            if (f > 0) score = 40 + f * 60;
           }
         }
-        if (fullCombined.includes(query)) {
-          score += 15;
-        }
+        // Interpretation 2: no root, whole query is the scale ("blues", "minor pentatonic")
+        const whole = fuzzyPhraseScore(query, candidates);
+        if (whole > 0) score = Math.max(score, whole * 35);
       }
 
       if (score > 0) {

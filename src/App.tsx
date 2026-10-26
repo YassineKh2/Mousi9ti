@@ -86,6 +86,7 @@ const RoutinePage = lazy(() =>
   })),
 );
 import { ALL_ROOT_NOTES, SCALES_DATABASE } from "./data/musicTheory";
+import { searchBaseScales, searchChords } from "./utils/musicSearch";
 import {
   CHORD_TYPES_CATALOG,
   clearCustomChords,
@@ -1278,9 +1279,6 @@ export function App() {
     if (!q) return [];
 
     const parsed = parseRootQuery(q);
-    const strippedScaleQuery = normalizeSearchQuality(
-      (parsed?.rest ?? q).replace(/\bscales?\b/g, "").trim(),
-    );
     const strippedChordQuery = normalizeSearchQuality(
       (parsed?.rest ?? q).replace(/\bchords?\b/g, "").trim(),
     );
@@ -1349,43 +1347,27 @@ export function App() {
       `${r.label} ${r.subtitle}`.toLowerCase().includes(q),
     );
 
-    const scaleMatches = SCALES_DATABASE.filter((s) => {
-      const haystack = `${s.name} ${s.id} ${s.formula}`.toLowerCase();
-      if (parsed?.root) {
-        return strippedScaleQuery.length === 0
-          ? true
-          : haystack.includes(strippedScaleQuery);
-      }
-      return haystack.includes(q);
-    }).slice(0, 8);
+    const scaleResults: GlobalSearchResult[] = searchBaseScales(q, 8)
+      .filter((s) => s.score >= 10)
+      .map((s) => ({
+        id: `scale-${s.root}-${s.scaleId}`,
+        label: `${s.root} ${s.name}`,
+        subtitle: `${s.category} • ${SCALES_DATABASE.find((d) => d.id === s.scaleId)?.formula ?? ""}`,
+        tab: "scales" as const,
+        kind: "scale" as const,
+        payload: { scaleId: s.scaleId, root: s.root },
+      }));
 
-    const scaleResults: GlobalSearchResult[] = scaleMatches.map((s) => ({
-      id: `scale-${parsed?.root ?? "any"}-${s.id}`,
-      label: `${parsed?.root ?? "C"} ${s.name}`,
-      subtitle: `${s.category} • ${s.formula}`,
-      tab: "scales",
-      kind: "scale",
-      payload: { scaleId: s.id, root: parsed?.root ?? "C" },
-    }));
-
-    const chordMatches = CHORD_TYPES_CATALOG.filter((c) => {
-      const haystack = `${c.name} ${c.symbol} ${c.type}`.toLowerCase();
-      if (parsed?.root) {
-        return strippedChordQuery.length === 0
-          ? true
-          : haystack.includes(strippedChordQuery);
-      }
-      return haystack.includes(q);
-    }).slice(0, 8);
-
-    const chordResults: GlobalSearchResult[] = chordMatches.map((c) => ({
-      id: `chord-${parsed?.root ?? "C"}-${c.type}`,
-      label: `${parsed?.root ?? "C"}${c.symbol || ""}`,
-      subtitle: `${c.name} • ${c.formula}`,
-      tab: "chords",
-      kind: "chord",
-      payload: { chordType: c.type, root: parsed?.root ?? "C" },
-    }));
+    const chordResults: GlobalSearchResult[] = searchChords(q, 8)
+      .filter((c) => c.score >= 10)
+      .map((c) => ({
+        id: `chord-${c.root}-${c.type}`,
+        label: `${c.root}${c.symbol || ""}`,
+        subtitle: `${c.name} • ${CHORD_TYPES_CATALOG.find((t) => t.type === c.type)?.formula ?? ""}`,
+        tab: "chords" as const,
+        kind: "chord" as const,
+        payload: { chordType: c.type, root: c.root },
+      }));
 
     const customChordResults: GlobalSearchResult[] = getCustomChords()
       .filter((chord) => {
