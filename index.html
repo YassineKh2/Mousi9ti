@@ -69,34 +69,41 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Music&display=swap"
       rel="stylesheet"
       media="print"
-      onload="this.media='all'"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@fontsource/bravura@5.0.8/index.css"
-      media="print"
-      onload="this.media='all'"
+      onload="this.media = 'all'"
     />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "Mousi9ti",
-        "applicationCategory": "MusicApplication",
-        "operatingSystem": "Web",
-        "url": "https://mousi9ti.com/",
-        "image": "https://mousi9ti.com/favicons/android-chrome-512x512.png",
-        "description": "Practice guitar and piano with Mousi9ti: explore chords and scales, use a precision metronome, build routines, and track your progress.",
-        "inLanguage": "en",
-        "audience": {
-          "@type": "Audience",
-          "audienceType": "Guitar and piano players"
-        },
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD"
-        }
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://mousi9ti.com/#website",
+            "url": "https://mousi9ti.com/",
+            "name": "Mousi9ti",
+            "inLanguage": "en",
+            "about": { "@id": "https://mousi9ti.com/#app" }
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://mousi9ti.com/#app",
+            "name": "Mousi9ti",
+            "applicationCategory": "MultimediaApplication",
+            "operatingSystem": "Web",
+            "url": "https://mousi9ti.com/",
+            "image": "https://mousi9ti.com/favicons/android-chrome-512x512.png",
+            "description": "Practice guitar and piano with Mousi9ti: explore chords and scales, use a precision metronome, build routines, and track your progress.",
+            "inLanguage": "en",
+            "audience": {
+              "@type": "Audience",
+              "audienceType": "Guitar and piano players"
+            },
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            }
+          }
+        ]
       }
     </script>
   </head>

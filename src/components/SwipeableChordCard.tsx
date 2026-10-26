@@ -93,6 +93,7 @@ export const SwipeableChordCard: React.FC<SwipeableChordCardProps> = ({
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.pointerType !== "mouse") return; // let native touch scroll handle it
     dragStartX.current = e.clientX;
+    if ((e.target as Element).closest("button")) return;
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch (err) {}
@@ -147,6 +148,8 @@ export const SwipeableChordCard: React.FC<SwipeableChordCardProps> = ({
   return (
     <div className="relative flex flex-col w-full h-full overflow-hidden group">
       <button
+        type="button"
+        aria-label={`Remove ${chordDef.name}`}
         onClick={onRemove}
         className="absolute top-0 right-0 p-1.5 text-on-surface-variant hover:text-red-400 bg-surface-container hover:bg-surface-container-highest rounded-full transition-colors z-10 opacity-0 group-hover:opacity-100 focus:opacity-100"
       >
@@ -167,6 +170,15 @@ export const SwipeableChordCard: React.FC<SwipeableChordCardProps> = ({
         </div>
       ) : (
         <div
+          role={onChange ? "button" : undefined}
+          tabIndex={onChange ? 0 : undefined}
+          aria-label={onChange ? `Change ${chordDef.name}` : undefined}
+          onKeyDown={(event) => {
+            if (onChange && (event.key === "Enter" || event.key === " ")) {
+              event.preventDefault();
+              setIsEditing(true);
+            }
+          }}
           onClick={() => {
             if (onChange) setIsEditing(true);
           }}
@@ -194,11 +206,10 @@ export const SwipeableChordCard: React.FC<SwipeableChordCardProps> = ({
               key={i}
               className="w-full h-full flex-shrink-0 snap-center flex justify-center items-center px-2"
             >
-              <div
-                className={`${instrument === "piano" ? "pointer-events-auto" : "pointer-events-none"} w-full h-full flex justify-center items-center`}
-              >
+              <div className="pointer-events-auto w-full h-full flex justify-center items-center">
                 {instrument === "guitar" ? (
                   <ChordDiagram
+                    chordName={chordDef.name}
                     root={root}
                     voicing={voicing as any}
                     compact={true}
@@ -235,6 +246,8 @@ export const SwipeableChordCard: React.FC<SwipeableChordCardProps> = ({
         {voicings.map((_, i) => (
           <button
             key={i}
+            type="button"
+            aria-pressed={i === activeIndex}
             onClick={() => handleGoToIndex(i)}
             className={`rounded-full transition-all duration-300 ${i === activeIndex ? "w-2 h-2 bg-primary" : "w-1.5 h-1.5 bg-outline-variant/40 hover:bg-outline-variant/70"}`}
             aria-label={`Go to voicing ${i + 1}`}

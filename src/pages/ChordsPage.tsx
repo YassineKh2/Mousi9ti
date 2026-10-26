@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AppSettings, NoteName } from "../types";
 import {
   CHROMATIC_SHARPS,
@@ -29,8 +29,18 @@ import {
 import { audioEngine } from "../lib/audio";
 
 interface ChordsPageProps {
-  initialChordTarget?: { chordType: string; root: NoteName } | null;
+  initialChordTarget?: {
+    chordType: string;
+    root: NoteName;
+    instrumentView?: "guitar" | "piano" | "both";
+    customChordId?: string;
+  } | null;
   onInitialChordHandled?: () => void;
+  onChordRouteChange?: (
+    root: NoteName,
+    chordType: string,
+    instrumentView: "guitar" | "piano" | "both",
+  ) => void;
   onOpenCustomChord?: () => void;
   settings: AppSettings;
 }
@@ -38,22 +48,32 @@ interface ChordsPageProps {
 export const ChordsPage: React.FC<ChordsPageProps> = ({
   initialChordTarget,
   onInitialChordHandled,
+  onChordRouteChange,
   onOpenCustomChord,
   settings,
 }) => {
-  const [selectedRoot, setSelectedRoot] = useState<NoteName>("E");
-  const [selectedType, setSelectedType] = useState<string>("min7");
+  const initialChordType = CHORD_TYPES_CATALOG.find(
+    (chord) => chord.type === initialChordTarget?.chordType,
+  )?.type;
+  const [selectedRoot, setSelectedRoot] = useState<NoteName>(
+    initialChordTarget?.root ?? "E",
+  );
+  const [selectedType, setSelectedType] = useState<string>(
+    initialChordType ?? "min7",
+  );
   const [showStaffNotation, setShowStaffNotation] = useState(false);
   const [instrumentView, setInstrumentView] = useState<
     "guitar" | "piano" | "both"
-  >(settings.defaultInstrument);
+  >(initialChordTarget?.instrumentView ?? settings.defaultInstrument);
   const [customChords, setCustomChords] = useState<CustomChord[]>(() =>
     getCustomChords(),
   );
 
   useEffect(() => {
-    setInstrumentView(settings.defaultInstrument);
-  }, [settings.defaultInstrument]);
+    if (!initialChordTarget?.instrumentView) {
+      setInstrumentView(settings.defaultInstrument);
+    }
+  }, [settings.defaultInstrument, initialChordTarget?.instrumentView]);
   useEffect(() => {
     const handleCustomChordsChanged = () => setCustomChords(getCustomChords());
     window.addEventListener(
@@ -208,10 +228,22 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
     if (found) {
       setSelectedRoot(initialChordTarget.root);
       setSelectedType(found.type);
+      if (initialChordTarget.instrumentView) {
+        setInstrumentView(initialChordTarget.instrumentView);
+      }
       setSearchQuery("");
     }
     onInitialChordHandled?.();
   }, [initialChordTarget, onInitialChordHandled]);
+
+  const initialRouteSyncRef = useRef(false);
+  useEffect(() => {
+    if (!initialRouteSyncRef.current) {
+      initialRouteSyncRef.current = true;
+      return;
+    }
+    onChordRouteChange?.(selectedRoot, selectedType, instrumentView);
+  }, [selectedRoot, selectedType, instrumentView, onChordRouteChange]);
 
   const chordDef = getChordDefinition(selectedRoot, selectedType);
 
@@ -299,6 +331,7 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
           />
           <input
             type="text"
+            aria-label="Search chords"
             placeholder="Search chord (e.g., Am7)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -309,6 +342,7 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
           <button
             onClick={() => setInstrumentView("guitar")}
             aria-label="Guitar view"
+            aria-pressed={instrumentView === "guitar"}
             className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 transition-colors sm:min-h-0 sm:flex-none sm:px-4 ${
               instrumentView === "guitar"
                 ? "bg-primary text-on-primary"
@@ -321,6 +355,7 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
           <button
             onClick={() => setInstrumentView("piano")}
             aria-label="Piano view"
+            aria-pressed={instrumentView === "piano"}
             className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 transition-colors sm:min-h-0 sm:flex-none sm:px-4 ${
               instrumentView === "piano"
                 ? "bg-primary text-on-primary"
@@ -333,6 +368,7 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
           <button
             onClick={() => setInstrumentView("both")}
             aria-label="Both instrument views"
+            aria-pressed={instrumentView === "both"}
             className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 transition-colors sm:min-h-0 sm:flex-none sm:px-4 ${
               instrumentView === "both"
                 ? "bg-primary text-on-primary"
@@ -429,6 +465,7 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
             {/* Other Types */}
             <div className="relative">
               <select
+                aria-label="Chord type"
                 value={selectedType}
                 onChange={(e) => {
                   setSelectedType(e.target.value);
@@ -488,6 +525,7 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowStaffNotation((prev) => !prev)}
+                  aria-pressed={showStaffNotation}
                   className={`font-mono px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                     showStaffNotation
                       ? "bg-primary text-on-primary border-primary shadow"
@@ -677,6 +715,7 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
                 </h3>
                 <button
                   onClick={() => setShowChordCoverageModal(false)}
+                  aria-label="Close chord coverage"
                   className="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"
                 >
                   <X size={20} />
@@ -735,6 +774,7 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
                 </h3>
                 <button
                   onClick={() => setShowRedirectModal(false)}
+                  aria-label="Close theoretical keys explanation"
                   className="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"
                 >
                   <X size={20} />

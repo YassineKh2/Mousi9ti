@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import confetti from "canvas-confetti";
 import { SkipForward } from "lucide-react";
+import { NotFoundPage } from "./components/NotFoundPage";
 import {
   AppSettings,
   Exercise,
@@ -109,60 +110,9 @@ import {
   downloadAppBackup,
   restoreAppBackup,
 } from "./lib/appBackup";
-
-const TAB_SEO: Record<
-  ActiveTab,
-  { title: string; description: string; h1: string }
-> = {
-  dashboard: {
-    title: "Mousi9ti — Music Practice Studio for Guitar & Piano",
-    description:
-      "Mousi9ti is a music practice studio for guitar and piano players with daily routines, theory tools, metronome, timer, scales, chords, and progress tracking.",
-    h1: "Your Music Practice Studio",
-  },
-  scales: {
-    title: "Guitar & Piano Scales | Mousi9ti",
-    description:
-      "Explore guitar and piano scales, root notes, intervals, and scale patterns with an interactive music theory workspace.",
-    h1: "Guitar & Piano Scales",
-  },
-  chords: {
-    title: "Guitar & Piano Chords | Mousi9ti",
-    description:
-      "Find guitar and piano chords, voicings, inversions, and chord progressions in one music practice workspace.",
-    h1: "Chord Library",
-  },
-  builder: {
-    title: "Chord Progression Builder | Mousi9ti",
-    description:
-      "Build and practice chord progressions, loop ideas, and arrangements with a flexible music builder for guitar and piano.",
-    h1: "Chord Progression Builder",
-  },
-  exercises: {
-    title: "Music Exercises & Practice Drills | Mousi9ti",
-    description:
-      "Practice music drills for rhythm, theory, technique, and ear training with focused daily exercises for musicians.",
-    h1: "Music Practice Exercises",
-  },
-  routine: {
-    title: "Daily Practice Routine | Mousi9ti",
-    description:
-      "Plan a daily music practice routine with task scheduling, timers, streak tracking, and focused sessions for guitar and piano work.",
-    h1: "Daily Practice Routine",
-  },
-  tools: {
-    title: "Metronome, Timer & Practice Tools | Mousi9ti",
-    description:
-      "Use a precision metronome, practice timer, random note drills, and other musician tools to sharpen timing and daily practice.",
-    h1: "Practice Tools",
-  },
-  stats: {
-    title: "Practice Statistics & Progress | Mousi9ti",
-    description:
-      "Review practice stats, weekly progress, streaks, and session history to stay consistent with your music routine.",
-    h1: "Practice Statistics",
-  },
-};
+import { getPageRouteForTab, resolvePageRoute } from "./lib/pageRoutes";
+import { buildScaleUrl } from "./lib/scaleRoutes";
+import { buildChordUrl } from "./lib/chordRoutes";
 
 const getPracticeTasksForDate = (date: Date): PracticeTask[] => {
   const savedSchedule = localStorage.getItem("mous9iti_weekly_schedule");
@@ -192,7 +142,6 @@ const getPracticeTasksForDate = (date: Date): PracticeTask[] => {
 };
 
 export function App() {
-  type PendingScaleTarget = { scaleId: string; root: NoteName };
   type PendingChordTarget = {
     chordType: string;
     root: NoteName;
@@ -201,7 +150,9 @@ export function App() {
 
   // Onboarding tour
   const [isTourOpen, setIsTourOpen] = useState<boolean>(
-    () => localStorage.getItem("Mousi9ti_tour_done") !== "true",
+    () =>
+      window.location.pathname === "/" &&
+      localStorage.getItem("Mousi9ti_tour_done") !== "true",
   );
   // Kept in App so it survives TourOverlay unmount/remount — no reload needed to resume
   const [tourStep, setTourStep] = useState<number>(() => {
@@ -231,16 +182,17 @@ export function App() {
   };
 
   // Navigation
-  const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
+  const [route, setRoute] = useState(() =>
+    resolvePageRoute(window.location.pathname, window.location.search),
+  );
+  const activeTab: ActiveTab = route?.tab ?? "dashboard";
   const [toolsInitialTool, setToolsInitialTool] = useState<
-    "custom-chord" | null
-  >(null);
+    "custom-chord" | "metronome" | "timer" | null
+  >(() => route?.tool ?? null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(
     () => localStorage.getItem("Mousi9ti_sidebar_collapsed") === "true",
   );
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [pendingScaleSearch, setPendingScaleSearch] =
-    useState<PendingScaleTarget | null>(null);
   const [pendingChordSearch, setPendingChordSearch] =
     useState<PendingChordTarget | null>(null);
   const [pendingExerciseSearch, setPendingExerciseSearch] = useState<
@@ -248,12 +200,127 @@ export function App() {
   >(null);
 
   useEffect(() => {
+    if (
+      route?.tab === "dashboard" &&
+      localStorage.getItem("Mousi9ti_tour_done") !== "true"
+    ) {
+      setIsTourOpen(true);
+    }
+  }, [route?.tab]);
+
+  const setActiveTab = useCallback((tab: ActiveTab) => {
+    const nextRoute = getPageRouteForTab(tab);
+    if (window.location.pathname !== nextRoute.path) {
+      window.history.pushState({}, "", nextRoute.path);
+      setRoute(nextRoute);
+      setToolsInitialTool(tab === "tools" ? "timer" : null);
+    }
+  }, []);
+
+  const handleToolRouteChange = useCallback(
+    (
+      tool: "timer" | "metronome" | "circle" | "tuner" | "ear" | "custom-chord",
+    ) => {
+      const nextPath = tool === "metronome" ? "/metronome/" : "/tools/";
+      const nextRoute = resolvePageRoute(nextPath);
+      if (!nextRoute) return;
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState({}, "", nextPath);
+      }
+      setRoute(nextRoute);
+      setToolsInitialTool(tool === "metronome" ? "metronome" : null);
+    },
+    [],
+  );
+
+  const handleScaleRouteChange = useCallback(
+    (
+      root: NoteName,
+      scaleId: string,
+      boxKey: string | null,
+      instrumentView: "guitar" | "piano" | "both",
+      pianoFocusRange: "all" | "octave4" | "octave3" | "octave34",
+    ) => {
+      const nextUrl = buildScaleUrl(
+        root,
+        scaleId,
+        boxKey,
+        instrumentView,
+        pianoFocusRange,
+      );
+      const [nextPath, nextSearch] = nextUrl.split("?");
+      const nextRoute = resolvePageRoute(nextPath, `?${nextSearch}`);
+      if (!nextRoute) return;
+      if (`${window.location.pathname}${window.location.search}` !== nextUrl) {
+        window.history.pushState({}, "", nextUrl);
+      }
+      setRoute(nextRoute);
+    },
+    [],
+  );
+
+  const handleChordRouteChange = useCallback(
+    (
+      root: NoteName,
+      chordType: string,
+      instrumentView: "guitar" | "piano" | "both",
+    ) => {
+      const nextUrl = buildChordUrl(root, chordType, instrumentView);
+      const [nextPath, nextSearch] = nextUrl.split("?");
+      const nextRoute = resolvePageRoute(
+        nextPath,
+        nextSearch ? `?${nextSearch}` : "",
+      );
+      if (!nextRoute) return;
+      if (`${window.location.pathname}${window.location.search}` !== nextUrl) {
+        window.history.pushState({}, "", nextUrl);
+      }
+      setRoute(nextRoute);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const nextRoute = resolvePageRoute(
+        window.location.pathname,
+        window.location.search,
+      );
+      setRoute(nextRoute);
+      setToolsInitialTool(
+        nextRoute?.tool ?? (nextRoute?.tab === "tools" ? "timer" : null),
+      );
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [activeTab]);
 
   useEffect(() => {
-    const pageMeta = TAB_SEO[activeTab];
-    const rootUrl = "https://mousi9ti.com/";
+    if (!route) {
+      document.title = "Page Not Found | Mousi9ti";
+      const canonical = document.head.querySelector('link[rel="canonical"]');
+      canonical?.remove();
+      const ogUrl = document.head.querySelector('meta[property="og:url"]');
+      ogUrl?.remove();
+      const robots = document.head.querySelector('meta[name="robots"]');
+      robots?.setAttribute("content", "noindex, follow");
+      return;
+    }
+
+    const pageMeta = route;
+    const canonicalUrl = `https://mousi9ti.com${route.path}`;
+
+    if (window.location.pathname !== route.path) {
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${route.path}${window.location.search}`,
+      );
+    }
 
     document.title = pageMeta.title;
 
@@ -267,6 +334,12 @@ export function App() {
     };
 
     setMeta('meta[name="description"]', pageMeta.description);
+    setMeta(
+      'meta[name="robots"]',
+      route.indexable
+        ? "index, follow, max-image-preview:large"
+        : "noindex, follow",
+    );
     setMeta('meta[property="og:title"]', pageMeta.title);
     setMeta('meta[property="og:description"]', pageMeta.description);
     setMeta('meta[name="twitter:title"]', pageMeta.title);
@@ -276,16 +349,16 @@ export function App() {
       'link[rel="canonical"]',
     ) as HTMLLinkElement | null;
     if (canonical) {
-      canonical.href = rootUrl;
+      canonical.href = canonicalUrl;
     }
 
     const ogUrl = document.head.querySelector(
       'meta[property="og:url"]',
     ) as HTMLMetaElement | null;
     if (ogUrl) {
-      ogUrl.setAttribute("content", rootUrl);
+      ogUrl.setAttribute("content", canonicalUrl);
     }
-  }, [activeTab]);
+  }, [route]);
 
   // Settings & Theme
   const [settings, setSettings] = useState<AppSettings>(() =>
@@ -1352,17 +1425,20 @@ export function App() {
   }, [searchQuery]);
 
   const handleSelectSearchResult = (result: GlobalSearchResult) => {
-    setActiveTab(result.tab);
-
     if (
       result.kind === "scale" &&
       result.payload?.scaleId &&
       result.payload?.root
     ) {
-      setPendingScaleSearch({
-        scaleId: result.payload.scaleId,
-        root: result.payload.root as NoteName,
-      });
+      handleScaleRouteChange(
+        result.payload.root as NoteName,
+        result.payload.scaleId,
+        null,
+        route?.scaleTarget?.instrumentView ?? settings.defaultInstrument,
+        route?.scaleTarget?.pianoFocusRange ?? "octave4",
+      );
+    } else {
+      setActiveTab(result.tab);
     }
     if (
       result.kind === "chord" &&
@@ -1536,6 +1612,10 @@ export function App() {
     </div>
   );
 
+  if (!route) {
+    return <NotFoundPage />;
+  }
+
   return (
     <SettingsContext.Provider value={settings}>
       <div className="min-h-screen bg-background text-on-background flex flex-col antialiased selection:bg-primary/30 selection:text-on-surface">
@@ -1570,8 +1650,10 @@ export function App() {
           className={`flex-1 ${isSidebarCollapsed ? "lg:pl-20" : "lg:pl-72"} pt-4 pb-20 lg:pb-0 px-4 lg:px-8 max-w-[1600px] w-full mx-auto transition-[padding] duration-200`}
         >
           <div className="sr-only">
-            <h1>{TAB_SEO[activeTab].h1}</h1>
-            <p>{TAB_SEO[activeTab].description}</p>
+            <h1>{route?.h1 ?? "Page Not Found"}</h1>
+            <p>
+              {route?.description ?? "The requested page could not be found."}
+            </p>
           </div>
           <Suspense fallback={pageFallback}>
             {activeTab === "dashboard" && (
@@ -1630,16 +1712,17 @@ export function App() {
 
             {activeTab === "scales" && (
               <ScalesPage
-                initialScaleTarget={pendingScaleSearch}
-                onInitialScaleHandled={() => setPendingScaleSearch(null)}
+                initialScaleTarget={route.scaleTarget}
+                onScaleRouteChange={handleScaleRouteChange}
                 settings={settings}
               />
             )}
 
             {activeTab === "chords" && (
               <ChordsPage
-                initialChordTarget={pendingChordSearch}
+                initialChordTarget={route.chordTarget ?? pendingChordSearch}
                 onInitialChordHandled={() => setPendingChordSearch(null)}
+                onChordRouteChange={handleChordRouteChange}
                 onOpenCustomChord={() => {
                   setToolsInitialTool("custom-chord");
                   setActiveTab("tools");
@@ -1696,6 +1779,7 @@ export function App() {
                 onBarCycleModeChange={setMetronomeBarCycleMode}
                 initialTool={toolsInitialTool}
                 onInitialToolHandled={() => setToolsInitialTool(null)}
+                onToolRouteChange={handleToolRouteChange}
               />
             )}
 

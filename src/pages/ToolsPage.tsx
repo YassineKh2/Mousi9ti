@@ -32,8 +32,11 @@ interface ToolsPageProps {
   onMetronomePlayingChange?: (playing: boolean) => void;
   metronomeBarCycleMode?: boolean;
   onBarCycleModeChange?: (enabled: boolean) => void;
-  initialTool?: "custom-chord" | null;
+  initialTool?: "custom-chord" | "metronome" | "timer" | null;
   onInitialToolHandled?: () => void;
+  onToolRouteChange?: (
+    tool: "timer" | "metronome" | "circle" | "tuner" | "ear" | "custom-chord",
+  ) => void;
 }
 
 export const ToolsPage: React.FC<ToolsPageProps> = ({
@@ -49,6 +52,7 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
   onBarCycleModeChange,
   initialTool,
   onInitialToolHandled,
+  onToolRouteChange,
 }) => {
   const [activeTool, setActiveTool] = useState<
     "timer" | "metronome" | "circle" | "tuner" | "ear" | "custom-chord"
@@ -56,6 +60,13 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
   const [selectedTuning, setSelectedTuning] = useState(GUITAR_TUNINGS[0]);
   const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
   const toolMenuRef = useRef<HTMLDivElement>(null);
+
+  const changeActiveTool = (
+    tool: "timer" | "metronome" | "circle" | "tuner" | "ear" | "custom-chord",
+  ) => {
+    setActiveTool(tool);
+    onToolRouteChange?.(tool);
+  };
 
   useEffect(() => {
     if (!initialTool) return;
@@ -152,10 +163,10 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
       >
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant/10">
           <div>
-            <h1 className="font-mono text-base font-bold tracking-[0.2em] text-on-surface uppercase flex items-center gap-2">
+            <h2 className="font-mono text-base font-bold tracking-[0.2em] text-on-surface uppercase flex items-center gap-2">
               <Compass size={18} className="text-primary" />
               Music Theory & Ear Tools
-            </h1>
+            </h2>
           </div>
 
           <div className="relative w-full sm:w-auto" ref={toolMenuRef}>
@@ -228,7 +239,7 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
                         <button
                           key={tool.id}
                           onClick={() => {
-                            setActiveTool(tool.id as any);
+                            changeActiveTool(tool.id as typeof activeTool);
                             setIsToolMenuOpen(false);
                             if (tool.id === "ear" && !earInterval)
                               startNewEarChallenge();
@@ -271,7 +282,7 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
             {/* Desktop Navigation Tabs */}
             <div className="hidden sm:flex items-center gap-1.5 bg-surface-container-low p-1 rounded-lg border border-outline-variant/30 flex-wrap">
               <button
-                onClick={() => setActiveTool("timer")}
+                onClick={() => changeActiveTool("timer")}
                 className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all flex items-center gap-1.5 ${
                   activeTool === "timer"
                     ? "bg-primary text-on-primary font-bold shadow"
@@ -282,7 +293,7 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
               </button>
 
               <button
-                onClick={() => setActiveTool("metronome")}
+                onClick={() => changeActiveTool("metronome")}
                 className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
                   activeTool === "metronome"
                     ? "bg-primary text-on-primary font-bold shadow"
@@ -292,7 +303,7 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
                 Metronome
               </button>
               <button
-                onClick={() => setActiveTool("custom-chord")}
+                onClick={() => changeActiveTool("custom-chord")}
                 className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
                   activeTool === "custom-chord"
                     ? "bg-primary text-on-primary font-bold shadow"
@@ -302,7 +313,7 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
                 Custom Chord Builder
               </button>
               <button
-                onClick={() => setActiveTool("circle")}
+                onClick={() => changeActiveTool("circle")}
                 className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
                   activeTool === "circle"
                     ? "bg-primary text-on-primary font-bold shadow"
@@ -312,7 +323,7 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
                 Circle of Fifths
               </button>
               <button
-                onClick={() => setActiveTool("tuner")}
+                onClick={() => changeActiveTool("tuner")}
                 className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${
                   activeTool === "tuner"
                     ? "bg-primary text-on-primary font-bold shadow"
@@ -323,7 +334,7 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
               </button>
               <button
                 onClick={() => {
-                  setActiveTool("ear");
+                  changeActiveTool("ear");
                   if (!earInterval) startNewEarChallenge();
                 }}
                 className={`px-3.5 py-1.5 rounded text-xs font-mono transition-all ${

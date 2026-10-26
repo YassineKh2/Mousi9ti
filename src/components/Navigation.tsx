@@ -13,6 +13,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
+import { getPageRouteForTab } from "../lib/pageRoutes";
 
 export type ActiveTab =
   | "dashboard"
@@ -121,11 +122,11 @@ export const Navigation: React.FC<NavigationProps> = ({
             src={
               theme === "light"
                 ? isSidebarCollapsed
-                  ? "Mousi9tiSmall.svg"
-                  : "Mousi9ti.svg"
+                  ? "/Mousi9tiSmall.svg"
+                  : "/Mousi9ti.svg"
                 : isSidebarCollapsed
-                  ? "Mousi9tiWhiteSmall.svg"
-                  : "Mousi9tiWhite.svg"
+                  ? "/Mousi9tiWhiteSmall.svg"
+                  : "/Mousi9tiWhite.svg"
             }
             alt="Mousi9ti Logo"
           />
@@ -139,12 +140,25 @@ export const Navigation: React.FC<NavigationProps> = ({
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
-              <button
+              <a
                 key={item.id}
                 data-tour={`nav-item-${item.id}`}
-                onClick={() => onSelectTab(item.id)}
+                href={getPageRouteForTab(item.id).path}
+                aria-current={isActive ? "page" : undefined}
+                onClick={(event) => {
+                  if (
+                    event.button !== 0 ||
+                    event.metaKey ||
+                    event.ctrlKey ||
+                    event.shiftKey ||
+                    event.altKey
+                  )
+                    return;
+                  event.preventDefault();
+                  onSelectTab(item.id);
+                }}
                 title={isSidebarCollapsed ? item.label : undefined}
-                className={`w-full flex items-center ${isSidebarCollapsed ? "justify-center px-0" : "px-4"} py-3 rounded text-left transition-all duration-200 group border-l-2 ${
+                className={`w-full flex items-center no-underline ${isSidebarCollapsed ? "justify-center px-0" : "px-4"} py-3 rounded text-left transition-all duration-200 group border-l-2 ${
                   isActive
                     ? "bg-primary-container text-on-primary-container border-primary font-semibold shadow-sm"
                     : "text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface border-transparent"
@@ -160,7 +174,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                     {item.label}
                   </span>
                 )}
-              </button>
+              </a>
             );
           })}
         </nav>
@@ -373,11 +387,24 @@ export const Navigation: React.FC<NavigationProps> = ({
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
-            <button
+            <a
               key={item.id}
               data-tour={`nav-item-${item.id}`}
-              onClick={() => onSelectTab(item.id)}
-              className={`flex min-w-0 w-full flex-col items-center gap-1 py-1 px-0 transition-colors ${
+              href={getPageRouteForTab(item.id).path}
+              aria-current={isActive ? "page" : undefined}
+              onClick={(event) => {
+                if (
+                  event.button !== 0 ||
+                  event.metaKey ||
+                  event.ctrlKey ||
+                  event.shiftKey ||
+                  event.altKey
+                )
+                  return;
+                event.preventDefault();
+                onSelectTab(item.id);
+              }}
+              className={`flex min-w-0 w-full flex-col items-center no-underline gap-1 py-1 px-0 transition-colors ${
                 isActive
                   ? "text-primary font-semibold"
                   : "text-on-surface-variant hover:text-on-surface"
@@ -387,7 +414,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               <span className="text-[8px] font-mono tracking-tighter">
                 {item.label}
               </span>
-            </button>
+            </a>
           );
         })}
       </nav>

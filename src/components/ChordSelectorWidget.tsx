@@ -164,6 +164,8 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
               </div>
             ) : (
               <button
+                type="button"
+                aria-label="Add chord"
                 onClick={() => setIsAdding(true)}
                 className="w-12 h-12 rounded-full bg-surface-container hover:bg-surface-container-highest text-on-surface-variant hover:text-primary flex items-center justify-center transition-colors shadow-sm"
                 title="Add Chord"

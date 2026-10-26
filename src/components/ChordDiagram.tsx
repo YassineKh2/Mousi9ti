@@ -1,5 +1,4 @@
-import React from "react";
-import { Volume2 } from "lucide-react";
+import React, { useId } from "react";
 import { GuitarVoicing, NoteName } from "../types";
 import { audioEngine } from "../lib/audio";
 import {
@@ -31,6 +30,7 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
   fretCount = 5,
 }) => {
   const settings = useSettingsContext();
+  const descriptionId = useId();
   const theme = settings.fretboardTheme;
   const noteSize = settings.fretboardNoteSize || "medium";
   const isLarge = ["large", "xlarge"].includes(noteSize);
@@ -80,6 +80,27 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
         ? [voicing.barre]
         : [];
 
+  const description = voicing.frets
+    .map((storedFret, stringIdx) => {
+      let fret = storedFret;
+      barreEntries.forEach((barre) => {
+        if (
+          stringIdx >= barre.fromString &&
+          stringIdx <= barre.toString &&
+          (fret === null || fret === 0 || fret < barre.fret)
+        ) {
+          fret = barre.fret;
+        }
+      });
+      const stringLabel = `String ${6 - stringIdx} (${tuning.strings[stringIdx]})`;
+      if (fret === null) return `${stringLabel}: muted`;
+      const totalSemi = NOTE_SEMITONES[tuning.strings[stringIdx]] + fret;
+      const note = CHROMATIC_SHARPS[totalSemi % 12];
+      const octave = tuning.octaves[stringIdx] + Math.floor(totalSemi / 12);
+      return `${stringLabel}: ${fret === 0 ? "open" : `fret ${fret}`}, ${note}${octave}`;
+    })
+    .join("; ");
+
   // Handle Play Sound
   const handlePlayChord = () => {
     if (onPlay) {
@@ -117,7 +138,8 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
   };
 
   return (
-    <div
+    <button
+      type="button"
       className={
         compact
           ? "flex h-full w-full flex-col items-center justify-center p-2"
@@ -126,28 +148,36 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
             : "group flex cursor-pointer flex-col items-center rounded-xl border border-outline-variant/30 bg-surface-container-low p-4 shadow-lg transition-all hover:border-outline-variant/60 sm:p-6"
       }
       onClick={handlePlayChord}
-      style={
-        scale !== 1
+      aria-label={`Play ${chordName || root}, ${voicing.positionLabel || voicing.name}`}
+      aria-describedby={descriptionId}
+      style={{
+        textAlign: "inherit",
+        ...(compact || noBackground ? { background: "none", border: 0 } : {}),
+        ...(scale !== 1
           ? { transform: `scale(${scale})`, transformOrigin: "center center" }
-          : undefined
-      }
+          : {}),
+      }}
     >
+      <span id={descriptionId} className="sr-only">
+        {description}
+      </span>
       {/* Chord Card Header */}
       {!compact && (
-        <div className="w-full flex items-center justify-between pb-4 mb-2">
-          <div className="flex items-center gap-4">
+        <span className="w-full flex items-center justify-between pb-4 mb-2">
+          <span className="flex items-center gap-4">
             <span className="font-mono text-[10px] tracking-widest text-on-surface-variant uppercase font-bold">
               {voicing.positionLabel || voicing.name}
             </span>
-          </div>
+          </span>
           <span className="bg-surface-container border border-outline-variant/20 px-2 py-0.5 rounded text-[10px] font-mono text-on-surface">
             {voicing.rootString || `Root on ${root}`}
           </span>
-        </div>
+        </span>
       )}
 
       {/* SVG Diagram Canvas */}
       <svg
+        aria-hidden="true"
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
         width={compact ? undefined : svgWidth}
         height={compact ? undefined : svgHeight}
@@ -422,6 +452,6 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
             </text>
           ))}
       </svg>
-    </div>
+    </button>
   );
 };

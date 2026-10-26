@@ -2,7 +2,9 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://mousi9ti.com/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
   </url>
+  <url><loc>https://mousi9ti.com/scales/</loc></url>
+  <url><loc>https://mousi9ti.com/chords/</loc></url>
+  <url><loc>https://mousi9ti.com/chord-progression-builder/</loc></url>
+  <url><loc>https://mousi9ti.com/metronome/</loc></url>
 </urlset>

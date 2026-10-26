@@ -157,6 +157,7 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
 
         {/* Accidental Filter */}
         <select
+          aria-label="Random note accidentals"
           value={accidentalMode}
           onChange={(e) =>
             setAccidentalMode(e.target.value as RandomNoteAccidentalMode)
@@ -172,7 +173,10 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
 
       {/* Center Note Display (Background-free, pure typography) */}
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center my-3 relative select-none">
-        <div
+        <button
+          type="button"
+          aria-label={`Next random note, current note ${currentNote}`}
+          style={{ background: "none", border: 0, padding: 0 }}
           className="group cursor-pointer flex flex-col items-center justify-center transition-transform hover:scale-105"
           onClick={pickNextRandomNote}
         >
@@ -182,7 +186,7 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
           <span className="text-[10px] font-mono text-on-surface-variant group-hover:text-primary transition-colors mt-1">
             Click or N for Next
           </span>
-        </div>
+        </button>
 
         <div className="flex items-center gap-2 mt-2">
           <span className="text-[10px] font-mono text-on-surface-variant tracking-wider">
@@ -193,6 +197,7 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
           {onToggleHighlight && (
             <button
               onClick={onToggleHighlight}
+              aria-pressed={showHighlight}
               className={`min-h-9 text-[9px] font-mono px-2 py-0.5 rounded border transition-colors md:min-h-0 ${
                 showHighlight
                   ? "bg-primary/20 text-primary border-primary/40"
@@ -220,6 +225,7 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
           <div className="flex items-end gap-1.5 flex-1">
             <button
               onClick={() => setAutoAdvance(!autoAdvance)}
+              aria-pressed={autoAdvance}
               className={`flex min-h-10 items-center gap-1.5 px-2.5 py-1.5 rounded font-mono text-[10px] tracking-wider border transition-all md:min-h-0 ${
                 autoAdvance
                   ? "bg-primary/20 text-primary border-primary/50"
@@ -231,6 +237,7 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
             </button>
 
             <select
+              aria-label="Random note advance interval"
               value={intervalType}
               onChange={(e) => {
                 setIntervalType(e.target.value as RandomNoteInterval);

@@ -31,7 +31,13 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { AppSettings, NoteName, PracticeTask, TaskActivity, UserTimerPreferences } from "../types";
+import {
+  AppSettings,
+  NoteName,
+  PracticeTask,
+  TaskActivity,
+  UserTimerPreferences,
+} from "../types";
 import {
   ALL_ROOT_NOTES,
   SCALES_DATABASE,
@@ -1112,8 +1118,13 @@ const getWeekStart = (date: Date) => {
 };
 interface RoutinePageProps {
   timerPreferences?: UserTimerPreferences;
-  onUpdateTimerPreferences?: (preferences: Partial<UserTimerPreferences>) => void;
-  onQuickStartTasks?: (instrument: "guitar" | "piano", tasks: PracticeTask[]) => void;
+  onUpdateTimerPreferences?: (
+    preferences: Partial<UserTimerPreferences>,
+  ) => void;
+  onQuickStartTasks?: (
+    instrument: "guitar" | "piano",
+    tasks: PracticeTask[],
+  ) => void;
   timer?: ReturnType<typeof useTimer>;
   streak?: StreakData;
   practiceTasks?: PracticeTask[];
@@ -1142,7 +1153,11 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   onEndSession = () => {},
 }) => {
   const settings = useSettingsContext();
-  const needsTaskSetup = Boolean(timerPreferences && !timerPreferences.hasSeenDailyTasksOnboarding && practiceTasks?.length === 0);
+  const needsTaskSetup = Boolean(
+    timerPreferences &&
+    !timerPreferences.hasSeenDailyTasksOnboarding &&
+    practiceTasks?.length === 0,
+  );
   const internalTimer = useTimer();
   const timer = propTimer || internalTimer;
   const [taskHistory, setTaskHistory] = useState<TaskActivity[]>(
@@ -1240,10 +1255,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       settings.defaultInstrument === "piano"
         ? DEFAULT_PIANO_WEEKLY_SCHEDULE
         : DEFAULT_WEEKLY_SCHEDULE;
-    if (
-      quickStartInstrument !== "guitar" &&
-      quickStartInstrument !== "piano"
-    ) {
+    if (quickStartInstrument !== "guitar" && quickStartInstrument !== "piano") {
       schedule = schedule.map((day) => ({ ...day, tasks: [] }));
     }
     if (saved) {
@@ -1795,7 +1807,9 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
     );
   }, 0);
   const completionPercent =
-    Math.round((completedMins / totalWeekTargetMins) * 100) || 58;
+    totalWeekTargetMins > 0
+      ? Math.round((completedMins / totalWeekTargetMins) * 100)
+      : 0;
 
   const formatHoursMins = (mins: number) => {
     const h = Math.floor(mins / 60);
@@ -1806,13 +1820,16 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   return (
     <div className="routine-page space-y-6 pb-12 relative">
       {/* Top Banner: Weekly Schedule & Cadence */}
-      <div data-tour="routine-schedule" className="bg-surface-container border border-outline-variant/30 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-md">
+      <div
+        data-tour="routine-schedule"
+        className="bg-surface-container border border-outline-variant/30 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-md"
+      >
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-mono text-base font-bold tracking-[0.2em] text-on-surface uppercase flex items-center gap-2">
+            <h2 className="font-mono text-base font-bold tracking-[0.2em] text-on-surface uppercase flex items-center gap-2">
               <Calendar size={18} className="text-primary" />
               Weekly Schedule & Cadence
-            </h1>
+            </h2>
             <span className="hidden sm:inline text-xs text-on-surface-variant font-mono">
               • Select day to inspect and define routine
             </span>
@@ -1827,7 +1844,11 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
               {formatHoursMins(totalWeekTargetMins)}
             </strong>
           </div>
-          <div className="flex min-w-0 flex-col items-start gap-1 text-on-surface-variant lg:flex-row lg:flex-wrap lg:items-center lg:gap-3">
+          <div
+            className="flex min-w-0 flex-col items-start gap-1 text-on-surface-variant lg:flex-row lg:flex-wrap lg:items-center lg:gap-3"
+            title="Estimated completion based on completed tasks and daily target durations, not recorded practice time."
+            aria-label={`Estimated completion: ${formatHoursMins(completedMins)} (${completionPercent}%), based on completed tasks and daily target durations, not recorded practice time.`}
+          >
             <span className="text-[10px] uppercase tracking-wider lg:text-xs lg:normal-case lg:tracking-normal">
               Completed
             </span>
@@ -1935,7 +1956,10 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       </div>
 
       {/* 7 Day Cards Row */}
-      <div data-tour="routine-days" className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div
+        data-tour="routine-days"
+        className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3"
+      >
         {daysInWeek.map((day) => {
           const historyDate = getHistoryDateForDay(day.day);
           const dayTasks = getTasksForDate(day.tasks, historyDate, taskHistory);
@@ -2016,7 +2040,10 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       {/* Two-Column Grid: Daily Practice Goals & Practice Tracker Timer */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Daily Practice Goals */}
-        <div data-tour="routine-goals" className="lg:col-span-7 bg-surface-container border border-outline-variant/30 rounded-xl p-5 shadow-md flex flex-col gap-4">
+        <div
+          data-tour="routine-goals"
+          className="lg:col-span-7 bg-surface-container border border-outline-variant/30 rounded-xl p-5 shadow-md flex flex-col gap-4"
+        >
           <div className="flex items-center justify-between pb-3 border-b border-outline-variant/20">
             <div>
               <h2 className="text-sm font-bold font-mono uppercase tracking-wider text-on-surface flex items-center gap-2">
@@ -2044,271 +2071,285 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
               tasks={practiceTasks}
               timerPreferences={timerPreferences}
               onUpdateTimerPreferences={onUpdateTimerPreferences}
-              onDismissTour={() => window.dispatchEvent(new Event("mousi9ti-task-setup-start"))}
+              onDismissTour={() =>
+                window.dispatchEvent(new Event("mousi9ti-task-setup-start"))
+              }
               onQuickStartTasks={(instrument, tasks) => {
-                const schedule = instrument === "piano" ? DEFAULT_PIANO_WEEKLY_SCHEDULE : DEFAULT_WEEKLY_SCHEDULE;
-                setWeeklySchedule(schedule.map((day) => day.day === getTodayCode() ? { ...day, tasks } : day));
+                const schedule =
+                  instrument === "piano"
+                    ? DEFAULT_PIANO_WEEKLY_SCHEDULE
+                    : DEFAULT_WEEKLY_SCHEDULE;
+                setWeeklySchedule(
+                  schedule.map((day) =>
+                    day.day === getTodayCode() ? { ...day, tasks } : day,
+                  ),
+                );
                 onQuickStartTasks?.(instrument, tasks);
               }}
               onFinishDailyTasksOnboarding={() => {
                 window.dispatchEvent(new Event("mousi9ti-task-setup-ready"));
               }}
             />
-          ) : <>
-          <div className="flex flex-col gap-2.5 min-h-[300px] overflow-y-auto max-h-[360px] custom-scrollbar pr-1">
-            {activeDayTasks.length === 0 ? (
-              <div className="text-center py-12 text-on-surface-variant text-sm font-mono">
-                No goals defined for {activeDay.name}. Start by adding ones
-                below
-              </div>
-            ) : (
-              activeDayTasks.map((task) => {
-                if (editingTaskId === task.id) {
-                  return (
-                    <InlineTaskRowEditor
-                      key={task.id}
-                      initialText={task.text}
-                      onSave={(updatedText) => {
-                        setWeeklySchedule((prev) =>
-                          prev.map((d) => {
-                            if (d.day === activeDayCode) {
-                              return {
-                                ...d,
-                                tasks: d.tasks.map((t) =>
-                                  t.id === task.id
-                                    ? { ...t, text: updatedText }
-                                    : t,
-                                ),
-                              };
-                            }
-                            return d;
-                          }),
-                        );
-                        setEditingTaskId(null);
-                      }}
-                      onCancel={() => setEditingTaskId(null)}
-                    />
-                  );
-                }
-                return (
-                  <div
-                    key={task.id}
-                    onClick={() => toggleTaskCompleted(task.id)}
-                    className={`group flex w-full items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                      task.completed
-                        ? "bg-surface-container-low/50 border-outline-variant/20 opacity-75"
-                        : "bg-surface-container-low border-outline-variant/30 hover:border-primary/50"
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleTaskCompleted(task.id);
-                      }}
-                      className="text-on-surface-variant hover:text-primary transition-colors shrink-0"
-                    >
-                      {task.completed ? (
-                        <CheckCircle2 size={18} className="text-primary" />
-                      ) : (
-                        <Circle size={18} />
-                      )}
-                    </button>
-                    <div className="min-w-0 flex-1">
+          ) : (
+            <>
+              <div className="flex flex-col gap-2.5 min-h-[300px] overflow-y-auto max-h-[360px] custom-scrollbar pr-1">
+                {activeDayTasks.length === 0 ? (
+                  <div className="text-center py-12 text-on-surface-variant text-sm font-mono">
+                    No goals defined for {activeDay.name}. Start by adding ones
+                    below
+                  </div>
+                ) : (
+                  activeDayTasks.map((task) => {
+                    if (editingTaskId === task.id) {
+                      return (
+                        <InlineTaskRowEditor
+                          key={task.id}
+                          initialText={task.text}
+                          onSave={(updatedText) => {
+                            setWeeklySchedule((prev) =>
+                              prev.map((d) => {
+                                if (d.day === activeDayCode) {
+                                  return {
+                                    ...d,
+                                    tasks: d.tasks.map((t) =>
+                                      t.id === task.id
+                                        ? { ...t, text: updatedText }
+                                        : t,
+                                    ),
+                                  };
+                                }
+                                return d;
+                              }),
+                            );
+                            setEditingTaskId(null);
+                          }}
+                          onCancel={() => setEditingTaskId(null)}
+                        />
+                      );
+                    }
+                    return (
                       <div
-                        className={`text-sm font-mono leading-relaxed break-all [overflow-wrap:anywhere] ${task.completed ? "line-through text-on-surface-variant" : "text-on-surface"}`}
+                        key={task.id}
+                        onClick={() => toggleTaskCompleted(task.id)}
+                        className={`group flex w-full items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                          task.completed
+                            ? "bg-surface-container-low/50 border-outline-variant/20 opacity-75"
+                            : "bg-surface-container-low border-outline-variant/30 hover:border-primary/50"
+                        }`}
                       >
-                        {renderTaskText(task)}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleTaskCompleted(task.id);
+                          }}
+                          className="text-on-surface-variant hover:text-primary transition-colors shrink-0"
+                        >
+                          {task.completed ? (
+                            <CheckCircle2 size={18} className="text-primary" />
+                          ) : (
+                            <Circle size={18} />
+                          )}
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <div
+                            className={`text-sm font-mono leading-relaxed break-all [overflow-wrap:anywhere] ${task.completed ? "line-through text-on-surface-variant" : "text-on-surface"}`}
+                          >
+                            {renderTaskText(task)}
+                          </div>
+                          {task.startsAt !== undefined &&
+                            task.expiresAt !== undefined && (
+                              <span className="mt-1 block text-[10px] font-mono text-on-surface-variant">
+                                {new Date(task.startsAt).toLocaleDateString(
+                                  undefined,
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  },
+                                )}
+                                {" - "}
+                                {new Date(task.expiresAt).toLocaleDateString(
+                                  undefined,
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  },
+                                )}
+                              </span>
+                            )}
+                        </div>
+                        <div className="ml-auto flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          <TaskDurationMenu
+                            value={task.duration ?? "forever"}
+                            customRange={taskRange(task)}
+                            onCustomRangeChange={(range) =>
+                              updateTaskRange(task.id, range)
+                            }
+                            onChange={(duration) =>
+                              updateTaskDuration(task.id, duration)
+                            }
+                            iconOnly
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingTaskId(task.id);
+                            }}
+                            className="p-1 text-on-surface-variant hover:text-primary transition-colors"
+                            title="Edit goal"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPendingDeleteTask(task);
+                            }}
+                            className="p-1 text-on-surface-variant hover:text-error transition-colors"
+                            title="Delete goal"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
-                      {task.startsAt !== undefined &&
-                        task.expiresAt !== undefined && (
-                          <span className="mt-1 block text-[10px] font-mono text-on-surface-variant">
-                            {new Date(task.startsAt).toLocaleDateString(
-                              undefined,
-                              {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              },
-                            )}
-                            {" - "}
-                            {new Date(task.expiresAt).toLocaleDateString(
-                              undefined,
-                              {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              },
-                            )}
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Bottom Task Input Bar with Autocomplete */}
+              <form
+                onSubmit={addTask}
+                className="mt-2 pt-3 border-t border-outline-variant/20 flex flex-col relative overflow-visible"
+              >
+                {suggestions.length > 0 && (
+                  <div
+                    className="absolute bottom-[calc(100%+8px)] left-0 w-72 sm:w-80 max-h-52 overflow-y-auto bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-xl z-50 animate-in fade-in slide-in-from-bottom-2 py-1 custom-scrollbar overscroll-contain"
+                    onWheel={(e) => e.stopPropagation()}
+                  >
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySuggestion(s.value);
+                        }}
+                        className={`w-full text-left px-3.5 py-1.5 text-xs font-mono flex items-center justify-between gap-2 transition-colors ${i === safeSuggestionIndex ? "bg-surface-container-highest text-primary font-semibold" : "text-on-surface hover:bg-surface-container-highest hover:text-primary"}`}
+                        ref={(el) => {
+                          if (el && i === safeSuggestionIndex) {
+                            el.scrollIntoView({ block: "nearest" });
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Command
+                            size={11}
+                            className={
+                              i === safeSuggestionIndex
+                                ? "opacity-100 text-primary"
+                                : "opacity-40"
+                            }
+                          />
+                          <span className="truncate">{s.label}</span>
+                        </div>
+                        {s.subLabel && (
+                          <span
+                            className={`text-[10px] shrink-0 font-normal ${i === safeSuggestionIndex ? "text-primary/80" : "text-on-surface-variant"}`}
+                          >
+                            {s.subLabel}
                           </span>
                         )}
-                    </div>
-                    <div className="ml-auto flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                      <TaskDurationMenu
-                        value={task.duration ?? "forever"}
-                        customRange={taskRange(task)}
-                        onCustomRangeChange={(range) =>
-                          updateTaskRange(task.id, range)
-                        }
-                        onChange={(duration) =>
-                          updateTaskDuration(task.id, duration)
-                        }
-                        iconOnly
-                      />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingTaskId(task.id);
-                        }}
-                        className="p-1 text-on-surface-variant hover:text-primary transition-colors"
-                        title="Edit goal"
-                      >
-                        <Edit2 size={14} />
                       </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPendingDeleteTask(task);
-                        }}
-                        className="p-1 text-on-surface-variant hover:text-error transition-colors"
-                        title="Delete goal"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                );
-              })
-            )}
-          </div>
+                )}
 
-          {/* Bottom Task Input Bar with Autocomplete */}
-          <form
-            onSubmit={addTask}
-            className="mt-2 pt-3 border-t border-outline-variant/20 flex flex-col relative overflow-visible"
-          >
-            {suggestions.length > 0 && (
-              <div
-                className="absolute bottom-[calc(100%+8px)] left-0 w-72 sm:w-80 max-h-52 overflow-y-auto bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-xl z-50 animate-in fade-in slide-in-from-bottom-2 py-1 custom-scrollbar overscroll-contain"
-                onWheel={(e) => e.stopPropagation()}
-              >
-                {suggestions.map((s, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      applySuggestion(s.value);
-                    }}
-                    className={`w-full text-left px-3.5 py-1.5 text-xs font-mono flex items-center justify-between gap-2 transition-colors ${i === safeSuggestionIndex ? "bg-surface-container-highest text-primary font-semibold" : "text-on-surface hover:bg-surface-container-highest hover:text-primary"}`}
-                    ref={(el) => {
-                      if (el && i === safeSuggestionIndex) {
-                        el.scrollIntoView({ block: "nearest" });
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <Command
-                        size={11}
-                        className={
-                          i === safeSuggestionIndex
-                            ? "opacity-100 text-primary"
-                            : "opacity-40"
-                        }
-                      />
-                      <span className="truncate">{s.label}</span>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 bg-surface-container-lowest border border-outline-variant/40 rounded-lg px-3 py-2 flex items-center overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/50">
+                    <div
+                      ref={backdropRef}
+                      className="absolute inset-0 px-3 py-2 font-mono text-xs whitespace-pre overflow-hidden pointer-events-none text-transparent"
+                    >
+                      {renderHighlights(newTaskInput)}
                     </div>
-                    {s.subLabel && (
-                      <span
-                        className={`text-[10px] shrink-0 font-normal ${i === safeSuggestionIndex ? "text-primary/80" : "text-on-surface-variant"}`}
-                      >
-                        {s.subLabel}
-                      </span>
-                    )}
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={newTaskInput}
+                      onChange={handleInputChange}
+                      onSelect={handleInputSelect}
+                      onScroll={handleScroll}
+                      onKeyUp={handleInputSelect}
+                      onMouseUp={handleInputSelect}
+                      onKeyDown={handleKeyDown}
+                      placeholder="e.g. Practice @chord(G major) @scale(C major) @bpm(120) @timer(15m 30s)..."
+                      className="w-full bg-transparent font-mono text-xs text-on-surface outline-none relative z-10"
+                      autoComplete="off"
+                      spellCheck="false"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={
+                      !newTaskInput.trim() ||
+                      suggestions.length > 0 ||
+                      (newTaskDuration === "custom" && !newTaskRange)
+                    }
+                    className="bg-primary text-on-primary w-10 h-10 rounded-lg flex items-center justify-center font-bold hover:scale-105 active:scale-95 transition-all shadow-md shrink-0 cursor-pointer disabled:opacity-50"
+                  >
+                    <Plus size={18} />
                   </button>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 bg-surface-container-lowest border border-outline-variant/40 rounded-lg px-3 py-2 flex items-center overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/50">
-                <div
-                  ref={backdropRef}
-                  className="absolute inset-0 px-3 py-2 font-mono text-xs whitespace-pre overflow-hidden pointer-events-none text-transparent"
-                >
-                  {renderHighlights(newTaskInput)}
                 </div>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={newTaskInput}
-                  onChange={handleInputChange}
-                  onSelect={handleInputSelect}
-                  onScroll={handleScroll}
-                  onKeyUp={handleInputSelect}
-                  onMouseUp={handleInputSelect}
-                  onKeyDown={handleKeyDown}
-                  placeholder="e.g. Practice @chord(G major) @scale(C major) @bpm(120) @timer(15m 30s)..."
-                  className="w-full bg-transparent font-mono text-xs text-on-surface outline-none relative z-10"
-                  autoComplete="off"
-                  spellCheck="false"
-                />
+                <div className="mt-3 flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <span className="block text-xs font-mono font-semibold text-on-surface">
+                      Task duration
+                    </span>
+                    <span className="block text-[10px] font-mono text-on-surface-variant">
+                      New tasks use the default duration from Settings
+                    </span>
+                  </div>
+                  <TaskDurationMenu
+                    value={newTaskDuration}
+                    customRange={newTaskRange}
+                    onCustomRangeChange={setNewTaskRange}
+                    defaultDurationLabel={getDefaultTaskDurationLabel(settings)}
+                    onChange={(duration) => {
+                      setNewTaskDuration(duration);
+                      if (duration !== "custom") setNewTaskRange(null);
+                    }}
+                  />
+                </div>
+                {newTaskDuration === "custom" && newTaskRange && (
+                  <p className="mt-2 text-[10px] font-mono text-on-surface-variant">
+                    {new Date(newTaskRange.start).toLocaleDateString(
+                      undefined,
+                      {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      },
+                    )}
+                    {" - "}
+                    {new Date(newTaskRange.end).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </p>
+                )}
+              </form>
+              <div className="text-[10px] text-on-surface-variant font-mono text-center">
+                Type <strong className="text-primary">@</strong> for tags
+                (custom, tuning, scale, chord, bpm, timer...)
               </div>
-              <button
-                type="submit"
-                disabled={
-                  !newTaskInput.trim() ||
-                  suggestions.length > 0 ||
-                  (newTaskDuration === "custom" && !newTaskRange)
-                }
-                className="bg-primary text-on-primary w-10 h-10 rounded-lg flex items-center justify-center font-bold hover:scale-105 active:scale-95 transition-all shadow-md shrink-0 cursor-pointer disabled:opacity-50"
-              >
-                <Plus size={18} />
-              </button>
-            </div>
-            <div className="mt-3 flex flex-wrap items-start justify-between gap-2">
-              <div className="space-y-1">
-                <span className="block text-xs font-mono font-semibold text-on-surface">
-                  Task duration
-                </span>
-                <span className="block text-[10px] font-mono text-on-surface-variant">
-                  New tasks use the default duration from Settings
-                </span>
-              </div>
-              <TaskDurationMenu
-                value={newTaskDuration}
-                customRange={newTaskRange}
-                onCustomRangeChange={setNewTaskRange}
-                defaultDurationLabel={getDefaultTaskDurationLabel(settings)}
-                onChange={(duration) => {
-                  setNewTaskDuration(duration);
-                  if (duration !== "custom") setNewTaskRange(null);
-                }}
-              />
-            </div>
-            {newTaskDuration === "custom" && newTaskRange && (
-              <p className="mt-2 text-[10px] font-mono text-on-surface-variant">
-                {new Date(newTaskRange.start).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-                {" - "}
-                {new Date(newTaskRange.end).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </p>
-            )}
-          </form>
-          <div className="text-[10px] text-on-surface-variant font-mono text-center">
-            Type <strong className="text-primary">@</strong> for tags (custom,
-            tuning, scale, chord, bpm, timer...)
-          </div>
-          </>}
+            </>
+          )}
         </div>
 
         {/* Right Column: Practice Stopwatch Timer & Active Day Summary */}

@@ -331,7 +331,7 @@ const SECTION_STARTS: Record<number, string> = {
 function getSidebarItemClass(i: number, stepIndex: number): string {
   if (i === stepIndex) return "bg-primary/12 text-on-surface";
   if (i < stepIndex)
-    return "text-on-surface-variant/50 hover:bg-surface-container-high hover:text-on-surface";
+    return "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface";
   return "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface";
 }
 
@@ -443,7 +443,7 @@ function resolveWithRetry(
 }
 
 function addListener(
-  target: Window,
+  target: Window | Document,
   event: string,
   handler: EventListenerOrEventListenerObject,
 ): () => void {
@@ -467,19 +467,79 @@ function attachClickAdvance(
     elements.forEach((el) => el.removeEventListener("click", handler));
 }
 
-function makeKeyHandler(
+export function getTourFocusable(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex], [contenteditable="true"]',
+    ),
+  ).filter((element) => {
+    const style = getComputedStyle(element);
+    return (
+      element.tabIndex >= 0 &&
+      !element.matches(":disabled") &&
+      !element.closest('[inert], [hidden], [aria-hidden="true"]') &&
+      style.visibility !== "hidden" &&
+      style.visibility !== "collapse" &&
+      element.getClientRects().length > 0
+    );
+  });
+}
+
+export function makeTourBackgroundInert(container: HTMLElement): () => void {
+  const previous: Array<[HTMLElement, boolean]> = [];
+  let branch = container;
+  while (branch.parentElement) {
+    for (const sibling of Array.from(branch.parentElement.children)) {
+      if (sibling === branch || !(sibling instanceof HTMLElement)) continue;
+      previous.push([sibling, sibling.hasAttribute("inert")]);
+      sibling.setAttribute("inert", "");
+    }
+    branch = branch.parentElement;
+    if (branch === document.body) break;
+  }
+  return () => {
+    for (const [element, wasInert] of previous) {
+      if (!wasInert) element.removeAttribute("inert");
+    }
+  };
+}
+
+export function makeKeyHandler(
   isFirst: boolean,
   isLast: boolean,
   onClose: () => void,
   setStep: React.Dispatch<React.SetStateAction<number>>,
 ): EventListener {
   return ((e: KeyboardEvent) => {
+    const target = e.target instanceof Element ? e.target : null;
+    if (target?.closest("[data-tour-controls]")) e.stopPropagation();
+    if (
+      e.defaultPrevented ||
+      e.isComposing ||
+      e.altKey ||
+      e.ctrlKey ||
+      e.metaKey ||
+      target?.closest(
+        'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="slider"], [role="spinbutton"], [role="combobox"], [role="listbox"], audio, video',
+      )
+    )
+      return;
     if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
       onClose();
       return;
     }
-    if (e.key === "ArrowRight" && !isLast) setStep((i) => i + 1);
-    if (e.key === "ArrowLeft" && !isFirst) setStep((i) => i - 1);
+    if (e.key === "ArrowRight" && !isLast) {
+      e.preventDefault();
+      e.stopPropagation();
+      setStep((i) => i + 1);
+    }
+    if (e.key === "ArrowLeft" && !isFirst) {
+      e.preventDefault();
+      e.stopPropagation();
+      setStep((i) => i - 1);
+    }
   }) as EventListener;
 }
 
@@ -724,6 +784,7 @@ const RevealOverlay: React.FC<RevealOverlayProps> = ({
       {/* Mini floating card — draggable so users can move it to see the element */}
       <motion.div
         ref={cardRef}
+        data-tour-controls=""
         drag
         dragMomentum={false}
         dragElastic={0}
@@ -752,7 +813,7 @@ const RevealOverlay: React.FC<RevealOverlayProps> = ({
             {getStepIcon(step.id, 16)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-mono text-[9px] text-on-surface-variant/50 uppercase tracking-wider mb-0.5">
+            <p className="font-mono text-[9px] text-on-surface-variant uppercase tracking-wider mb-0.5">
               Step {stepIndex + 1} of {STEPS.length}
             </p>
             <p className="font-mono text-[12px] font-bold text-on-surface leading-snug">
@@ -763,7 +824,7 @@ const RevealOverlay: React.FC<RevealOverlayProps> = ({
           <button
             onClick={onClose}
             title="Exit tour (Esc)"
-            className="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg text-on-surface-variant/40 hover:text-on-surface hover:bg-surface-container-high transition-colors"
+            className="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
           >
             <X size={12} />
           </button>
@@ -779,8 +840,8 @@ const RevealOverlay: React.FC<RevealOverlayProps> = ({
         {/* Hint — only shown once the spotlight is visible */}
         {spot && (
           <div className="px-4 pb-3 flex items-center gap-1.5">
-            <MousePointerClick size={10} className="text-primary/60 shrink-0" />
-            <span className="font-mono text-[10px] text-on-surface-variant/50">
+            <MousePointerClick size={10} className="text-primary shrink-0" />
+            <span className="font-mono text-[10px] text-on-surface-variant">
               Interact with the highlighted element
             </span>
           </div>
@@ -847,7 +908,7 @@ const TourSidebar: React.FC<TourSidebarProps> = ({
     <div className="flex flex-col h-full w-full">
       {/* Panel header */}
       <div className="px-5 py-4 border-b border-outline-variant/20 shrink-0">
-        <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-on-surface-variant/50 mb-0.5">
+        <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-on-surface-variant mb-0.5">
           App Tour
         </p>
         <p className="font-mono text-xs font-bold text-on-surface">
@@ -867,7 +928,7 @@ const TourSidebar: React.FC<TourSidebarProps> = ({
         {STEPS.map((s, i) => (
           <React.Fragment key={s.id}>
             {SECTION_STARTS[i] && (
-              <p className="px-4 pt-3 pb-1 font-mono text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/40">
+              <p className="px-4 pt-3 pb-1 font-mono text-[9px] uppercase tracking-[0.2em] text-on-surface-variant">
                 {SECTION_STARTS[i]}
               </p>
             )}
@@ -878,16 +939,14 @@ const TourSidebar: React.FC<TourSidebarProps> = ({
             >
               {/* Status icon */}
               <span className="shrink-0 w-4 h-4 flex items-center justify-center">
-                {i < stepIndex && (
-                  <Check size={11} className="text-primary/70" />
-                )}
+                {i < stepIndex && <Check size={11} className="text-primary" />}
                 {i === stepIndex && (
                   <ChevronRight size={11} className="text-primary" />
                 )}
                 {i > stepIndex && s.awaitAction && (
                   <MousePointerClick
                     size={9}
-                    className="text-on-surface-variant/35"
+                    className="text-on-surface-variant"
                   />
                 )}
               </span>
@@ -976,7 +1035,7 @@ const TourContent: React.FC<TourContentProps> = ({
             <button
               onClick={() => setShowList(true)}
               title="Show all steps"
-              className="sm:hidden w-7 h-7 rounded flex items-center justify-center text-on-surface-variant/60 hover:text-on-surface hover:bg-surface-container-high transition-colors"
+              className="sm:hidden w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
             >
               <List size={14} />
             </button>
@@ -984,7 +1043,7 @@ const TourContent: React.FC<TourContentProps> = ({
           <button
             onClick={onClose}
             title="Close tour (Esc)"
-            className="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant/60 hover:text-on-surface hover:bg-surface-container-high transition-colors"
+            className="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
           >
             <X size={14} />
           </button>
@@ -1066,7 +1125,7 @@ const TourContent: React.FC<TourContentProps> = ({
               <span />
             )}
 
-            <span className="flex-1 text-center font-mono text-[10px] text-on-surface-variant/40 hidden sm:block">
+            <span className="flex-1 text-center font-mono text-[10px] text-on-surface-variant hidden sm:block">
               Navigate with ← → keys
             </span>
 
@@ -1170,7 +1229,7 @@ function useTourLogic(
   useEffect(() => {
     if (isPaused) return;
     return addListener(
-      window,
+      document,
       "keydown",
       makeKeyHandler(isFirst, isLast, onClose, setStepIndex),
     );
@@ -1290,21 +1349,38 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
   const revealMode =
     !!step.targetSelector && !userOpenedModal && !elementNotFound;
 
+  useEffect(() => {
+    const opener = document.activeElement;
+    return () => {
+      queueMicrotask(() => {
+        if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+      });
+    };
+  }, []);
+
   // Focus trap for the full modal (non-reveal mode)
   useEffect(() => {
     if (isPaused || revealMode || !cardRef.current) return;
     const container = cardRef.current;
-    const focusableSelector =
-      'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-    const getFocusable = () =>
-      Array.from(container.querySelectorAll<HTMLElement>(focusableSelector));
-    getFocusable()[0]?.focus();
+    const restoreBackground = makeTourBackgroundInert(container);
+    const getFocusable = () => getTourFocusable(container);
+    const focusFirst = () => (getFocusable()[0] ?? container).focus();
+    focusFirst();
+    const retainFocus = () => {
+      if (!container.contains(document.activeElement)) focusFirst();
+    };
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
+      if (e.key !== "Tab" || e.defaultPrevented) return;
       const all = getFocusable();
       const first = all[0];
       const last = all[all.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
+      if (!first) {
+        e.preventDefault();
+        container.focus();
+      } else if (!all.includes(document.activeElement as HTMLElement)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      } else if (e.shiftKey && document.activeElement === first) {
         e.preventDefault();
         last?.focus();
       } else if (!e.shiftKey && document.activeElement === last) {
@@ -1312,8 +1388,13 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
         first?.focus();
       }
     };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    document.addEventListener("keydown", handler, true);
+    document.addEventListener("focusin", retainFocus);
+    return () => {
+      document.removeEventListener("keydown", handler, true);
+      document.removeEventListener("focusin", retainFocus);
+      restoreBackground();
+    };
   }, [revealMode, stepIndex, isPaused]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (taskSetupStage) {
@@ -1407,6 +1488,8 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
       >
         <motion.div
           ref={cardRef}
+          data-tour-controls=""
+          tabIndex={-1}
           role="dialog"
           aria-modal="true"
           aria-label="App tour"

@@ -75,12 +75,74 @@ it("preserves a saved schedule when no quick-start choice is pending", () => {
       defaultBpm: 90,
       modules: [],
       tasks: [
-        { id: `saved-${day}`, text: "My saved practice goal", completed: false },
+        {
+          id: `saved-${day}`,
+          text: "My saved practice goal",
+          completed: false,
+        },
       ],
     }),
   );
   assert.match(
     renderRoutine("guitar", undefined, [], JSON.stringify(schedule)),
     /My saved practice goal/,
+  );
+});
+
+it("reports zero percent when no weekly practice is completed", () => {
+  const schedule = Array.from({ length: 7 }, (_, index) => ({
+    day: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][index],
+    focusTheme: "Personal routine",
+    goalDurationMins: 30,
+    defaultBpm: 90,
+    modules: [],
+    tasks: [{ id: `task-${index}`, text: "Practice", completed: false }],
+  }));
+
+  assert.match(
+    renderRoutine("guitar", undefined, [], JSON.stringify(schedule)),
+    /Completed<\/span><strong class="text-primary font-bold">0h 0m \(0%\)<\/strong>/,
+  );
+});
+
+it("labels task-based completion as an estimate and uses a page section heading", () => {
+  const html = renderRoutine("guitar");
+  assert.match(
+    html,
+    /title="Estimated completion based on completed tasks and daily target durations, not recorded practice time\."/,
+  );
+  assert.match(html, /aria-label="Estimated completion: 0h 0m \(0%\)/);
+  assert.match(html, /<h2[^>]*>.*?Weekly Schedule &amp; Cadence<\/h2>/s);
+  assert.doesNotMatch(html, /<h1\b/);
+});
+
+it("reports the calculated percentage and handles a zero weekly target", () => {
+  const halfComplete = Array.from({ length: 7 }, (_, index) => ({
+    day: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][index],
+    focusTheme: "Personal routine",
+    goalDurationMins: 30,
+    defaultBpm: 90,
+    modules: [],
+    tasks: [
+      { id: `done-${index}`, text: "Done", completed: true },
+      { id: `pending-${index}`, text: "Pending", completed: false },
+    ],
+  }));
+  const zeroTarget = Array.from({ length: 7 }, (_, index) => ({
+    day: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][index],
+    focusTheme: "Personal routine",
+    goalDurationMins: 0,
+    defaultBpm: 90,
+    modules: [],
+    tasks: [],
+  }));
+
+  assert.match(
+    renderRoutine("guitar", undefined, [], JSON.stringify(halfComplete)),
+    /Completed<\/span><strong class="text-primary font-bold">1h 45m \(50%\)<\/strong>/,
+  );
+  assert.match(
+    renderRoutine("guitar", undefined, [], JSON.stringify(zeroTarget)),
+    /Completed<\/span><strong class="text-primary font-bold">0h 0m \(0%\)<\/strong>/,
   );
 });

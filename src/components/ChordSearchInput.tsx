@@ -75,6 +75,7 @@ export const ChordSearchInput: React.FC<ChordSearchInputProps> = ({
         <input
           ref={inputRef}
           type="text"
+          aria-label="Search chords"
           placeholder={placeholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -92,6 +93,8 @@ export const ChordSearchInput: React.FC<ChordSearchInputProps> = ({
           className="w-full bg-surface-container-high border border-outline-variant/40 rounded-lg pl-8 pr-7 py-1.5 text-xs font-mono text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary"
         />
         <button
+          type="button"
+          aria-label="Cancel chord search"
           onClick={onCancel}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-0.5"
         >
@@ -103,6 +106,7 @@ export const ChordSearchInput: React.FC<ChordSearchInputProps> = ({
         {filteredChords.length > 0 ? (
           filteredChords.map((chord) => (
             <button
+              type="button"
               key={`${chord.root}-${chord.type}-${chord.customChordId || "standard"}`}
               onClick={() =>
                 onSelect(chord.root, chord.type, chord.customChordId)

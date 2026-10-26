@@ -519,9 +519,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
     onBpmChange(newBpm);
   };
 
-  const getPrecisionArmPoint = (
-    event: React.PointerEvent<SVGGElement>,
-  ) => {
+  const getPrecisionArmPoint = (event: React.PointerEvent<SVGGElement>) => {
     const arm = precisionArmRef.current;
     const svg = arm?.ownerSVGElement;
     const screenMatrix = arm?.getScreenCTM();
@@ -756,7 +754,9 @@ export const Metronome: React.FC<MetronomeProps> = ({
                     updatePrecisionTempoFromPointer(event);
                   }}
                   onPointerMove={(event) => {
-                    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                    if (
+                      event.currentTarget.hasPointerCapture(event.pointerId)
+                    ) {
                       updatePrecisionTempoFromPointer(event);
                     }
                   }}
@@ -892,6 +892,8 @@ export const Metronome: React.FC<MetronomeProps> = ({
                 className={`precision-metro__preset${
                   bpm === preset ? " is-selected" : ""
                 }`}
+                aria-label={`Set tempo to ${preset} BPM`}
+                aria-pressed={bpm === preset}
                 onClick={() => onBpmChange(preset)}
               >
                 {preset}
@@ -939,6 +941,14 @@ export const Metronome: React.FC<MetronomeProps> = ({
                 ].map((item) => (
                   <button
                     key={item.id}
+                    aria-pressed={subdivision === item.id}
+                    aria-label={
+                      item.id === "quarter"
+                        ? "Beats only"
+                        : item.id === "triplet"
+                          ? "Triplet subdivision"
+                          : `Subdivision ${item.label}`
+                    }
                     className={
                       subdivision === item.id ? "is-selected" : undefined
                     }
@@ -1013,6 +1023,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
             onChange={(e) =>
               handleTimeSignatureChange(e.target.value as TimeSignature)
             }
+            aria-label="Time signature"
             className="min-h-10 min-w-0 bg-surface-container-low border border-outline-variant/30 rounded px-2 py-1 text-[11px] font-mono text-on-surface focus:outline-none focus:border-primary/50 cursor-pointer md:min-h-0"
           >
             <option value="2/2">2/2</option>
@@ -1031,6 +1042,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
           <select
             value={soundType}
             onChange={(e) => setSoundType(e.target.value as MetronomeSound)}
+            aria-label="Metronome sound"
             className="min-h-10 min-w-0 flex-1 bg-surface-container-low border border-outline-variant/30 rounded px-2 py-1 text-[11px] font-mono text-on-surface focus:outline-none focus:border-primary/50 cursor-pointer md:min-h-0"
           >
             <option value="click">Digital Click</option>
@@ -1078,6 +1090,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
             <button
               key={preset}
               onClick={() => onBpmChange(preset)}
+              aria-label={`Set tempo to ${preset} BPM`}
               className={`px-2.5 py-1 rounded-full text-[10px] font-mono tracking-widest transition-all ${
                 bpm === preset
                   ? "bg-primary/20 text-primary border border-primary/50"
@@ -1101,6 +1114,8 @@ export const Metronome: React.FC<MetronomeProps> = ({
           <button
             key={s.id}
             onClick={() => setSubdivision(s.id as MetronomeSubdivision)}
+            aria-pressed={subdivision === s.id}
+            aria-label={`Set subdivision to ${s.label}`}
             className={`min-h-10 px-3 py-1 rounded font-mono text-[10px] tracking-wider transition-colors md:min-h-0 ${
               subdivision === s.id
                 ? "bg-primary/20 text-primary border border-primary/50 font-bold"
@@ -1116,6 +1131,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
       <div className="flex items-center gap-3 my-2">
         <button
           onClick={() => adjustBpm(-1)}
+          aria-label="Decrease tempo"
           className="w-10 h-10 md:w-7 md:h-7 rounded bg-surface-container-low border border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:border-outline-variant transition-all"
         >
           <Minus size={14} />
@@ -1126,12 +1142,14 @@ export const Metronome: React.FC<MetronomeProps> = ({
           min="20"
           max="300"
           value={bpm}
+          aria-label="Tempo in BPM"
           onChange={(e) => onBpmChange(Number(e.target.value))}
           className="flex-1 min-w-0 h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary"
         />
 
         <button
           onClick={() => adjustBpm(1)}
+          aria-label="Increase tempo"
           className="w-10 h-10 md:w-7 md:h-7 rounded bg-surface-container-low border border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:border-outline-variant transition-all"
         >
           <Plus size={14} />
@@ -1143,6 +1161,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
         <div className="flex flex-wrap items-end gap-2 flex-1">
           <button
             onClick={handleTapTempo}
+            aria-label="Tap tempo"
             className="inline-flex min-h-10 items-center gap-1.5 text-[10px] font-mono tracking-widest text-on-surface-variant border border-outline-variant/30 px-3.5 py-1.5 rounded hover:text-on-surface hover:border-primary/40 hover:bg-primary/5 active:scale-95 transition-all md:min-h-0"
           >
             {showTapTempoIcon && (
@@ -1159,6 +1178,10 @@ export const Metronome: React.FC<MetronomeProps> = ({
               setIsSilentBar(false);
               setBarCycleMode(next);
             }}
+            aria-pressed={barCycleMode}
+            aria-label={
+              barCycleMode ? "Disable silent bar" : "Enable silent bar"
+            }
             className={`inline-flex min-h-10 items-center gap-1.5 px-2.5 py-1.5 rounded text-[10px] font-mono tracking-widest transition-all md:min-h-0 ${
               barCycleMode
                 ? "bg-primary/15 text-primary border border-primary/50"
@@ -1172,6 +1195,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
 
         <button
           onClick={togglePlay}
+          aria-label={isPlaying ? "Stop metronome" : "Start metronome"}
           className={`w-11 h-11 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-95 ${
             isPlaying
               ? "bg-error-container text-on-error-container border border-error/50 hover:opacity-80"

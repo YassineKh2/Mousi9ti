@@ -37,16 +37,32 @@ import {
 type PlaybackDirection = "ascending" | "descending" | "both";
 
 interface ScalesPageProps {
-  initialScaleTarget?: { scaleId: string; root: NoteName } | null;
-  onInitialScaleHandled?: () => void;
+  initialScaleTarget?: {
+    scaleId: string;
+    root: NoteName;
+    boxKey?: string | null;
+    instrumentView?: "guitar" | "piano" | "both";
+    pianoFocusRange?: "all" | "octave4" | "octave3" | "octave34";
+  } | null;
+  onScaleRouteChange?: (
+    root: NoteName,
+    scaleId: string,
+    boxKey: string | null,
+    instrumentView: "guitar" | "piano" | "both",
+    pianoFocusRange: "all" | "octave4" | "octave3" | "octave34",
+  ) => void;
   settings: AppSettings;
 }
 
 export const ScalesPage: React.FC<ScalesPageProps> = ({
   initialScaleTarget,
-  onInitialScaleHandled,
+  onScaleRouteChange,
   settings,
 }) => {
+  const initialScale = initialScaleTarget
+    ? SCALES_DATABASE.find((scale) => scale.id === initialScaleTarget.scaleId)
+    : undefined;
+
   // Get tuning from settings
   const defaultTuning = useMemo(() => {
     return (
@@ -55,20 +71,27 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
     );
   }, [settings.defaultTuning]);
 
-  const [selectedRoot, setSelectedRoot] = useState<NoteName>("A");
+  const [selectedRoot, setSelectedRoot] = useState<NoteName>(
+    initialScaleTarget?.root ?? "A",
+  );
   const [selectedScale, setSelectedScale] = useState<ScaleDefinition>(
-    SCALES_DATABASE[4],
-  ); // A Minor Pentatonic
+    initialScale ?? SCALES_DATABASE[4],
+  );
   const [displayMode, setDisplayMode] = useState<NoteDisplayMode>("name");
   const [currentTuning, setCurrentTuning] = useState<Tuning>(defaultTuning);
   const [fretCount, setFretCount] = useState<number>(settings.fretCount);
-  const [activeCagedBox, setActiveCagedBox] = useState<string | null>(null);
+  const [activeCagedBox, setActiveCagedBox] = useState<string | null>(() =>
+    initialScaleTarget?.boxKey &&
+    initialScale?.cagedBoxes?.[initialScaleTarget.boxKey]
+      ? initialScaleTarget.boxKey
+      : null,
+  );
   const [pianoFocusRange, setPianoFocusRange] = useState<
     "all" | "octave4" | "octave3" | "octave34"
-  >("octave4");
+  >(initialScaleTarget?.pianoFocusRange ?? "octave4");
   const [instrumentView, setInstrumentView] = useState<
     "guitar" | "piano" | "both"
-  >(settings.defaultInstrument);
+  >(initialScaleTarget?.instrumentView ?? settings.defaultInstrument);
 
   useEffect(() => {
     setInstrumentView(settings.defaultInstrument);
@@ -179,15 +202,23 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
     if (found) {
       setSelectedRoot(initialScaleTarget.root);
       setSelectedScale(found);
-      setActiveCagedBox(null);
+      setActiveCagedBox(
+        initialScaleTarget.boxKey &&
+          found.cagedBoxes?.[initialScaleTarget.boxKey]
+          ? initialScaleTarget.boxKey
+          : null,
+      );
+      setInstrumentView(
+        initialScaleTarget.instrumentView ?? settings.defaultInstrument,
+      );
+      setPianoFocusRange(initialScaleTarget.pianoFocusRange ?? "octave4");
       setScaleSearchQuery("");
       setScaleMenuCategory("All");
       setIsScaleMenuOpen(false);
       setIsRootMenuOpen(false);
       setIsPlayMenuOpen(false);
     }
-    onInitialScaleHandled?.();
-  }, [initialScaleTarget, onInitialScaleHandled]);
+  }, [initialScaleTarget, settings.defaultInstrument]);
 
   const scaleNotes = getScaleNotes(selectedRoot, selectedScale);
 
@@ -459,6 +490,8 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                 }}
                 className="w-11 h-11 rounded-lg bg-primary text-on-primary flex flex-col items-center justify-center font-mono font-bold text-lg shadow-md transition-transform hover:scale-105 active:scale-95 group focus:outline-none focus:ring-2 focus:ring-primary/60 cursor-pointer"
                 title="Click to change root note"
+                aria-label={`Change root note, current root ${selectedRoot}`}
+                aria-expanded={isRootMenuOpen}
               >
                 <span>{selectedRoot}</span>
                 <span className="text-[8px] -mt-1 opacity-70 font-mono tracking-tighter group-hover:opacity-100 flex items-center">
@@ -475,6 +508,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                     </span>
                     <button
                       onClick={() => setIsRootMenuOpen(false)}
+                      aria-label="Close root note picker"
                       className="text-on-surface-variant hover:text-on-surface p-0.5 rounded"
                     >
                       <X size={14} />
@@ -489,6 +523,14 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                           type="button"
                           onClick={() => {
                             setSelectedRoot(note);
+                            setActiveCagedBox(null);
+                            onScaleRouteChange?.(
+                              note,
+                              selectedScale.id,
+                              null,
+                              instrumentView,
+                              pianoFocusRange,
+                            );
                             setIsRootMenuOpen(false);
                           }}
                           className={`h-9 rounded font-mono text-xs font-bold transition-all flex items-center justify-center ${
@@ -516,6 +558,8 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                 }}
                 className="group w-full min-w-0 max-w-full text-left px-2 py-1 -ml-2 rounded-lg hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-1 focus:ring-primary/40 cursor-pointer"
                 title="Click to select another scale"
+                aria-label={`Select scale, current scale ${selectedRoot} ${selectedScale.name}`}
+                aria-expanded={isScaleMenuOpen}
               >
                 <div className="flex items-center gap-1.5">
                   <h2 className="font-mono text-base sm:text-lg font-bold text-on-surface group-hover:text-primary transition-colors flex min-w-0 items-center gap-1.5">
@@ -550,6 +594,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                     </span>
                     <button
                       onClick={() => setIsScaleMenuOpen(false)}
+                      aria-label="Close scale picker"
                       className="text-on-surface-variant hover:text-on-surface p-0.5 rounded"
                     >
                       <X size={14} />
@@ -564,6 +609,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                     />
                     <input
                       type="text"
+                      aria-label="Search scales"
                       placeholder="Search scale name or category..."
                       value={scaleSearchQuery}
                       onChange={(e) => setScaleSearchQuery(e.target.value)}
@@ -573,6 +619,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                     {scaleSearchQuery && (
                       <button
                         onClick={() => setScaleSearchQuery("")}
+                        aria-label="Clear scale search"
                         className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-0.5"
                       >
                         <X size={12} />
@@ -612,6 +659,13 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                             onClick={() => {
                               setSelectedScale(s);
                               setActiveCagedBox(null);
+                              onScaleRouteChange?.(
+                                selectedRoot,
+                                s.id,
+                                null,
+                                instrumentView,
+                                pianoFocusRange,
+                              );
                               setIsScaleMenuOpen(false);
                             }}
                             className={`w-full flex items-center justify-between p-2 rounded-lg text-left transition-all ${
@@ -682,8 +736,18 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
             <div className="flex w-fit shrink-0 items-center gap-1 rounded-lg border border-outline-variant/30 bg-surface-container-low p-1">
               <button
                 type="button"
-                onClick={() => setInstrumentView("guitar")}
+                onClick={() => {
+                  setInstrumentView("guitar");
+                  onScaleRouteChange?.(
+                    selectedRoot,
+                    selectedScale.id,
+                    activeCagedBox,
+                    "guitar",
+                    pianoFocusRange,
+                  );
+                }}
                 aria-label="Guitar view"
+                aria-pressed={instrumentView === "guitar"}
                 title="Guitar view"
                 className={`w-8 lg:w-auto h-8 px-0 lg:px-2 flex items-center justify-center gap-1.5 text-xs font-mono rounded transition-all cursor-pointer ${
                   instrumentView === "guitar"
@@ -697,8 +761,19 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
 
               <button
                 type="button"
-                onClick={() => setInstrumentView("piano")}
+                onClick={() => {
+                  setInstrumentView("piano");
+                  setActiveCagedBox(null);
+                  onScaleRouteChange?.(
+                    selectedRoot,
+                    selectedScale.id,
+                    null,
+                    "piano",
+                    pianoFocusRange,
+                  );
+                }}
                 aria-label="Piano view"
+                aria-pressed={instrumentView === "piano"}
                 title="Piano view"
                 className={`w-8 lg:w-auto h-8 px-0 lg:px-2 flex items-center justify-center gap-1.5 text-xs font-mono rounded transition-all cursor-pointer ${
                   instrumentView === "piano"
@@ -712,8 +787,23 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
 
               <button
                 type="button"
-                onClick={() => setInstrumentView("both")}
+                onClick={() => {
+                  setInstrumentView("both");
+                  const bothBox =
+                    activeCagedBox ??
+                    Object.keys(selectedScale.cagedBoxes ?? {})[0] ??
+                    null;
+                  setActiveCagedBox(bothBox);
+                  onScaleRouteChange?.(
+                    selectedRoot,
+                    selectedScale.id,
+                    bothBox,
+                    "both",
+                    pianoFocusRange,
+                  );
+                }}
                 aria-label="Guitar and piano view"
+                aria-pressed={instrumentView === "both"}
                 title="Guitar and piano view"
                 className={`w-8 lg:w-auto h-8 px-0 lg:px-2 flex items-center justify-center gap-1.5 text-xs font-mono rounded transition-all cursor-pointer ${
                   instrumentView === "both"
@@ -765,6 +855,8 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                     onClick={() => setIsPlayMenuOpen((prev) => !prev)}
                     className="px-2.5 py-2 bg-primary hover:bg-primary-container text-on-primary rounded-r-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center focus:outline-none"
                     title="Change Playback Order (Ascending, Descending, Both)"
+                    aria-label="Change scale playback order"
+                    aria-expanded={isPlayMenuOpen}
                   >
                     <ChevronDown
                       size={14}
@@ -907,7 +999,17 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
                 <button
                   type="button"
-                  onClick={() => setActiveCagedBox(null)}
+                  onClick={() => {
+                    setActiveCagedBox(null);
+                    setInstrumentView("guitar");
+                    onScaleRouteChange?.(
+                      selectedRoot,
+                      selectedScale.id,
+                      null,
+                      "guitar",
+                      pianoFocusRange,
+                    );
+                  }}
                   aria-pressed={activeCagedBox === null}
                   className={`col-span-2 flex min-h-[56px] items-center gap-3 rounded-lg border px-3 py-1.5 text-left font-mono transition-all active:scale-[0.99] sm:col-span-3 sm:min-h-[56px] md:max-lg:col-span-1 lg:col-span-1 ${
                     activeCagedBox === null
@@ -930,16 +1032,24 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                 {Object.keys(selectedScale.cagedBoxes).map((boxKey, index) => {
                   const isActive = activeCagedBox === boxKey;
                   const patternNumber =
-                    boxKey.match(/^Pattern\s*(\d+)/i)?.[1] ??
-                    String(index + 1);
-                  const shapeName =
-                    boxKey.match(/\(([^)]+)\)/)?.[1] ?? boxKey;
+                    boxKey.match(/^Pattern\s*(\d+)/i)?.[1] ?? String(index + 1);
+                  const shapeName = boxKey.match(/\(([^)]+)\)/)?.[1] ?? boxKey;
 
                   return (
                     <button
                       key={boxKey}
                       type="button"
-                      onClick={() => setActiveCagedBox(boxKey)}
+                      onClick={() => {
+                        setActiveCagedBox(boxKey);
+                        setInstrumentView("guitar");
+                        onScaleRouteChange?.(
+                          selectedRoot,
+                          selectedScale.id,
+                          boxKey,
+                          "guitar",
+                          pianoFocusRange,
+                        );
+                      }}
                       aria-label={boxKey}
                       aria-pressed={isActive}
                       className={`relative flex min-h-[56px] min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left font-mono transition-all active:scale-[0.98] last:col-span-2 sm:last:col-span-1 sm:min-h-[56px] sm:px-3 ${
@@ -1022,7 +1132,16 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                   <button
                     key={range}
                     type="button"
-                    onClick={() => setPianoFocusRange(range)}
+                    onClick={() => {
+                      setPianoFocusRange(range);
+                      onScaleRouteChange?.(
+                        selectedRoot,
+                        selectedScale.id,
+                        activeCagedBox,
+                        instrumentView,
+                        range,
+                      );
+                    }}
                     aria-pressed={isActive}
                     className={`relative flex min-h-[56px] min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left font-mono transition-all active:scale-[0.98] sm:px-3 ${
                       isActive

@@ -30,8 +30,10 @@ class AudioEngine {
   private guitarInstrument: any = null;
   private pianoInstrument: any = null;
   private builderInstrumentInstance: any = null;
-  private defaultSoundfontsRequested = false;
-  private defaultSoundfontsLoadPromise: Promise<void> | null = null;
+  private defaultSoundfontLoadPromises = new Map<
+    "guitar" | "piano",
+    Promise<void>
+  >();
   private builderSoundfontLoadPromise: Promise<void> | null = null;
   public isSoundfontLoading = false;
 
@@ -301,56 +303,50 @@ class AudioEngine {
     guitarSource: string = "acoustic_guitar_nylon",
     pianoSource: string = "acoustic_grand_piano",
   ) {
-    if (this.guitarInstrument && this.pianoInstrument) {
-      return;
-    }
+    await Promise.all([
+      this.loadDefaultSoundfont("guitar", guitarSource),
+      this.loadDefaultSoundfont("piano", pianoSource),
+    ]);
+  }
 
-    if (!this.ctx) this.getContext();
-    if (!this.ctx) return;
+  private async loadDefaultSoundfont(
+    instrument: "guitar" | "piano",
+    source = instrument === "guitar"
+      ? "acoustic_guitar_nylon"
+      : "acoustic_grand_piano",
+  ) {
+    const instrumentKey =
+      instrument === "guitar" ? "guitarInstrument" : "pianoInstrument";
+    if (this[instrumentKey]) return;
 
-    if (this.defaultSoundfontsLoadPromise) {
-      await this.defaultSoundfontsLoadPromise;
-      return;
-    }
+    const pending = this.defaultSoundfontLoadPromises.get(instrument);
+    if (pending) return pending;
 
+    const ctx = this.getContext();
     this.isSoundfontLoading = true;
-    this.defaultSoundfontsRequested = true;
-    this.defaultSoundfontsLoadPromise = (async () => {
+    const loadPromise = (async () => {
       try {
         const { Soundfont } = await this.resolveSoundfontModules();
-        const destination = this.compressor || this.ctx!.destination;
-
-        if (!this.guitarInstrument) {
-          this.guitarInstrument = Soundfont(this.ctx as any, {
-            instrument: guitarSource,
-            destination,
-          });
-          await this.guitarInstrument.ready;
-        }
-
-        if (!this.pianoInstrument) {
-          this.pianoInstrument = Soundfont(this.ctx as any, {
-            instrument: pianoSource,
-            destination,
-          });
-          await this.pianoInstrument.ready;
-        }
+        const loadedInstrument = Soundfont(ctx as any, {
+          instrument: source,
+          destination: this.compressor || ctx.destination,
+        });
+        await loadedInstrument.ready;
+        this[instrumentKey] = loadedInstrument;
       } catch (err) {
-        console.error("Failed to load default soundfonts:", err);
+        console.error(`Failed to load ${instrument} soundfont:`, err);
       } finally {
-        this.isSoundfontLoading = false;
-        this.defaultSoundfontsLoadPromise = null;
+        this.defaultSoundfontLoadPromises.delete(instrument);
+        this.isSoundfontLoading =
+          this.defaultSoundfontLoadPromises.size > 0 ||
+          this.builderSoundfontLoadPromise !== null;
       }
     })();
-
-    await this.defaultSoundfontsLoadPromise;
+    this.defaultSoundfontLoadPromises.set(instrument, loadPromise);
+    await loadPromise;
   }
 
   public async ensureDefaultSoundfontsLoaded() {
-    if (this.defaultSoundfontsRequested && this.guitarInstrument && this.pianoInstrument) {
-      return;
-    }
-
     await this.loadSoundfonts();
   }
 
@@ -368,7 +364,8 @@ class AudioEngine {
     const sourceUrl = isUploadedFile ? URL.createObjectURL(source) : source;
     this.builderSoundfontLoadPromise = (async () => {
       try {
-        const { Soundfont, Soundfont2, SoundFont2 } = await this.resolveSoundfontModules();
+        const { Soundfont, Soundfont2, SoundFont2 } =
+          await this.resolveSoundfontModules();
         // Builder instrument uses masterGain (gets reverb)
         const destination =
           this.masterGain || this.compressor || this.ctx!.destination;
@@ -400,8 +397,8 @@ class AudioEngine {
         console.error("Failed to load builder soundfont:", err);
       } finally {
         if (isUploadedFile) URL.revokeObjectURL(sourceUrl);
-        this.isSoundfontLoading = false;
         this.builderSoundfontLoadPromise = null;
+        this.isSoundfontLoading = this.defaultSoundfontLoadPromises.size > 0;
       }
     })();
 
@@ -446,7 +443,7 @@ class AudioEngine {
     if (this.isMuted) return;
     const ctx = this.getContext();
     if (!this.guitarInstrument && !useBuilderInst) {
-      void this.ensureDefaultSoundfontsLoaded();
+      void this.loadDefaultSoundfont("guitar");
     }
     const startTime = ctx.currentTime + timeOffset + 0.02;
 
@@ -544,7 +541,7 @@ class AudioEngine {
     if (this.isMuted) return;
     const ctx = this.getContext();
     if (!this.pianoInstrument && !useBuilderInst) {
-      void this.ensureDefaultSoundfontsLoaded();
+      void this.loadDefaultSoundfont("piano");
     }
     const startTime = ctx.currentTime + timeOffset + 0.02;
 
@@ -1145,8 +1142,7 @@ class AudioEngine {
         this.setMuted(!this.metronomeBarCycleShouldSound);
       }
       const isSilentBar =
-        this.metronomeBarCycleEnabled &&
-        !this.metronomeBarCycleShouldSound;
+        this.metronomeBarCycleEnabled && !this.metronomeBarCycleShouldSound;
 
       this.scheduleMetronomeTick(this.nextNoteTime, isAccent, isSub);
 
@@ -1200,8 +1196,7 @@ class AudioEngine {
     this.metronomeBarCycleShouldSound = true;
     this.metronomeBarCycleStarted = false;
     this.setMuted(false);
-    this.nextNoteTime =
-      ctx.currentTime + Math.max(0.05, initialDelaySeconds);
+    this.nextNoteTime = ctx.currentTime + Math.max(0.05, initialDelaySeconds);
     this.notifyMetronomeStateListeners();
 
     this.scheduler();

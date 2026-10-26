@@ -287,6 +287,10 @@ export const TimerWidget: React.FC<TimerWidgetProps> = ({
 
           {/* Bright tip marker */}
           <motion.line
+            x1={cx + (r - strokeWidth / 2 - 4) * Math.cos(currentAngle)}
+            y1={cy + (r - strokeWidth / 2 - 4) * Math.sin(currentAngle)}
+            x2={cx + (r + strokeWidth / 2 + 4) * Math.cos(currentAngle)}
+            y2={cy + (r + strokeWidth / 2 + 4) * Math.sin(currentAngle)}
             stroke="#ffffff"
             strokeWidth="6"
             strokeLinecap="round"
