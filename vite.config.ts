@@ -18,6 +18,14 @@ const siteUrl = "https://mousi9ti.com";
 const escapeAttribute = (value: string) =>
   value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
 
+const escapeHtml = (value: string) =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+
 const replaceMeta = (
   html: string,
   attribute: string,
@@ -42,6 +50,7 @@ function routeHtmlPlugin(): Plugin {
         canonicalPath?: string;
         title: string;
         description: string;
+        h1: string;
         indexable?: boolean;
       }) => {
         const canonicalUrl = `${siteUrl}${route.canonicalPath ?? route.path}`;
@@ -72,6 +81,19 @@ function routeHtmlPlugin(): Plugin {
           /<meta property="og:url" content="[^"]*"\s*\/>/,
           `<meta property="og:url" content="${canonicalUrl}" />`,
         );
+        html = html.replace(
+          '<div id="route-fallback"></div>',
+          `<main id="route-fallback" aria-labelledby="route-fallback-title">
+            <h1 id="route-fallback-title">${escapeHtml(route.h1)}</h1>
+            <p>${escapeHtml(route.description)}</p>
+            <nav aria-label="Practice tools">
+              <a href="/chords/">Chords</a>
+              <a href="/scales/">Scales</a>
+              <a href="/metronome/">Metronome</a>
+              <a href="/chord-progression-builder/">Progression builder</a>
+            </nav>
+          </main>`,
+        );
         if (!route.indexable) {
           html = html.replace(
             /<meta name="robots" content="[^"]*"\s*\/>/,
@@ -88,6 +110,9 @@ function routeHtmlPlugin(): Plugin {
         mkdirSync(path.dirname(outputPath), { recursive: true });
         writeFileSync(outputPath, html);
       };
+
+      const homeRoute = PAGE_ROUTES.find((route) => route.path === "/");
+      if (homeRoute) writeRouteDocument(homeRoute);
 
       for (const route of PAGE_ROUTES) {
         if (route.path !== "/") writeRouteDocument(route);

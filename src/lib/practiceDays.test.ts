@@ -34,9 +34,18 @@ it("credits task starts only toward the streak and keeps completion separate", (
   const originalStorage = globalThis.localStorage;
   const saved = new Map<string, string>();
   globalThis.localStorage = {
+    get length() {
+      return saved.size;
+    },
+    clear: () => saved.clear(),
     getItem: (key: string) => saved.get(key) ?? null,
-    setItem: (key: string, value: string) => saved.set(key, value),
-    removeItem: (key: string) => saved.delete(key),
+    key: (index: number) => Array.from(saved.keys())[index] ?? null,
+    setItem: (key: string, value: string) => {
+      saved.set(key, value);
+    },
+    removeItem: (key: string) => {
+      saved.delete(key);
+    },
   } as Storage;
   try {
     assert.equal(getSavedStreak().currentStreak, 0);

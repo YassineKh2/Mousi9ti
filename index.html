@@ -42,7 +42,13 @@
       property="og:description"
       content="Practice guitar and piano with Mousi9ti: explore chords and scales, use a precision metronome, build routines, and track your progress."
     />
-    <meta property="og:image" content="https://mousi9ti.com/og-image.png" />
+    <meta
+      property="og:image"
+      content="https://mousi9ti.com/og-image-1200x630.png"
+    />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
       content="Mousi9ti music practice studio for guitar and piano"
@@ -57,7 +63,10 @@
       name="twitter:description"
       content="Practice guitar and piano with Mousi9ti: explore chords and scales, use a precision metronome, build routines, and track your progress."
     />
-    <meta name="twitter:image" content="https://mousi9ti.com/og-image.png" />
+    <meta
+      name="twitter:image"
+      content="https://mousi9ti.com/og-image-1200x630.png"
+    />
     <meta
       name="twitter:image:alt"
       content="Mousi9ti music practice studio for guitar and piano"
@@ -71,6 +80,38 @@
       media="print"
       onload="this.media = 'all'"
     />
+    <style>
+      #route-fallback {
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 1.5rem 1rem;
+        color: #e5e2e1;
+      }
+      #route-fallback h1 {
+        margin: 0 0 0.5rem;
+        font-size: 1.5rem;
+        font-weight: 650;
+      }
+      #route-fallback p {
+        max-width: 48rem;
+        margin: 0 0 1rem;
+        color: #c6c5d0;
+        line-height: 1.6;
+      }
+      #route-fallback nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      #route-fallback a {
+        color: #adc6ff;
+        text-decoration: underline;
+        text-underline-offset: 0.2em;
+      }
+      html[data-app-ready="true"] #route-fallback {
+        display: none;
+      }
+    </style>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -111,6 +152,7 @@
     class="bg-[#0f0f0f] text-[#e5e2e1] antialiased selection:bg-blue-500/30 selection:text-blue-200 min-h-screen overflow-x-hidden"
   >
     <div id="root"></div>
+    <div id="route-fallback"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
