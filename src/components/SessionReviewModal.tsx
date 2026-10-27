@@ -199,7 +199,7 @@ export const SessionReviewModal: React.FC<SessionReviewModalProps> = ({
             <div
               className="mt-5 flex h-2.5 overflow-hidden rounded-sm bg-secondary/25"
               role="img"
-              aria-label={`${formatDuration(assignedSeconds)} assigned to tasks; ${formatDuration(unassignedSeconds)} general practice`}
+              aria-label={`${formatDuration(assignedSeconds)} assigned to tasks, ${formatDuration(unassignedSeconds)} general practice`}
             >
               <div
                 className="h-full bg-primary transition-[width] duration-200"

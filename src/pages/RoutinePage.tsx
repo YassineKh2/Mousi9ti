@@ -90,17 +90,13 @@ import {
 } from "../lib/taskDates";
 import { SessionWidget } from "../components/SessionWidget";
 import { CustomWeekDuration } from "../components/CustomWeekDuration";
-import { validateCustomWeekDuration } from "../lib/taskDuration";
+import {
+  getTaskExpiration,
+  TaskDurationPeriod,
+  validateCustomWeekDuration,
+} from "../lib/taskDuration";
 import { StreakData } from "../types";
 import { useSettingsContext } from "../contexts/SettingsContext";
-
-type TaskDurationPeriod =
-  | "default"
-  | "forever"
-  | "week"
-  | "month"
-  | "year"
-  | "custom";
 
 interface RoutineTask extends PracticeTask {
   duration?: TaskDurationPeriod;
@@ -128,25 +124,6 @@ const TASK_TAG_COLOR_CLASSES: Record<string, string> = {
     "bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/25",
   random:
     "bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/25",
-};
-
-const getTaskExpiration = (
-  period: TaskDurationPeriod,
-  referenceDate = Date.now(),
-): number | undefined => {
-  if (period === "forever" || period === "default") return undefined;
-  if (period === "custom") return undefined;
-
-  if (period === "week") return getDayBoundaryAfter(referenceDate, 7);
-
-  const expiration = new Date(referenceDate);
-  expiration.setHours(0, 0, 0, 0);
-  if (period === "month") {
-    expiration.setMonth(expiration.getMonth() + 1, 1);
-  } else {
-    expiration.setFullYear(expiration.getFullYear() + 1, 0, 1);
-  }
-  return expiration.getTime();
 };
 
 const getDefaultTaskDurationLabel = (
@@ -315,14 +292,15 @@ const TaskDurationMenu: React.FC<{
   useLayoutEffect(() => {
     if (!isOpen) return;
 
-    const updateMenuPosition = () => {
+    let horizontalAnchor: number | undefined;
+    const updateMenuPosition = (reanchor = false) => {
       const button = buttonRef.current;
       const panel = menuPanelRef.current;
       if (!button || !panel) return;
 
       const buttonRect = button.getBoundingClientRect();
-      const panelRect = panel.getBoundingClientRect();
-      const panelHeight = panel.scrollHeight;
+      const panelWidth = panel.offsetWidth;
+      const panelHeight = panel.offsetHeight;
       const viewportWidth = document.documentElement.clientWidth;
       const viewportHeight = document.documentElement.clientHeight;
       const gap = 8;
@@ -331,45 +309,51 @@ const TaskDurationMenu: React.FC<{
         0,
         viewportHeight - edgePadding * 2,
       );
-      const maxHeight = Math.min(panelHeight, availableViewportHeight);
+      const visibleHeight = Math.min(panelHeight, availableViewportHeight);
       const spaceAbove = Math.max(0, buttonRect.top - gap - edgePadding);
       const spaceBelow = Math.max(
         0,
         viewportHeight - buttonRect.bottom - gap - edgePadding,
       );
       const openAbove = panelHeight > spaceBelow && spaceAbove > spaceBelow;
-      const left = iconOnly
-        ? buttonRect.right - panelRect.width
-        : buttonRect.left;
+      if (horizontalAnchor === undefined || reanchor) {
+        horizontalAnchor = iconOnly
+          ? buttonRect.right - panelWidth
+          : buttonRect.left;
+      }
       const clampedLeft = Math.min(
-        Math.max(edgePadding, left),
-        Math.max(edgePadding, viewportWidth - panelRect.width - edgePadding),
+        Math.max(edgePadding, horizontalAnchor),
+        Math.max(edgePadding, viewportWidth - panelWidth - edgePadding),
       );
       const top = openAbove
-        ? buttonRect.top - gap - maxHeight
+        ? buttonRect.top - gap - visibleHeight
         : buttonRect.bottom + gap;
       const clampedTop = Math.min(
         Math.max(edgePadding, top),
-        Math.max(edgePadding, viewportHeight - maxHeight - edgePadding),
+        Math.max(edgePadding, viewportHeight - visibleHeight - edgePadding),
       );
 
       setMenuPosition({
         position: "fixed",
         top: clampedTop,
         left: clampedLeft,
-        maxHeight,
+        maxHeight: availableViewportHeight,
         transformOrigin: openAbove ? "bottom left" : "top left",
       });
     };
 
     updateMenuPosition();
-    window.addEventListener("resize", updateMenuPosition);
-    window.addEventListener("scroll", updateMenuPosition, true);
+    const resizeObserver = new ResizeObserver(() => updateMenuPosition());
+    if (menuPanelRef.current) resizeObserver.observe(menuPanelRef.current);
+    const reanchorMenu = () => updateMenuPosition(true);
+    window.addEventListener("resize", reanchorMenu);
+    window.addEventListener("scroll", reanchorMenu, true);
     return () => {
-      window.removeEventListener("resize", updateMenuPosition);
-      window.removeEventListener("scroll", updateMenuPosition, true);
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", reanchorMenu);
+      window.removeEventListener("scroll", reanchorMenu, true);
     };
-  }, [iconOnly, isOpen, showingCustomDuration, value, durationOptions.length]);
+  }, [iconOnly, isOpen]);
 
   return (
     <div
@@ -422,7 +406,7 @@ const TaskDurationMenu: React.FC<{
                 visibility: "hidden",
               }
             }
-            className={`z-50 w-[21rem] max-w-[calc(100vw-2rem)] rounded-xl border border-outline-variant/40 bg-surface p-2 shadow-2xl ${
+            className={`z-50 w-[21rem] max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain rounded-xl border border-outline-variant/40 bg-surface p-2 shadow-2xl ${
               showingCustomDuration ? "pb-4" : ""
             } ${
               menuPosition
@@ -455,8 +439,20 @@ const TaskDurationMenu: React.FC<{
                   existingRange={existingRange}
                   onApply={() => {
                     const weeks = customWeeks ?? draftWeeks;
-                    if (!validateCustomWeekDuration(startDate, weeks, weekday, hiddenDates).range) return;
-                    onCustomDurationApply?.(weeks);
+                    if (
+                      !validateCustomWeekDuration(
+                        startDate,
+                        weeks,
+                        weekday,
+                        hiddenDates,
+                      ).range
+                    )
+                      return;
+                    if (onCustomDurationApply) {
+                      onCustomDurationApply(weeks);
+                    } else {
+                      onChange("custom");
+                    }
                     setIsOpen(false);
                   }}
                 />
@@ -469,7 +465,6 @@ const TaskDurationMenu: React.FC<{
                   aria-current={value === option.value ? "true" : undefined}
                   onClick={() => {
                     if (option.value === "custom") {
-                      if (onCustomWeeksChange) onChange(option.value);
                       setShowingCustomDuration(true);
                     } else {
                       onChange(option.value);
@@ -1425,9 +1420,12 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   const [newTaskDuration, setNewTaskDuration] =
     useState<TaskDurationPeriod>("default");
   const [newTaskWeeks, setNewTaskWeeks] = useState("1");
-  const newTaskRange = validateCustomWeekDuration(
-    activeDayDate.getTime(), newTaskWeeks, activeDayDate.getDay(),
-  ).range;
+  const { range: newTaskRange, error: newTaskDurationError } =
+    validateCustomWeekDuration(
+      activeDayDate.getTime(),
+      newTaskWeeks,
+      activeDayDate.getDay(),
+    );
   const [cursor, setCursor] = useState(0);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [activeDropdown, setActiveDropdown] = useState<ActiveDropdown | null>(
@@ -1631,7 +1629,10 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
     const task = activeDay.tasks.find((item) => item.id === taskId);
     if (!task) return;
     const { range } = validateCustomWeekDuration(
-      activeDayDate.getTime(), weeks, activeDayDate.getDay(), task.hiddenDates,
+      activeDayDate.getTime(),
+      weeks,
+      activeDayDate.getDay(),
+      task.hiddenDates,
     );
     if (!range) return;
     setWeeklySchedule((prev) =>
@@ -1644,7 +1645,10 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                   ? {
                       ...task,
                       duration: "custom",
-                      visibilityHistory: preserveTaskHistoryBefore(task, range.startsAt),
+                      visibilityHistory: preserveTaskHistoryBefore(
+                        task,
+                        range.startsAt,
+                      ),
                       startsAt: range.startsAt,
                       expiresAt: range.expiresAt,
                     }
@@ -2181,14 +2185,13 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                                   },
                                 )}
                                 {" - "}
-                                {new Date(task.expiresAt - 1).toLocaleDateString(
-                                  undefined,
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  },
-                                )}
+                                {new Date(
+                                  task.expiresAt - 1,
+                                ).toLocaleDateString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}
                               </span>
                             )}
                         </div>
@@ -2198,9 +2201,15 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                             startDate={activeDayDate.getTime()}
                             weekday={activeDayDate.getDay()}
                             hiddenDates={task.hiddenDates}
-                            existingRange={task.startsAt !== undefined && task.expiresAt !== undefined
-                              ? { startsAt: task.startsAt, expiresAt: task.expiresAt }
-                              : undefined}
+                            existingRange={
+                              task.startsAt !== undefined &&
+                              task.expiresAt !== undefined
+                                ? {
+                                    startsAt: task.startsAt,
+                                    expiresAt: task.expiresAt,
+                                  }
+                                : undefined
+                            }
                             onCustomDurationApply={(weeks) =>
                               updateTaskWeeks(task.id, weeks)
                             }
@@ -2312,6 +2321,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                   </div>
                   <button
                     type="submit"
+                    aria-label="Add task"
                     disabled={
                       !newTaskInput.trim() ||
                       suggestions.length > 0 ||
@@ -2337,6 +2347,15 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                     weekday={activeDayDate.getDay()}
                     customWeeks={newTaskWeeks}
                     onCustomWeeksChange={setNewTaskWeeks}
+                    onCustomDurationApply={(weeks) => {
+                      setNewTaskWeeks(weeks);
+                      setNewTaskDuration("custom");
+                      inputRef.current?.form
+                        ?.querySelector<HTMLButtonElement>(
+                          'button[type="submit"]',
+                        )
+                        ?.focus();
+                    }}
                     defaultDurationLabel={getDefaultTaskDurationLabel(settings)}
                     onChange={(duration) => {
                       setNewTaskDuration(duration);
@@ -2354,11 +2373,19 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                       },
                     )}
                     {" - "}
-                    {new Date(newTaskRange.expiresAt - 1).toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {new Date(newTaskRange.expiresAt - 1).toLocaleDateString(
+                      undefined,
+                      {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      },
+                    )}
+                  </p>
+                )}
+                {newTaskDuration === "custom" && newTaskDurationError && (
+                  <p role="alert" className="mt-2 text-xs font-mono text-error">
+                    {newTaskDurationError}
                   </p>
                 )}
               </form>

@@ -1,6 +1,9 @@
 import React, { useId } from "react";
 import { Check } from "lucide-react";
-import { MAX_CUSTOM_WEEKS, validateCustomWeekDuration } from "../lib/taskDuration";
+import {
+  MAX_CUSTOM_WEEKS,
+  validateCustomWeekDuration,
+} from "../lib/taskDuration";
 
 interface CustomWeekDurationProps {
   startDate: number;
@@ -12,23 +15,40 @@ interface CustomWeekDurationProps {
   existingRange?: { startsAt: number; expiresAt: number };
 }
 
-const formatDate = (timestamp: number) => new Date(timestamp).toLocaleDateString(undefined, {
-  month: "short", day: "numeric", year: "numeric",
-});
+const formatDate = (timestamp: number) =>
+  new Date(timestamp).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 
 export const CustomWeekDuration: React.FC<CustomWeekDurationProps> = ({
-  startDate, weeks, onChange, onApply, weekday, hiddenDates, existingRange,
+  startDate,
+  weeks,
+  onChange,
+  onApply,
+  weekday,
+  hiddenDates,
+  existingRange,
 }) => {
   const inputId = useId();
-  const { range, error } = validateCustomWeekDuration(startDate, weeks, weekday, hiddenDates);
+  const { range, error } = validateCustomWeekDuration(
+    startDate,
+    weeks,
+    weekday,
+    hiddenDates,
+  );
   return (
     <div className="space-y-3 px-2 text-xs font-mono text-on-surface">
       {existingRange && (
         <p className="text-on-surface-variant">
-          Current period: {formatDate(existingRange.startsAt)} - {formatDate(existingRange.expiresAt - 1)}
+          Current period: {formatDate(existingRange.startsAt)} -{" "}
+          {formatDate(existingRange.expiresAt - 1)}
         </p>
       )}
-      <label htmlFor={inputId} className="block">Number of weeks</label>
+      <label htmlFor={inputId} className="block">
+        Number of weeks
+      </label>
       <input
         id={inputId}
         type="text"
@@ -40,7 +60,11 @@ export const CustomWeekDuration: React.FC<CustomWeekDurationProps> = ({
         autoComplete="off"
         className="min-h-9 w-full rounded-md border border-outline-variant/40 bg-surface-container-high px-3 outline-none focus:border-primary"
       />
-      <div className="flex gap-2" role="group" aria-label="Common week durations">
+      <div
+        className="flex gap-2"
+        role="group"
+        aria-label="Common week durations"
+      >
         {[1, 2, 3, 4].map((count) => (
           <button
             key={count}
@@ -53,8 +77,14 @@ export const CustomWeekDuration: React.FC<CustomWeekDurationProps> = ({
           </button>
         ))}
       </div>
-      <p id={`${inputId}-status`} aria-live="polite" className={error ? "text-error" : "text-on-surface-variant"}>
-        {range ? `${formatDate(range.startsAt)} - ${formatDate(range.expiresAt - 1)}` : error}
+      <p
+        id={`${inputId}-status`}
+        aria-live="polite"
+        className={error ? "text-error" : "text-on-surface-variant"}
+      >
+        {range
+          ? `${formatDate(range.startsAt)} - ${formatDate(range.expiresAt - 1)}`
+          : error}
       </p>
       <button
         type="button"

@@ -66,6 +66,13 @@ it("keeps custom tasks without adding a default routine", () => {
   assert.match(html, /My personal practice goal/);
 });
 
+it("provides a named submit control for adding tasks after choosing a duration", () => {
+  const html = renderRoutine("guitar", undefined, [
+    { id: "custom-task", text: "My personal practice goal", completed: false },
+  ]);
+  assert.match(html, /<button type="submit" aria-label="Add task"/);
+});
+
 it("exposes task completion controls with names and pressed state", () => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const schedule = Array.from({ length: 7 }, (_, index) => ({

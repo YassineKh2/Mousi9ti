@@ -382,7 +382,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   Default Task Duration
                 </h3>
                 <p className="mt-1 text-[11px] text-on-surface-variant">
-                  Applied to new tasks; you can still change each task.
+                  Applied to new taks, you can still change each task.
                 </p>
               </div>
               <select
