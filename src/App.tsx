@@ -1627,11 +1627,9 @@ export function App() {
           aria-label="Mousi9ti music practice workspace"
           className={`flex-1 ${isSidebarCollapsed ? "lg:pl-20" : "lg:pl-72"} pt-4 pb-20 lg:pb-0 px-4 lg:px-8 max-w-[1600px] w-full mx-auto transition-[padding] duration-200`}
         >
-          <div className="mb-5 border-b border-outline-variant/20 pb-3">
-            <h1 className="text-xl font-semibold text-on-surface">
-              {route?.h1 ?? "Page Not Found"}
-            </h1>
-            <p className="mt-1 max-w-3xl text-sm text-on-surface-variant">
+          <div className="sr-only">
+            <h1>{route?.h1 ?? "Page Not Found"}</h1>
+            <p>
               {route?.description ?? "The requested page could not be found."}
             </p>
           </div>

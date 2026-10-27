@@ -89,10 +89,8 @@ import {
   preserveTaskHistoryBefore,
 } from "../lib/taskDates";
 import { SessionWidget } from "../components/SessionWidget";
-import {
-  CalendarDateRange,
-  CalendarRangePicker,
-} from "../components/CalendarRangePicker";
+import { CustomWeekDuration } from "../components/CustomWeekDuration";
+import { validateCustomWeekDuration } from "../lib/taskDuration";
 import { StreakData } from "../types";
 import { useSettingsContext } from "../contexts/SettingsContext";
 
@@ -217,11 +215,6 @@ const isExpiredTask = (task: RoutineTask | PracticeTask) => {
   return isTaskExpiredAt(task, Date.now());
 };
 
-const taskRange = (task: RoutineTask): CalendarDateRange | null =>
-  task.startsAt !== undefined && task.expiresAt !== undefined
-    ? { start: task.startsAt, end: task.expiresAt }
-    : null;
-
 const getStartOfDay = (timestamp: number) => {
   const date = new Date(timestamp);
   return new Date(
@@ -231,14 +224,8 @@ const getStartOfDay = (timestamp: number) => {
   ).getTime();
 };
 
-const getEndOfDay = (timestamp: number) => {
-  const date = new Date(timestamp);
-  date.setHours(23, 59, 59, 999);
-  return date.getTime();
-};
-
 const getTaskDurationLabel = (task: RoutineTask) => {
-  if (task.duration === "custom") return "Custom dates";
+  if (task.duration === "custom") return "Custom duration";
   if (task.duration === "week") return "This week";
   if (task.duration === "month") return "This month";
   if (task.duration === "year") return "This year";
@@ -250,29 +237,40 @@ const TASK_DURATION_OPTIONS: { value: TaskDurationPeriod; label: string }[] = [
   { value: "week", label: "This week" },
   { value: "month", label: "This month" },
   { value: "year", label: "This year" },
-  { value: "custom", label: "Custom dates" },
+  { value: "custom", label: "Custom duration" },
 ];
 
 const TaskDurationMenu: React.FC<{
   value: TaskDurationPeriod;
   onChange: (value: TaskDurationPeriod) => void;
-  customRange: CalendarDateRange | null;
-  onCustomRangeChange: (range: CalendarDateRange) => void;
+  startDate: number;
+  weekday: number;
+  customWeeks?: string;
+  onCustomWeeksChange?: (weeks: string) => void;
+  onCustomDurationApply?: (weeks: string) => void;
+  hiddenDates?: string[];
+  existingRange?: { startsAt: number; expiresAt: number };
   defaultDurationLabel?: string;
   iconOnly?: boolean;
   className?: string;
 }> = ({
   value,
   onChange,
-  customRange,
-  onCustomRangeChange,
+  startDate,
+  weekday,
+  customWeeks,
+  onCustomWeeksChange,
+  onCustomDurationApply,
+  hiddenDates,
+  existingRange,
   defaultDurationLabel,
   iconOnly = false,
   className = "",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [showingCustomCalendar, setShowingCustomCalendar] = useState(false);
+  const [showingCustomDuration, setShowingCustomDuration] = useState(false);
+  const [draftWeeks, setDraftWeeks] = useState("1");
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuPanelRef = useRef<HTMLDivElement>(null);
@@ -371,7 +369,7 @@ const TaskDurationMenu: React.FC<{
       window.removeEventListener("resize", updateMenuPosition);
       window.removeEventListener("scroll", updateMenuPosition, true);
     };
-  }, [iconOnly, isOpen, showingCustomCalendar, value, durationOptions.length]);
+  }, [iconOnly, isOpen, showingCustomDuration, value, durationOptions.length]);
 
   return (
     <div
@@ -390,7 +388,7 @@ const TaskDurationMenu: React.FC<{
             setIsOpen(false);
           } else {
             setMenuPosition(null);
-            setShowingCustomCalendar(value === "custom");
+            setShowingCustomDuration(value === "custom");
             setIsMounted(true);
             setIsOpen(true);
           }
@@ -425,7 +423,7 @@ const TaskDurationMenu: React.FC<{
               }
             }
             className={`z-50 w-[21rem] max-w-[calc(100vw-2rem)] rounded-xl border border-outline-variant/40 bg-surface p-2 shadow-2xl ${
-              showingCustomCalendar ? "task-duration-calendar-view pb-4" : ""
+              showingCustomDuration ? "pb-4" : ""
             } ${
               menuPosition
                 ? isOpen
@@ -438,22 +436,29 @@ const TaskDurationMenu: React.FC<{
               if (!isOpen) setIsMounted(false);
             }}
           >
-            {showingCustomCalendar ? (
+            {showingCustomDuration ? (
               <>
                 <button
                   type="button"
-                  onClick={() => setShowingCustomCalendar(false)}
+                  onClick={() => setShowingCustomDuration(false)}
                   className="mb-2 flex w-full items-center gap-1 rounded px-2 py-2 text-left text-xs font-mono text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
                 >
                   <ChevronLeft size={14} />
                   Duration options
                 </button>
-                <CalendarRangePicker
-                  range={customRange}
-                  minDate={Date.now()}
-                  inline
-                  onChange={onCustomRangeChange}
-                  onComplete={() => setIsOpen(false)}
+                <CustomWeekDuration
+                  startDate={startDate}
+                  weekday={weekday}
+                  weeks={customWeeks ?? draftWeeks}
+                  onChange={onCustomWeeksChange ?? setDraftWeeks}
+                  hiddenDates={hiddenDates}
+                  existingRange={existingRange}
+                  onApply={() => {
+                    const weeks = customWeeks ?? draftWeeks;
+                    if (!validateCustomWeekDuration(startDate, weeks, weekday, hiddenDates).range) return;
+                    onCustomDurationApply?.(weeks);
+                    setIsOpen(false);
+                  }}
                 />
               </>
             ) : (
@@ -463,10 +468,11 @@ const TaskDurationMenu: React.FC<{
                   type="button"
                   aria-current={value === option.value ? "true" : undefined}
                   onClick={() => {
-                    onChange(option.value);
                     if (option.value === "custom") {
-                      setShowingCustomCalendar(true);
+                      if (onCustomWeeksChange) onChange(option.value);
+                      setShowingCustomDuration(true);
                     } else {
+                      onChange(option.value);
                       setIsOpen(false);
                     }
                   }}
@@ -1418,9 +1424,10 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   const [newTaskInput, setNewTaskInput] = useState("");
   const [newTaskDuration, setNewTaskDuration] =
     useState<TaskDurationPeriod>("default");
-  const [newTaskRange, setNewTaskRange] = useState<CalendarDateRange | null>(
-    null,
-  );
+  const [newTaskWeeks, setNewTaskWeeks] = useState("1");
+  const newTaskRange = validateCustomWeekDuration(
+    activeDayDate.getTime(), newTaskWeeks, activeDayDate.getDay(),
+  ).range;
   const [cursor, setCursor] = useState(0);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [activeDropdown, setActiveDropdown] = useState<ActiveDropdown | null>(
@@ -1560,12 +1567,12 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
         usesDefaultDuration && customRange
           ? getStartOfDay(customRange.start)
           : newTaskDuration === "custom" && newTaskRange
-            ? getStartOfDay(newTaskRange.start)
+            ? newTaskRange.startsAt
             : getStartOfDay(createdAt),
       expiresAt: usesDefaultDuration
         ? configuredExpiration
         : newTaskDuration === "custom" && newTaskRange
-          ? getEndOfDay(newTaskRange.end)
+          ? newTaskRange.expiresAt
           : getTaskExpiration(newTaskDuration),
     };
     setWeeklySchedule((prev) =>
@@ -1578,7 +1585,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
     );
     setNewTaskInput("");
     setNewTaskDuration("default");
-    setNewTaskRange(null);
+    setNewTaskWeeks("1");
     setCursor(0);
   };
 
@@ -1620,7 +1627,13 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
     );
   };
 
-  const updateTaskRange = (taskId: string, range: CalendarDateRange) => {
+  const updateTaskWeeks = (taskId: string, weeks: string) => {
+    const task = activeDay.tasks.find((item) => item.id === taskId);
+    if (!task) return;
+    const { range } = validateCustomWeekDuration(
+      activeDayDate.getTime(), weeks, activeDayDate.getDay(), task.hiddenDates,
+    );
+    if (!range) return;
     setWeeklySchedule((prev) =>
       prev.map((day) =>
         day.day === activeDayCode
@@ -1631,8 +1644,9 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                   ? {
                       ...task,
                       duration: "custom",
-                      startsAt: getStartOfDay(range.start),
-                      expiresAt: getEndOfDay(range.end),
+                      visibilityHistory: preserveTaskHistoryBefore(task, range.startsAt),
+                      startsAt: range.startsAt,
+                      expiresAt: range.expiresAt,
                     }
                   : task,
               ),
@@ -2167,7 +2181,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                                   },
                                 )}
                                 {" - "}
-                                {new Date(task.expiresAt).toLocaleDateString(
+                                {new Date(task.expiresAt - 1).toLocaleDateString(
                                   undefined,
                                   {
                                     month: "short",
@@ -2181,9 +2195,14 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                         <div className="ml-auto flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <TaskDurationMenu
                             value={task.duration ?? "forever"}
-                            customRange={taskRange(task)}
-                            onCustomRangeChange={(range) =>
-                              updateTaskRange(task.id, range)
+                            startDate={activeDayDate.getTime()}
+                            weekday={activeDayDate.getDay()}
+                            hiddenDates={task.hiddenDates}
+                            existingRange={task.startsAt !== undefined && task.expiresAt !== undefined
+                              ? { startsAt: task.startsAt, expiresAt: task.expiresAt }
+                              : undefined}
+                            onCustomDurationApply={(weeks) =>
+                              updateTaskWeeks(task.id, weeks)
                             }
                             onChange={(duration) =>
                               updateTaskDuration(task.id, duration)
@@ -2314,18 +2333,19 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                   </div>
                   <TaskDurationMenu
                     value={newTaskDuration}
-                    customRange={newTaskRange}
-                    onCustomRangeChange={setNewTaskRange}
+                    startDate={activeDayDate.getTime()}
+                    weekday={activeDayDate.getDay()}
+                    customWeeks={newTaskWeeks}
+                    onCustomWeeksChange={setNewTaskWeeks}
                     defaultDurationLabel={getDefaultTaskDurationLabel(settings)}
                     onChange={(duration) => {
                       setNewTaskDuration(duration);
-                      if (duration !== "custom") setNewTaskRange(null);
                     }}
                   />
                 </div>
                 {newTaskDuration === "custom" && newTaskRange && (
                   <p className="mt-2 text-[10px] font-mono text-on-surface-variant">
-                    {new Date(newTaskRange.start).toLocaleDateString(
+                    {new Date(newTaskRange.startsAt).toLocaleDateString(
                       undefined,
                       {
                         month: "short",
@@ -2334,7 +2354,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                       },
                     )}
                     {" - "}
-                    {new Date(newTaskRange.end).toLocaleDateString(undefined, {
+                    {new Date(newTaskRange.expiresAt - 1).toLocaleDateString(undefined, {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
