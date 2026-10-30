@@ -17,6 +17,7 @@ import {
   normalizeInstrumentRecord,
   resolveRecordInstrument,
 } from "./instruments";
+import { getEnabledInstruments } from "./instrumentDisplay";
 
 const STORAGE_KEYS = {
   SESSIONS: "Mousi9ti_sessions_v1",
@@ -52,6 +53,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   taskDefaultCustomUnit: "months",
   accentColor: "#3b82f6", // Electric Blue
   defaultInstrument: "guitar",
+  enabledInstruments: ["guitar", "piano"],
   defaultTuning: "E Standard",
   fretCount: 15,
   soundVolume: 1,
@@ -307,7 +309,7 @@ export function getSavedSettings(): AppSettings {
       parsed.fretboardColorMode = "default";
     }
 
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    return { ...DEFAULT_SETTINGS, ...parsed, enabledInstruments: getEnabledInstruments(parsed) };
   } catch (e) {
     console.error("Failed to load settings from storage", e);
     return DEFAULT_SETTINGS;
@@ -454,7 +456,7 @@ export function saveSession(session: Session): void {
       session,
       existing[index] ??
         (restored &&
-        (activeInstrument === "guitar" || activeInstrument === "piano")
+        (activeInstrument === "guitar" || activeInstrument === "piano" || activeInstrument === "bass")
           ? { instrument: activeInstrument }
           : undefined),
     );

@@ -1,6 +1,14 @@
 @import "tailwindcss";
 @import "./light-theme.css";
 
+.bass-fretboard [data-string-index] {
+  min-height: 3.5rem;
+}
+
+.bass-fretboard [data-string-index] > .flex-1 > .border-r {
+  border-right-width: 2px;
+}
+
 .daily-practice-widget-container {
   container-type: inline-size;
   min-height: 31.25rem;

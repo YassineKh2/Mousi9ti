@@ -28,6 +28,8 @@ import {
   Library,
   Power,
   Upload,
+  Piano,
+  Layers,
 } from "lucide-react";
 import {
   ALL_ROOT_NOTES,
@@ -48,12 +50,34 @@ import {
   QueueItem,
   SavedProgression,
   AppSettings,
+  PracticeInstrument,
 } from "../types";
 import { SONG_PRESETS } from "../data/songPresets";
 import { ChordDiagram } from "../components/ChordDiagram";
 import { KeyboardChordDiagram } from "../components/KeyboardChordDiagram";
+import { BassIcon } from "../components/BassIcon";
 import { SavedProgressionsModal } from "../components/SavedProgressionsModal";
 import { audioEngine } from "../lib/audio";
+import { getBassVoicings, getVoicingPitches } from "../lib/bassChords";
+import {
+  getEnabledInstruments,
+  normalizeInstrumentDisplay,
+  getDisplayedInstruments,
+  getCombinedInstrumentLabel,
+} from "../lib/instrumentDisplay";
+import type { InstrumentDisplay } from "../lib/frettedInstrument";
+
+function getPlaybackFamily(instrument: string): PracticeInstrument | undefined {
+  if (instrument === "bass") return "bass";
+  if (instrument.endsWith(".sf2")) return undefined;
+  if (instrument.includes("guitar")) return "guitar";
+  if (instrument.includes("piano") || instrument.includes("grand") || instrument.includes("keys")) return "piano";
+  return undefined;
+}
+
+function getDefaultPlaybackInstrument(instrument: PracticeInstrument): string {
+  return instrument === "piano" ? "acoustic_grand_piano" : instrument === "bass" ? "bass" : "acoustic_guitar_nylon";
+}
 
 export interface StyleStroke {
   beat: number;
@@ -1104,11 +1128,17 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
   const [selectedDuration, setSelectedDuration] = useState<number>(4);
   const [selectedStyle, setSelectedStyle] = useState<string>("down");
   const [selectedRepeats, setSelectedRepeats] = useState<number>(1);
-  const [selectedInstrument, setSelectedInstrument] = useState<string>(
-    settings.defaultInstrument === "piano"
-      ? "acoustic_grand_piano"
-      : "acoustic_guitar_nylon",
+  const enabledInstruments = getEnabledInstruments(settings);
+  const [requestedInstrumentView, setInstrumentView] = useState<InstrumentDisplay>(settings.defaultInstrument);
+  const instrumentView = normalizeInstrumentDisplay(requestedInstrumentView, enabledInstruments);
+  const displayedInstruments = getDisplayedInstruments(instrumentView, enabledInstruments);
+  const [requestedPlaybackInstrument, setSelectedInstrument] = useState<string>(
+    getDefaultPlaybackInstrument(enabledInstruments.includes(settings.defaultInstrument) ? settings.defaultInstrument : enabledInstruments[0]),
   );
+  const playbackFamily = getPlaybackFamily(requestedPlaybackInstrument);
+  const selectedInstrument = playbackFamily && !enabledInstruments.includes(playbackFamily)
+    ? getDefaultPlaybackInstrument(enabledInstruments[0])
+    : requestedPlaybackInstrument;
   const [customSoundfontFile, setCustomSoundfontFile] = useState<File | null>(
     null,
   );
@@ -1120,13 +1150,24 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
 
   useEffect(() => {
     setSelectedInstrument(
-      settings.defaultInstrument === "piano"
-        ? "acoustic_grand_piano"
-        : "acoustic_guitar_nylon",
+      getDefaultPlaybackInstrument(enabledInstruments.includes(settings.defaultInstrument) ? settings.defaultInstrument : enabledInstruments[0]),
     );
     setCustomSoundfontFile(null);
+    setInstrumentView(settings.defaultInstrument);
   }, [settings.defaultInstrument]);
 
+  useEffect(() => {
+    setInstrumentView(instrumentView);
+  }, [instrumentView]);
+
+  useEffect(() => {
+    if (selectedInstrument !== requestedPlaybackInstrument) {
+      setSelectedInstrument(selectedInstrument);
+      setCustomSoundfontFile(null);
+    }
+  }, [selectedInstrument, requestedPlaybackInstrument]);
+
+  const isBass = selectedInstrument === "bass";
   const isKeyboardOrSynth = useMemo(() => {
     return (
       selectedInstrument.includes("piano") ||
@@ -1151,7 +1192,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
   useEffect(() => {
     // Keep AudioEngine synchronized with active instrument
     audioEngine.setSelectedInstrument(selectedInstrument);
-    const soundfontSource = customSoundfontFile || selectedInstrument;
+    const soundfontSource = customSoundfontFile || (selectedInstrument === "bass" ? "electric_bass_finger" : selectedInstrument);
 
     // Load soundfonts depending on selection
     if (
@@ -1223,6 +1264,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
 
       // Play the chord
       const chordDef = getChordDefinition(item.root, item.type);
+      const isInstBass = state.instrument === "bass";
       const isInstKeyboard =
         state.instrument.includes("piano") ||
         state.instrument.includes("grand") ||
@@ -1234,7 +1276,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
               chord.id === item.customChordId &&
               (isInstKeyboard
                 ? !!chord.pianoVoicing
-                : chord.instrument !== "piano"),
+                : (chord.instrument ?? "guitar") === (isInstBass ? "bass" : "guitar")),
           )
         : undefined;
 
@@ -1244,18 +1286,22 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
       if (isInstKeyboard) {
         const voicing =
           customChord?.pianoVoicing ||
-          buildKeyboardVoicing(item.root, item.type, item.voicingIndex ?? 0);
+          buildKeyboardVoicing(item.root, item.type, !item.voicingInstrument || item.voicingInstrument === "piano" ? item.voicingIndex ?? 0 : 0);
         notesToPlay = voicing.notes.map((note) => ({
           note: note.note,
           octave: note.octave,
         }));
+      } else if (isInstBass) {
+        const voicings = getBassVoicings(chordDef);
+        const voicing = customChord?.voicing || voicings[item.voicingInstrument === "bass" ? item.voicingIndex ?? 0 : 0] || voicings[0];
+        notesToPlay = voicing ? getVoicingPitches(voicing) : [];
       } else if (
         (item.voicingIndex !== undefined &&
-          chordDef.voicings[item.voicingIndex]) ||
+          chordDef.voicings[item.voicingInstrument && item.voicingInstrument !== "guitar" ? 0 : item.voicingIndex]) ||
         customChord?.voicing
       ) {
         const voicing =
-          customChord?.voicing || chordDef.voicings[item.voicingIndex!];
+          customChord?.voicing || chordDef.voicings[item.voicingInstrument && item.voicingInstrument !== "guitar" ? 0 : item.voicingIndex!];
         voicing.frets.forEach((storedFret, stringIdx) => {
           let fret = storedFret;
           const barres =
@@ -1485,6 +1531,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
     type: string,
     voicingIndex?: number,
     customChordId?: string,
+    voicingInstrument?: "guitar" | "piano" | "bass",
   ) => {
     const chordDef = getChordDefinition(root, type);
     const isKeyboardOrSynth =
@@ -1498,14 +1545,21 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
             chord.id === customChordId &&
             (isKeyboardOrSynth
               ? !!chord.pianoVoicing
-              : chord.instrument !== "piano"),
+              : (chord.instrument ?? "guitar") === (isBass ? "bass" : "guitar")),
         )
       : undefined;
+
+    if (isBass) {
+      const voicings = getBassVoicings(chordDef);
+      const voicing = customChord?.voicing || voicings[voicingInstrument && voicingInstrument !== "bass" ? 0 : voicingIndex ?? 0] || voicings[0];
+      if (voicing) audioEngine.playChordArpeggio(getVoicingPitches(voicing), "bass", 0.04, 0, 1.8, true);
+      return;
+    }
 
     if (isKeyboardOrSynth) {
       const voicing =
         customChord?.pianoVoicing ||
-        buildKeyboardVoicing(root, type, voicingIndex ?? 0);
+        buildKeyboardVoicing(root, type, voicingInstrument && voicingInstrument !== "piano" ? 0 : voicingIndex ?? 0);
       const notesToPlay = voicing.notes.map((note) => ({
         note: note.note,
         octave: note.octave,
@@ -1523,8 +1577,8 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
 
     const voicing =
       customChord?.voicing ||
-      (voicingIndex !== undefined && chordDef.voicings[voicingIndex]
-        ? chordDef.voicings[voicingIndex]
+      (voicingIndex !== undefined && chordDef.voicings[voicingInstrument && voicingInstrument !== "guitar" ? 0 : voicingIndex]
+        ? chordDef.voicings[voicingInstrument && voicingInstrument !== "guitar" ? 0 : voicingIndex]
         : chordDef.voicings[0]);
 
     const notesToPlay: { note: string; octave: number }[] = [];
@@ -1578,31 +1632,27 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
     );
   };
 
-  const customBuilderChords = getCustomChords().filter((chord) => {
-    const matchesChord =
-      chord.root === selectedRoot && chord.chordType === selectedType;
-    return (
-      matchesChord &&
-      (isKeyboardOrSynth ? !!chord.pianoVoicing : chord.instrument !== "piano")
+  const getBuilderVoicingEntries = (instrument: PracticeInstrument) => {
+    const chordDef = getChordDefinition(selectedRoot, selectedType);
+    const customBuilderChords = getCustomChords().filter((chord) =>
+      chord.root === selectedRoot &&
+      chord.chordType === selectedType &&
+      (chord.instrument ?? (chord.pianoVoicing ? "piano" : "guitar")) === instrument &&
+      (instrument !== "piano" || !!chord.pianoVoicing),
     );
-  });
-  const builderVoicingEntries: {
-    voicingIndex?: number;
-    customChord?: CustomChord;
-  }[] = [
-    ...Array.from(
-      {
-        length: isKeyboardOrSynth
-          ? getKeyboardVoicingCount(selectedRoot, selectedType)
-          : getChordDefinition(selectedRoot, selectedType).voicings.length,
-      },
-      (_, voicingIndex) => ({ voicingIndex }),
-    ),
-    ...customBuilderChords.map((customChord) => ({ customChord })),
-  ];
+    const voicingCount = instrument === "piano"
+      ? getKeyboardVoicingCount(selectedRoot, selectedType)
+      : instrument === "bass" ? getBassVoicings(chordDef).length : chordDef.voicings.length;
+    const entries: { voicingIndex?: number; customChord?: CustomChord }[] = [
+      ...Array.from({ length: voicingCount }, (_, voicingIndex) => ({ voicingIndex })),
+      ...customBuilderChords.map((customChord) => ({ customChord })),
+    ];
+    return entries;
+  };
 
-  const handleAddChord = (voicingIndex?: number, customChordId?: string) => {
+  const handleAddChord = (instrument: PracticeInstrument, voicingIndex?: number, customChordId?: string) => {
     const newItem: QueueItem = {
+      voicingInstrument: instrument,
       id: generateId(),
       root: selectedRoot,
       type: selectedType,
@@ -1689,6 +1739,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
             </span>
             <div className="flex flex-col gap-1">
               <select
+                aria-label="Playback instrument"
                 value={
                   selectedInstrument.endsWith(".sf2")
                     ? "custom"
@@ -1705,7 +1756,10 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
                 }}
                 className="builder-instrument-select font-mono bg-surface border border-outline-variant/30 rounded-lg px-2.5 py-1 text-sm font-bold text-on-surface focus:outline-none focus:border-primary/50 cursor-pointer w-full max-w-[210px]"
               >
-                <optgroup label="Guitars">
+                {enabledInstruments.includes("bass") && <optgroup label="Bass">
+                  <option value="bass">Four-string Bass (E A D G)</option>
+                </optgroup>}
+                {enabledInstruments.includes("guitar") && <optgroup label="Guitars">
                   <option value="acoustic_guitar_nylon">
                     Nylon Acoustic Guitar
                   </option>
@@ -1720,15 +1774,15 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
                   </option>
                   <option value="overdriven_guitar">Overdriven Guitar</option>
                   <option value="distortion_guitar">Distortion Guitar</option>
-                </optgroup>
-                <optgroup label="Pianos & Keys">
+                </optgroup>}
+                {enabledInstruments.includes("piano") && <optgroup label="Pianos & Keys">
                   <option value="acoustic_grand_piano">
                     Acoustic Grand Piano
                   </option>
                   <option value="electric_piano_1">
                     Electric Piano (Rhodes)
                   </option>
-                </optgroup>
+                </optgroup>}
                 <optgroup label="Synthesizers">
                   <option value="synth_poly">Analog Poly Synth</option>
                   <option value="synth_pad">Warm Synth Pad</option>
@@ -2138,13 +2192,15 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
                             </h3>
                             <span className="text-xs text-on-surface-variant font-mono">
                               {item.voicingIndex !== undefined
-                                ? isKeyboardOrSynth
+                                ? item.voicingInstrument === "piano"
                                   ? buildKeyboardVoicing(
                                       item.root,
                                       item.type,
                                       item.voicingIndex,
                                     ).name
-                                  : getChordDefinition(item.root, item.type)
+                                  : item.voicingInstrument === "bass"
+                                    ? getBassVoicings(getChordDefinition(item.root, item.type))[item.voicingIndex]?.name
+                                    : getChordDefinition(item.root, item.type)
                                       .voicings[item.voicingIndex]?.name
                                 : CHORD_TYPES_CATALOG.find(
                                     (c) => c.type === item.type,
@@ -2284,6 +2340,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
                               item.type,
                               item.voicingIndex,
                               item.customChordId,
+                              item.voicingInstrument ?? "guitar",
                             )
                           }
                           className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
@@ -2436,6 +2493,17 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
 
             {/* Voicings List */}
             <div className="flex flex-col h-full">
+              <div role="group" aria-label="Voicing instrument view" className="flex flex-wrap gap-1 p-1 mb-3 bg-surface rounded-lg border border-outline-variant/30">
+                {([...enabledInstruments, ...(enabledInstruments.length > 1 ? ["both" as const] : [])]).map((view) => {
+                  const label = view === "both" ? getCombinedInstrumentLabel(enabledInstruments) : view === "piano" ? "Piano" : view === "bass" ? "Bass" : "Guitar";
+                  const Icon = view === "both" ? Layers : view === "piano" ? Piano : view === "bass" ? BassIcon : Guitar;
+                  return (
+                    <button key={view} type="button" aria-label={`${label} view`} aria-pressed={instrumentView === view} onClick={() => setInstrumentView(view)} className={`flex items-center justify-center gap-1.5 flex-1 px-2 py-1.5 rounded text-xs font-bold transition-colors ${instrumentView === view ? "bg-primary text-on-primary" : "text-on-surface-variant hover:bg-surface-container-highest"}`}>
+                      <Icon size={14} />{label}
+                    </button>
+                  );
+                })}
+              </div>
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-[10px] font-mono text-on-surface-variant uppercase tracking-wider">
                   Variations (Click to Add)
@@ -2451,16 +2519,19 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
               </div>
 
               <div className="flex flex-col gap-4 max-h-[420px] overflow-y-auto pr-1 pb-1">
-                {builderVoicingEntries.map((entry, idx) => {
+                {displayedInstruments.map((instrument) => (
+                  <section key={instrument} aria-label={`${instrument === "piano" ? "Piano" : instrument === "bass" ? "Bass" : "Guitar"} voicings`} data-voicing-instrument={instrument} className="flex flex-col gap-4">
+                    <h3 className="text-xs font-bold text-on-surface-variant uppercase">{instrument}</h3>
+                {getBuilderVoicingEntries(instrument).map((entry, idx) => {
                   const voicing = entry.customChord
                     ? entry.customChord.voicing
-                    : isKeyboardOrSynth
+                    : instrument === "piano"
                       ? buildKeyboardVoicing(
                           selectedRoot,
                           selectedType,
                           entry.voicingIndex ?? 0,
                         )
-                      : getChordDefinition(selectedRoot, selectedType).voicings[
+                      : (instrument === "bass" ? getBassVoicings(getChordDefinition(selectedRoot, selectedType)) : getChordDefinition(selectedRoot, selectedType).voicings)[
                           entry.voicingIndex ?? 0
                         ];
 
@@ -2469,7 +2540,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
                       key={entry.customChord?.id || idx}
                       className="relative group/voicing"
                     >
-                      {isKeyboardOrSynth ? (
+                      {instrument === "piano" ? (
                         <KeyboardChordDiagram
                           chordName={
                             entry.customChord?.pianoVoicing?.name ||
@@ -2480,10 +2551,11 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
                             (voicing as KeyboardVoicing)
                           }
                           root={selectedRoot}
-                          instrument={selectedInstrument}
+                          instrument={isKeyboardOrSynth ? selectedInstrument : "acoustic_grand_piano"}
                         />
                       ) : (
                         <ChordDiagram
+                          instrument={instrument}
                           chordName={
                             entry.customChord?.voicing.name ||
                             getChordDefinition(selectedRoot, selectedType).name
@@ -2498,6 +2570,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
                         <button
                           onClick={() =>
                             handleAddChord(
+                              instrument,
                               entry.voicingIndex,
                               entry.customChord?.id,
                             )
@@ -2512,6 +2585,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
                       <button
                         onClick={() =>
                           handleAddChord(
+                            instrument,
                             entry.voicingIndex,
                             entry.customChord?.id,
                           )
@@ -2524,6 +2598,8 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
                     </div>
                   );
                 })}
+                  </section>
+                ))}
               </div>
             </div>
           </div>

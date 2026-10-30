@@ -3,9 +3,12 @@ import { Tuning, NoteDisplayMode, NoteName, ScaleDefinition } from "../../types"
 import { GUITAR_TUNINGS, NOTE_SEMITONES, getScaleNotes, getSpelledNote } from "../../data/musicTheory";
 import { audioEngine } from "../../lib/audio";
 import { FretboardProps } from "./OriginalFretboard";
+import { getFrettedNote, getInstrumentTunings } from "../../lib/frettedInstrument";
 
 export function useFretboardLogic(props: FretboardProps) {
   const {
+    instrument = "guitar",
+    fretRange,
     tuning: controlledTuning,
     onTuningChange,
     fretCount: controlledFretCount,
@@ -24,7 +27,7 @@ export function useFretboardLogic(props: FretboardProps) {
 
   // Local state fallbacks for standalone/uncontrolled usage
   const [internalTuning, setInternalTuning] = useState<Tuning>(
-    controlledTuning || GUITAR_TUNINGS[0]
+    controlledTuning || getInstrumentTunings(instrument)[0]
   );
   const [internalFretCount, setInternalFretCount] = useState<number>(
     controlledFretCount || 15
@@ -45,7 +48,8 @@ export function useFretboardLogic(props: FretboardProps) {
     if (controlledDisplayMode) setInternalDisplayMode(controlledDisplayMode);
   }, [controlledDisplayMode]);
 
-  const tuning = controlledTuning || internalTuning;
+  const tunings = getInstrumentTunings(instrument);
+  const tuning = controlledTuning || (tunings.includes(internalTuning) ? internalTuning : tunings[0]);
   const fretCount =
     controlledFretCount !== undefined ? controlledFretCount : internalFretCount;
   const displayMode = controlledDisplayMode || internalDisplayMode;
@@ -113,6 +117,7 @@ export function useFretboardLogic(props: FretboardProps) {
   // Determine if a given fret falls into the active CAGED box
   const isInCagedBox = useCallback(
     (fretNum: number) => {
+      if (fretRange) return fretNum >= fretRange.start && fretNum <= fretRange.end;
       if (
         !activeCagedBox ||
         !selectedScale ||
@@ -139,7 +144,7 @@ export function useFretboardLogic(props: FretboardProps) {
       }
       return false;
     },
-    [activeCagedBox, selectedScale, selectedRoot, tuning]
+    [activeCagedBox, selectedScale, selectedRoot, tuning, fretRange, instrument]
   );
 
   // Play guitar note on click
@@ -156,16 +161,12 @@ export function useFretboardLogic(props: FretboardProps) {
       activeRandomNote,
     });
 
-    const totalSemitonesFromOpen = openSemitone + fret;
-    const octave =
-      baseOctave +
-      Math.floor(totalSemitonesFromOpen / 12) -
-      Math.floor(openSemitone / 12);
-
-    audioEngine.playGuitarPluck(noteName, octave);
+    const { octave } = getFrettedNote(tuning, stringIdx, fret);
+    audioEngine.playSingleInstrumentNote(noteName, octave, 1.8, 0, instrument);
   };
 
   return {
+    tunings,
     tuning,
     fretCount,
     displayMode,

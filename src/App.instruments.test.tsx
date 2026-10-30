@@ -104,6 +104,25 @@ const browserTests = String.raw`
     await mount();
     equal(probe().activeInstrument, 'piano', 'Remount uses saved default, not last switch');
   });
+  await scenario('Bass selection and sessions preserve attribution when switching back to guitar', async () => {
+    await mount({ defaultInstrument: 'bass' }, {
+      mous9iti_tasks: JSON.stringify([
+        { id: 'bass-task', text: 'Bass scales', instrument: 'bass', completed: false },
+        { id: 'guitar-task', text: 'Guitar scales', instrument: 'guitar', completed: false },
+      ]),
+    });
+    equal(probe().activeInstrument, 'bass', 'Bass default restored');
+    equal(probe().props.practiceTasks.map(task => task.id), ['bass-task'], 'Bass task scope');
+    await change(() => probe().props.onResumeSession());
+    equal(localStorage.getItem('Mousi9ti_session_instrument'), 'bass', 'Bass session captured');
+    now += 60000;
+    await switchTo('guitar');
+    equal(probe().props.isSessionActive, false, 'Bass session paused on switch');
+    await change(() => probe().props.onEndSession());
+    await change(() => probe('SessionReviewModal').props.onSave({ 'bass-task': 60 }));
+    equal(read('Mousi9ti_sessions_v1')[0].instrument, 'bass', 'Bass ownership retained');
+    equal(read('Mousi9ti_task_time_attributions_v1')[0].instrument, 'bass', 'Bass task allocation retained');
+  });
   await scenario('App falls back to guitar for an invalid saved default', async () => {
     await mount({ defaultInstrument: 'violin' });
     equal(probe().activeInstrument, 'guitar', 'Invalid saved default');
@@ -353,7 +372,7 @@ it(
             .replaceAll("&gt;", ">")
             .replaceAll("&amp;", "&"),
         );
-      assert.equal(results.length, 11, "All browser scenarios must execute");
+      assert.equal(results.length, 12, "All browser scenarios must execute");
       for (const result of results) {
         await context.test(result.name, { todo: result.todo }, () =>
           assert.equal(result.error, undefined, result.error),

@@ -64,11 +64,11 @@ interface StatsPageProps {
 }
 
 type Range = "week" | "30" | "90" | "all" | "custom";
-export type StatisticsScope = "guitar" | "piano" | "all";
-const statisticsInstrument = (record: object): "guitar" | "piano" =>
+export type StatisticsScope = "guitar" | "piano" | "bass" | "all";
+const statisticsInstrument = (record: object): "guitar" | "piano" | "bass" =>
   (record as { instrument?: string }).instrument === "piano"
     ? "piano"
-    : "guitar";
+    : (record as { instrument?: string }).instrument === "bass" ? "bass" : "guitar";
 
 export function filterStatisticsRecords<T extends object>(
   records: T[],
@@ -80,7 +80,7 @@ export function filterStatisticsRecords<T extends object>(
 }
 
 export function getDefaultStatisticsScope(value: unknown): StatisticsScope {
-  return value === "piano" ? "piano" : "guitar";
+  return value === "piano" || value === "bass" ? value : "guitar";
 }
 
 const statisticsTaskKey = (task: object, id: string) =>
@@ -157,7 +157,7 @@ export function getStatisticsStreak(dates: string[], today: string) {
 type Source = "Task" | "Timer" | "Metronome" | "Session" | "Custom";
 interface AnalyticsActivity {
   id: string;
-  instrument: "guitar" | "piano";
+  instrument: "guitar" | "piano" | "bass";
   date: string;
   startTime: number;
   durationSeconds: number;
@@ -1082,6 +1082,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({
               >
                 <option value="guitar">Guitar</option>
                 <option value="piano">Piano</option>
+                <option value="bass">Bass</option>
                 <option value="all">All instruments</option>
               </select>
               <ChevronDown
@@ -1624,7 +1625,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({
                     {scope === "all"
                       ? activity.instrument === "piano"
                         ? "Piano"
-                        : "Guitar"
+                        : activity.instrument === "bass" ? "Bass" : "Guitar"
                       : activity.bpm || "-"}
                   </td>
                   <td className="py-3 px-3 text-on-surface-variant">

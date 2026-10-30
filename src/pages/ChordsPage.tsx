@@ -16,6 +16,7 @@ import { ChordDiagram } from "../components/ChordDiagram";
 import { PianoKeyboard } from "../components/PianoKeyboard";
 import { ChordSheetMusic } from "../components/ChordSheetMusic";
 import { KeyboardChordDiagram } from "../components/KeyboardChordDiagram";
+import { BassIcon } from "../components/BassIcon";
 import {
   Search,
   Play,
@@ -27,19 +28,26 @@ import {
   Layers,
 } from "lucide-react";
 import { audioEngine } from "../lib/audio";
+import { getBassVoicings, getVoicingPitches } from "../lib/bassChords";
+import {
+  getEnabledInstruments,
+  normalizeInstrumentDisplay,
+  getDisplayedInstruments,
+  getCombinedInstrumentLabel,
+} from "../lib/instrumentDisplay";
 
 interface ChordsPageProps {
   initialChordTarget?: {
     chordType: string;
     root: NoteName;
-    instrumentView?: "guitar" | "piano" | "both";
+    instrumentView?: "guitar" | "piano" | "bass" | "both";
     customChordId?: string;
   } | null;
   onInitialChordHandled?: () => void;
   onChordRouteChange?: (
     root: NoteName,
     chordType: string,
-    instrumentView: "guitar" | "piano" | "both",
+    instrumentView: "guitar" | "piano" | "bass" | "both",
   ) => void;
   onOpenCustomChord?: () => void;
   settings: AppSettings;
@@ -62,9 +70,22 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
     initialChordType ?? "min7",
   );
   const [showStaffNotation, setShowStaffNotation] = useState(false);
-  const [instrumentView, setInstrumentView] = useState<
-    "guitar" | "piano" | "both"
+  const [requestedInstrumentView, setInstrumentView] = useState<
+    "guitar" | "piano" | "bass" | "both"
   >(initialChordTarget?.instrumentView ?? settings.defaultInstrument);
+  const enabledInstruments = getEnabledInstruments(settings);
+  const instrumentView = normalizeInstrumentDisplay(
+    requestedInstrumentView,
+    enabledInstruments,
+  );
+  const displayedInstruments = getDisplayedInstruments(
+    instrumentView,
+    enabledInstruments,
+  );
+  const combinedLabel = getCombinedInstrumentLabel(enabledInstruments);
+  useEffect(() => {
+    setInstrumentView(instrumentView);
+  }, [instrumentView]);
   const [customChords, setCustomChords] = useState<CustomChord[]>(() =>
     getCustomChords(),
   );
@@ -88,14 +109,10 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
   }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInversion, setSelectedInversion] = useState<number>(0);
-  const customVoicings = customChords.filter(
-    (chord) =>
-      chord.instrument !== "piano" &&
-      chord.root === selectedRoot &&
-      chord.chordType === selectedType,
-  );
   const customPianoVoicings = customChords.filter(
     (chord) =>
+      (chord.instrument ?? (chord.pianoVoicing ? "piano" : "guitar")) ===
+        "piano" &&
       chord.pianoVoicing &&
       chord.root === selectedRoot &&
       chord.chordType === selectedType,
@@ -239,7 +256,7 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
   useEffect(() => {
     if (!initialRouteSyncRef.current) {
       initialRouteSyncRef.current = true;
-      return;
+      if (instrumentView === requestedInstrumentView) return;
     }
     onChordRouteChange?.(selectedRoot, selectedType, instrumentView);
   }, [selectedRoot, selectedType, instrumentView, onChordRouteChange]);
@@ -284,13 +301,25 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
       octave: v.octave,
     }));
 
-    if (instrumentView === "both") {
-      audioEngine.playChordArpeggio(notesToPlay, "guitar", 0.06, 0, 1.8);
-      audioEngine.playChordArpeggio(notesToPlay, "piano", 0.06, 0.18, 1.2);
-      return;
-    }
-
-    audioEngine.playChordArpeggio(notesToPlay, instrumentView, 0.06);
+    displayedInstruments.forEach((instrument, index) => {
+      const bassVoicing =
+        instrument === "bass" ? getBassVoicings(chordDef)[0] : undefined;
+      if (instrument === "bass" && !bassVoicing) return;
+      const pitches = bassVoicing
+        ? getVoicingPitches(bassVoicing)
+        : notesToPlay;
+      if (instrumentView === "both") {
+        audioEngine.playChordArpeggio(
+          pitches,
+          instrument,
+          0.06,
+          index * 0.18,
+          instrument === "piano" ? 1.2 : 1.8,
+        );
+      } else {
+        audioEngine.playChordArpeggio(pitches, instrument, 0.06);
+      }
+    });
   };
 
   const handleInversionSelect = (index: number) => {
@@ -338,45 +367,63 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
           />
         </div>
         <div className="flex w-full shrink-0 overflow-hidden rounded border border-outline-variant/30 bg-surface-container text-xs font-mono font-bold sm:w-auto">
-          <button
-            onClick={() => setInstrumentView("guitar")}
-            aria-label="Guitar view"
-            aria-pressed={instrumentView === "guitar"}
-            className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 transition-colors sm:min-h-0 sm:flex-none sm:px-4 ${
-              instrumentView === "guitar"
-                ? "bg-primary text-on-primary"
-                : "text-on-surface-variant hover:text-on-surface"
-            }`}
-          >
-            <Guitar size={14} />
-            <span className="hidden sm:inline">Guitar</span>
-          </button>
-          <button
-            onClick={() => setInstrumentView("piano")}
-            aria-label="Piano view"
-            aria-pressed={instrumentView === "piano"}
-            className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 transition-colors sm:min-h-0 sm:flex-none sm:px-4 ${
-              instrumentView === "piano"
-                ? "bg-primary text-on-primary"
-                : "text-on-surface-variant hover:text-on-surface"
-            }`}
-          >
-            <Piano size={14} />
-            <span className="hidden sm:inline">Piano</span>
-          </button>
-          <button
-            onClick={() => setInstrumentView("both")}
-            aria-label="Both instrument views"
-            aria-pressed={instrumentView === "both"}
-            className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 transition-colors sm:min-h-0 sm:flex-none sm:px-4 ${
-              instrumentView === "both"
-                ? "bg-primary text-on-primary"
-                : "text-on-surface-variant hover:text-on-surface"
-            }`}
-          >
-            <Layers size={14} />
-            <span className="hidden sm:inline">Both</span>
-          </button>
+          {enabledInstruments.includes("bass") && (
+            <button
+              onClick={() => setInstrumentView("bass")}
+              aria-label="Bass view"
+              title="Four-string bass"
+              aria-pressed={instrumentView === "bass"}
+              className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 sm:flex-none ${instrumentView === "bass" ? "bg-primary text-on-primary" : "text-on-surface-variant"}`}
+            >
+              <BassIcon size={14} />
+              <span>Bass</span>
+            </button>
+          )}
+          {enabledInstruments.includes("guitar") && (
+            <button
+              onClick={() => setInstrumentView("guitar")}
+              aria-label="Guitar view"
+              aria-pressed={instrumentView === "guitar"}
+              className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 transition-colors sm:min-h-0 sm:flex-none sm:px-4 ${
+                instrumentView === "guitar"
+                  ? "bg-primary text-on-primary"
+                  : "text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              <Guitar size={14} />
+              <span className="hidden sm:inline">Guitar</span>
+            </button>
+          )}
+          {enabledInstruments.includes("piano") && (
+            <button
+              onClick={() => setInstrumentView("piano")}
+              aria-label="Piano view"
+              aria-pressed={instrumentView === "piano"}
+              className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 transition-colors sm:min-h-0 sm:flex-none sm:px-4 ${
+                instrumentView === "piano"
+                  ? "bg-primary text-on-primary"
+                  : "text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              <Piano size={14} />
+              <span className="hidden sm:inline">Piano</span>
+            </button>
+          )}
+          {enabledInstruments.length >= 2 && (
+            <button
+              onClick={() => setInstrumentView("both")}
+              aria-label={`${combinedLabel} instrument views`}
+              aria-pressed={instrumentView === "both"}
+              className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 transition-colors sm:min-h-0 sm:flex-none sm:px-4 ${
+                instrumentView === "both"
+                  ? "bg-primary text-on-primary"
+                  : "text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              <Layers size={14} />
+              <span className="hidden sm:inline">{combinedLabel}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -610,47 +657,70 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
               </button>
             </div>
 
-            {(instrumentView === "guitar" || instrumentView === "both") && (
-              <div className="space-y-6">
-                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
-                  <div className="flex items-center gap-2 text-sm font-mono font-bold uppercase tracking-[0.2em] text-on-surface-variant">
-                    <Guitar size={14} />
-                    <span>Guitar Voicings</span>
+            {displayedInstruments
+              .filter((instrument) => instrument !== "piano")
+              .map((instrument) => (
+                <div key={instrument} className="space-y-6 mb-8">
+                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+                    <div className="flex items-center gap-2 text-sm font-mono font-bold uppercase tracking-[0.2em] text-on-surface-variant">
+                      {instrument === "bass" ? (
+                        <BassIcon size={14} />
+                      ) : (
+                        <Guitar size={14} />
+                      )}
+                      <span>
+                        {instrument === "bass"
+                          ? "Bass Voicings"
+                          : "Guitar Voicings"}
+                      </span>
+                    </div>
+                    <span className="text-right text-[10px] font-mono uppercase tracking-[0.15em] text-on-surface-variant/80 sm:tracking-[0.2em]">
+                      click to play
+                    </span>
                   </div>
-                  <span className="text-right text-[10px] font-mono uppercase tracking-[0.15em] text-on-surface-variant/80 sm:tracking-[0.2em]">
-                    click to play
-                  </span>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 sm:gap-6">
+                    {[
+                      ...(instrument === "bass"
+                        ? getBassVoicings(chordDef)
+                        : chordDef.voicings
+                      ).map((voicing) => ({
+                        voicing,
+                        fretCount: 5,
+                      })),
+                      ...customChords
+                        .filter(
+                          (chord) =>
+                            (chord.instrument ??
+                              (chord.pianoVoicing ? "piano" : "guitar")) ===
+                              instrument &&
+                            chord.root === selectedRoot &&
+                            chord.chordType === selectedType,
+                        )
+                        .map((chord) => ({
+                          voicing: chord.voicing,
+                          fretCount: chord.fretCount ?? 5,
+                        })),
+                    ]
+                      .slice()
+                      .sort(
+                        (a, b) =>
+                          (a.voicing.baseFret || 1) - (b.voicing.baseFret || 1),
+                      )
+                      .map(({ voicing, fretCount }, idx) => (
+                        <ChordDiagram
+                          key={idx}
+                          instrument={instrument}
+                          chordName={chordDef.name}
+                          voicing={voicing}
+                          root={selectedRoot}
+                          fretCount={fretCount}
+                        />
+                      ))}
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 sm:gap-6">
-                  {[
-                    ...chordDef.voicings.map((voicing) => ({
-                      voicing,
-                      fretCount: 5,
-                    })),
-                    ...customVoicings.map((chord) => ({
-                      voicing: chord.voicing,
-                      fretCount: chord.fretCount ?? 5,
-                    })),
-                  ]
-                    .slice()
-                    .sort(
-                      (a, b) =>
-                        (a.voicing.baseFret || 1) - (b.voicing.baseFret || 1),
-                    )
-                    .map(({ voicing, fretCount }, idx) => (
-                      <ChordDiagram
-                        key={idx}
-                        chordName={chordDef.name}
-                        voicing={voicing}
-                        root={selectedRoot}
-                        fretCount={fretCount}
-                      />
-                    ))}
-                </div>
-              </div>
-            )}
+              ))}
 
-            {(instrumentView === "piano" || instrumentView === "both") && (
+            {displayedInstruments.includes("piano") && (
               <div className="flex flex-col gap-4 w-full max-w-full min-w-0 mt-8">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-sm font-mono font-bold uppercase tracking-[0.2em] text-on-surface-variant">

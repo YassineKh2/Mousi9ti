@@ -58,6 +58,21 @@ beforeEach(() => {
   });
 });
 
+it("preserves four-string bass through settings, migration, and session attribution", () => {
+  assert.equal(normalizeInstrument("bass"), "bass");
+  put("Mousi9ti_settings_v1", { defaultInstrument: "bass" });
+  put("mous9iti_tasks", [{ id: "bass-task", instrument: "bass" }]);
+  put("Mousi9ti_sessions_v1", [{ id: "bass-session", instrument: "bass" }]);
+  migrateInstrumentData();
+  assert.equal(getSavedSettings().defaultInstrument, "bass");
+  assert.equal(getTaskInstrument("bass-task"), "bass");
+  assert.equal(get("Mousi9ti_sessions_v1")[0].instrument, "bass");
+  put("Mousi9ti_settings_v1", { defaultInstrument: "guitar" });
+  migrateInstrumentData();
+  assert.equal(getTaskInstrument("bass-task"), "bass");
+  assert.equal(get("Mousi9ti_sessions_v1")[0].instrument, "bass");
+});
+
 it("captures piano once, normalizes missing fields repeatedly, and makes no writes on rerun", () => {
   put("Mousi9ti_settings_v1", { defaultInstrument: "piano" });
   put("mous9iti_tasks", [{ id: "task" }]);

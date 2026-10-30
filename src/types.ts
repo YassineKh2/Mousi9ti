@@ -21,6 +21,7 @@ export interface ChordSelection {
   root: NoteName;
   type: string;
   customChordId?: string;
+  instrument?: "guitar" | "piano" | "bass";
 }
 
 export type NoteDisplayMode = "name" | "degree" | "interval";
@@ -29,7 +30,7 @@ export type AccidentalPreference = "sharp" | "flat" | "both";
 
 export type InstrumentView = "fretboard" | "piano";
 
-export type PracticeInstrument = "guitar" | "piano";
+export type PracticeInstrument = "guitar" | "piano" | "bass";
 
 export type MetronomeSound = "click" | "woodblock" | "tick" | "beep";
 
@@ -93,6 +94,9 @@ export interface ScaleDefinition {
 }
 
 export interface GuitarVoicing {
+  instrument?: "guitar" | "bass";
+  omittedDegrees?: string[];
+  displayFretCount?: number;
   name: string;
   positionLabel: string;
   rootString: string;
@@ -153,6 +157,7 @@ export interface ChordDefinition {
   formula: string;
   notes: NoteName[];
   voicings: GuitarVoicing[];
+  bassVoicings?: GuitarVoicing[];
   keyboardVoicings?: KeyboardVoicing[];
 }
 
@@ -298,7 +303,8 @@ export interface AppSettings {
   taskDefaultCustomDuration: number;
   taskDefaultCustomUnit: "days" | "weeks" | "months" | "years";
   accentColor: string; // hex
-  defaultInstrument: "guitar" | "piano";
+  defaultInstrument: PracticeInstrument;
+  enabledInstruments?: PracticeInstrument[];
   defaultTuning: string;
   fretCount: number; // 12, 15, 21, 22, 24
   soundVolume: number; // 0-1
@@ -341,6 +347,7 @@ export interface DashboardLayoutData {
 }
 
 export interface QueueItem {
+  voicingInstrument?: "guitar" | "piano" | "bass";
   id: string;
   root: NoteName;
   type: string;

@@ -250,8 +250,9 @@ function PracticeApp() {
       root: NoteName,
       scaleId: string,
       boxKey: string | null,
-      instrumentView: "guitar" | "piano" | "both",
+      instrumentView: "guitar" | "piano" | "bass" | "both",
       pianoFocusRange: "all" | "octave4" | "octave3" | "octave34",
+      bassPosition: number | null = null,
     ) => {
       const nextUrl = buildScaleUrl(
         root,
@@ -259,6 +260,7 @@ function PracticeApp() {
         boxKey,
         instrumentView,
         pianoFocusRange,
+        bassPosition,
       );
       const [nextPath, nextSearch] = nextUrl.split("?");
       const nextRoute = resolvePageRoute(nextPath, `?${nextSearch}`);
@@ -275,7 +277,7 @@ function PracticeApp() {
     (
       root: NoteName,
       chordType: string,
-      instrumentView: "guitar" | "piano" | "both",
+      instrumentView: "guitar" | "piano" | "bass" | "both",
     ) => {
       const nextUrl = buildChordUrl(root, chordType, instrumentView);
       const [nextPath, nextSearch] = nextUrl.split("?");

@@ -15,6 +15,10 @@ import {
 import { ChordDiagram } from "./ChordDiagram";
 import { KeyboardChordDiagram } from "./KeyboardChordDiagram";
 import { PianoKeyboard } from "./PianoKeyboard";
+import { BassIcon } from "./BassIcon";
+import { getVoicingPitches, recognizeBassChord } from "../lib/bassChords";
+import { audioEngine } from "../lib/audio";
+import { BASS_STANDARD_TUNING } from "../lib/frettedInstrument";
 import { ALL_ROOT_NOTES, NOTE_SEMITONES } from "../data/musicTheory";
 import {
   CHORD_TYPES_CATALOG,
@@ -65,7 +69,7 @@ function createPianoVoicing(
 }
 
 interface CustomChordEditorProps {
-  defaultInstrument: "guitar" | "piano";
+  defaultInstrument: "guitar" | "piano" | "bass";
 }
 
 export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
@@ -75,12 +79,12 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
 
   const [root, setRoot] = useState<NoteName>("C");
   const [chordType, setChordType] = useState<string>("major");
-  const [editorInstrument, setEditorInstrument] = useState<"guitar" | "piano">(
+  const [editorInstrument, setEditorInstrument] = useState<"guitar" | "piano" | "bass">(
     defaultInstrument,
   );
 
   useEffect(() => {
-    setEditorInstrument(defaultInstrument);
+    changeEditorInstrument(defaultInstrument);
   }, [defaultInstrument]);
 
   const [name, setName] = useState("Custom Chord");
@@ -89,26 +93,26 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
   const [baseFret, setBaseFret] = useState<number | "">(1);
   const [fretCount, setFretCount] = useState(5);
 
-  const [frets, setFrets] = useState<(number | null)[]>([
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-  ]);
-  const [fingers, setFingers] = useState<(number | null)[]>([
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-  ]);
+  const [frets, setFrets] = useState<(number | null)[]>(() => Array(defaultInstrument === "bass" ? 4 : 6).fill(null));
+  const [fingers, setFingers] = useState<(number | null)[]>(() => Array(defaultInstrument === "bass" ? 4 : 6).fill(null));
 
   const [barres, setBarres] = useState<
     { fret: number; fromString: number; toString: number; finger: number }[]
   >([]);
+  const numStrings = editorInstrument === "bass" ? 4 : 6;
+  const stringIndices = Array.from({ length: numStrings }, (_, index) => index);
+  const stringSpacing = 280 / (numStrings - 1);
+  function changeEditorInstrument(instrument: "guitar" | "piano" | "bass") {
+    setEditorInstrument(instrument);
+    setFrets(Array(instrument === "bass" ? 4 : 6).fill(null));
+    setFingers(Array(instrument === "bass" ? 4 : 6).fill(null));
+    setBarres([]);
+    setDragStart(null);
+    setDragCurrent(null);
+    setIsDragging(false);
+    setBaseFret(1);
+    setRootString(instrument === "bass" ? "Root: 4th String" : "Root: 6th String");
+  }
   const [pianoNotes, setPianoNotes] = useState<KeyboardVoicingNote[]>(
     () => getChordDefinition("C", "major").keyboardVoicings?.[0]?.notes || [],
   );
@@ -229,6 +233,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
   };
 
   const handleStringClick = (stringIdx: number) => {
+    removeStringFromBarres(stringIdx);
     const newFrets = [...frets];
     if (newFrets[stringIdx] === null) {
       newFrets[stringIdx] = 0;
@@ -281,6 +286,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
   };
 
   const removeFinger = (stringIdx: number) => {
+    removeStringFromBarres(stringIdx);
     const newFrets = [...frets];
     newFrets[stringIdx] = null;
     setFrets(newFrets);
@@ -288,6 +294,16 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
     const newFingers = [...fingers];
     newFingers[stringIdx] = null;
     setFingers(newFingers);
+  };
+
+  const removeStringFromBarres = (stringIndex: number) => {
+    setBarres(current => current.flatMap(barre => {
+      if (stringIndex < barre.fromString || stringIndex > barre.toString) return [barre];
+      return [
+        ...(barre.fromString < stringIndex ? [{ ...barre, toString: stringIndex - 1 }] : []),
+        ...(barre.toString > stringIndex ? [{ ...barre, fromString: stringIndex + 1 }] : []),
+      ];
+    }));
   };
 
   const removeBarre = (fret: number) => {
@@ -331,7 +347,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
           setFrets((prev) => {
             const nf = [...prev];
             for (let i = minS; i <= maxS; i += 1) {
-              if (nf[i] === null || nf[i] === 0 || nf[i] < dragStart.f) {
+              if ((nf[i] ?? 0) < dragStart.f) {
                 nf[i] = dragStart.f;
               }
             }
@@ -385,7 +401,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
         setFrets((prev) => {
           const nf = [...prev];
           for (let i = minS; i <= maxS; i += 1) {
-            if (nf[i] === null || nf[i] === 0 || nf[i] < dragStart.f) {
+            if ((nf[i] ?? 0) < dragStart.f) {
               nf[i] = dragStart.f;
             }
           }
@@ -419,8 +435,8 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
       });
     } else {
       let minStr = 0;
-      let maxStr = 5;
-      const activeStrings = [0, 1, 2, 3, 4, 5].filter(
+      let maxStr = numStrings - 1;
+      const activeStrings = stringIndices.filter(
         (s) => frets[s] !== null && frets[s] !== 0 && frets[s]! >= absFret,
       );
 
@@ -437,7 +453,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
       setFrets((prev) => {
         const nf = [...prev];
         for (let i = minStr; i <= maxStr; i += 1) {
-          if (nf[i] === null || nf[i] === 0 || nf[i] < absFret) {
+          if ((nf[i] ?? 0) < absFret) {
             nf[i] = absFret;
           }
         }
@@ -458,9 +474,12 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
 
   const handleSave = () => {
     const voicing: GuitarVoicing = {
+      instrument: editorInstrument === "bass" ? "bass" : "guitar",
+      omittedDegrees: editorInstrument === "bass" ? recognitionCandidates.find(candidate => candidate.root === root && candidate.type === chordType)?.omittedDegrees : undefined,
+      displayFretCount: editorInstrument === "bass" ? fretCount : undefined,
       name,
       positionLabel,
-      rootString,
+      rootString: editorInstrument === "bass" ? bassLabel : rootString,
       baseFret: baseFret === "" ? 1 : baseFret,
       frets,
       fingers,
@@ -472,7 +491,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
       root,
       chordType,
       voicing,
-      fretCount: editorInstrument === "guitar" ? fretCount : undefined,
+      fretCount: editorInstrument !== "piano" ? fretCount : undefined,
       pianoVoicing:
         editorInstrument === "piano"
           ? {
@@ -507,11 +526,11 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
       setName(chord.voicing.name);
       setPositionLabel(chord.voicing.positionLabel);
       setRootString(chord.voicing.rootString);
-      setBaseFret(chord.voicing.baseFret || 1);
+      setBaseFret(instrument === "bass" ? Math.min(chord.voicing.baseFret || 1, 21 - Math.min(8, Math.max(5, chord.fretCount ?? 5))) : chord.voicing.baseFret || 1);
       setFretCount(Math.min(8, Math.max(5, chord.fretCount ?? 5)));
       setFrets([...chord.voicing.frets]);
       setFingers([...chord.voicing.fingers]);
-      setBarres(chord.voicing.barres ? [...chord.voicing.barres] : []);
+      setBarres(chord.voicing.barres ? [...chord.voicing.barres] : chord.voicing.barre ? [chord.voicing.barre] : []);
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -551,6 +570,12 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
       );
     });
   };
+
+  const bassShape: GuitarVoicing = { name, positionLabel, rootString, baseFret: baseFret || 1, frets, fingers, barres, instrument: "bass" };
+  const bassPitches = editorInstrument === "bass" ? getVoicingPitches(bassShape) : [];
+  const lowestPitch = bassPitches.reduce<(typeof bassPitches)[number] | undefined>((lowest, pitch) => !lowest || pitch.midi < lowest.midi ? pitch : lowest, undefined);
+  const bassLabel = lowestPitch ? `Bass: ${lowestPitch.note}${lowestPitch.octave}` : "All strings muted";
+  const recognitionCandidates = editorInstrument === "bass" ? recognizeBassChord(bassShape) : [];
 
   return (
     <div className="custom-chord-editor flex w-full min-w-0 flex-col gap-6 pb-12 animate-fade-in">
@@ -606,12 +631,12 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
 
           <div className="custom-chord-instrument-section">
             <span className="custom-chord-instrument-label">Editor Mode</span>
-            <div className="custom-chord-instrument-switch flex w-full shrink-0 overflow-hidden rounded border border-outline-variant/30 bg-surface-container text-xs font-mono font-bold sm:w-auto">
+            <div style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }} className="custom-chord-instrument-switch flex w-full shrink-0 overflow-hidden rounded border border-outline-variant/30 bg-surface-container text-xs font-mono font-bold sm:w-auto">
               <button
                 type="button"
                 aria-label="Use guitar chord editor"
                 title="Guitar chord editor"
-                onClick={() => setEditorInstrument("guitar")}
+                onClick={() => changeEditorInstrument("guitar")}
                 className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 transition-colors sm:min-h-0 sm:flex-none sm:px-4 ${
                   editorInstrument === "guitar"
                     ? "bg-primary text-on-primary"
@@ -625,7 +650,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                 type="button"
                 aria-label="Use piano chord editor"
                 title="Piano chord editor"
-                onClick={() => setEditorInstrument("piano")}
+                onClick={() => changeEditorInstrument("piano")}
                 className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 transition-colors sm:min-h-0 sm:flex-none sm:px-4 ${
                   editorInstrument === "piano"
                     ? "bg-primary text-on-primary"
@@ -635,6 +660,12 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                 <Piano size={14} />
                 <span className="hidden sm:inline">Piano</span>
               </button>
+              <button type="button" aria-label="Use bass chord editor" title="Four-string bass chord editor"
+                aria-pressed={editorInstrument === "bass"}
+                onClick={() => changeEditorInstrument("bass")}
+                className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 ${editorInstrument === "bass" ? "bg-primary text-on-primary" : "text-on-surface-variant"}`}>
+                <BassIcon size={14} /><span>Bass</span>
+              </button>
             </div>
           </div>
         </div>
@@ -642,7 +673,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         <div
-          className={`${editorInstrument === "guitar" ? "flex" : "hidden"} xl:col-span-7 bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 lg:p-10 flex-col items-center shadow-sm overflow-hidden`}
+          className={`${editorInstrument !== "piano" ? "flex" : "hidden"} xl:col-span-7 bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 lg:p-10 flex-col items-center shadow-sm overflow-hidden`}
         >
           <div className="w-full max-w-[400px] mb-4">
             <h2 className="text-xl font-bold mb-1 font-mono flex items-center gap-2">
@@ -717,24 +748,24 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
               />
             ))}
 
-            {[0, 1, 2, 3, 4, 5].map((s) => (
+            {stringIndices.map((s) => (
               <div
                 key={`string-${s}`}
                 className="absolute top-[60px] bottom-0 bg-on-surface-variant/40 shadow-sm"
                 style={{
-                  left: `${40 + s * 56}px`,
-                  width: `${4 + (5 - s) * 0.6}px`,
+                  left: `${40 + s * stringSpacing}px`,
+                  width: `${4 + (numStrings - 1 - s) * 0.6}px`,
                   transform: "translateX(-50%)",
                 }}
               />
             ))}
 
-            {["E", "A", "D", "G", "B", "e"].map((label, s) => (
+            {(editorInstrument === "bass" ? BASS_STANDARD_TUNING.strings : ["E", "A", "D", "G", "B", "e"]).map((label, s) => (
               <div
                 key={`label-${s}`}
                 className="absolute -bottom-8 w-10 text-center text-xs font-bold text-on-surface-variant/50"
                 style={{
-                  left: `${40 + s * 56}px`,
+                  left: `${40 + s * stringSpacing}px`,
                   transform: "translateX(-50%)",
                 }}
               >
@@ -759,13 +790,14 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
               );
             })}
 
-            {[0, 1, 2, 3, 4, 5].map((s) => (
+            {stringIndices.map((s) => (
               <button
                 key={`mute-${s}`}
+                aria-label={`String ${numStrings - s} (${editorInstrument === "bass" ? BASS_STANDARD_TUNING.strings[s] : ["E", "A", "D", "G", "B", "E"][s]}): ${frets[s] === null ? "muted" : frets[s] === 0 ? "open" : `fret ${frets[s]}`}`}
                 onClick={() => handleStringClick(s)}
                 className="absolute top-0 w-10 h-10 rounded-md flex items-center justify-center font-bold text-lg bg-surface-container-highest hover:bg-outline-variant/40 border border-outline-variant/50 transition-colors z-20 shadow-sm"
                 style={{
-                  left: `${40 + s * 56}px`,
+                  left: `${40 + s * stringSpacing}px`,
                   transform: "translateX(-50%)",
                 }}
               >
@@ -802,7 +834,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                   {f + (baseFret || 1) - 1}fr
                 </div>
 
-                {[0, 1, 2, 3, 4, 5].map((s) => {
+                {stringIndices.map((s) => {
                   const absFret = f + (baseFret || 1) - 1;
                   const isPlaced = frets[s] === absFret;
                   const isBarreCovered = barres.some(
@@ -815,12 +847,21 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                   return (
                     <div
                       key={`zone-${f}-${s}`}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`String ${numStrings - s}, fret ${absFret}`}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handleFretClick(s, f);
+                        }
+                      }}
                       onPointerDown={(e) => handlePointerDown(s, f, e)}
                       onPointerEnter={() => handlePointerEnter(s, f)}
                       onPointerUp={() => handlePointerUp(s, f)}
                       className="absolute z-20 flex items-center justify-center group cursor-pointer touch-none"
                       style={{
-                        left: `${40 + s * 56 - 28}px`,
+                        left: `${40 + s * stringSpacing - 28}px`,
                         top: `${60 + (f - 1) * 80}px`,
                         width: "56px",
                         height: "80px",
@@ -869,8 +910,8 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                   top: `${60 + (dragStart.f - (baseFret || 1)) * 80 + 20}px`,
                   height: "40px",
                   borderRadius: "20px",
-                  left: `${40 + Math.min(dragStart.s, dragCurrent.s) * 56 - 20}px`,
-                  width: `${(Math.max(dragStart.s, dragCurrent.s) - Math.min(dragStart.s, dragCurrent.s)) * 56 + 40}px`,
+                  left: `${40 + Math.min(dragStart.s, dragCurrent.s) * stringSpacing - 20}px`,
+                  width: `${(Math.max(dragStart.s, dragCurrent.s) - Math.min(dragStart.s, dragCurrent.s)) * stringSpacing + 40}px`,
                 }}
               />
             )}
@@ -883,8 +924,8 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                   top: `${60 + (barre.fret - (baseFret || 1)) * 80 + 20}px`,
                   height: "40px",
                   borderRadius: "20px",
-                  left: `${40 + barre.fromString * 56 - 20}px`,
-                  width: `${(barre.toString - barre.fromString) * 56 + 40}px`,
+                  left: `${40 + barre.fromString * stringSpacing - 20}px`,
+                  width: `${(barre.toString - barre.fromString) * stringSpacing + 40}px`,
                 }}
                 onClick={() => cycleBarreFinger(barre.fret)}
                 onPointerDown={(e) => e.stopPropagation()}
@@ -1042,7 +1083,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
               </div>
             )}
 
-            {editorInstrument === "guitar" && (
+            {editorInstrument !== "piano" && (
               <>
                 <div>
                   <label className="block text-xs font-bold font-mono text-on-surface-variant uppercase tracking-wider mb-2">
@@ -1051,7 +1092,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                   <input
                     type="number"
                     min="1"
-                    max="28"
+                    max={editorInstrument === "bass" ? 21 - fretCount : 28}
                     value={baseFret}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -1059,8 +1100,9 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                         setBaseFret("");
                       } else {
                         let num = Number.parseInt(val, 10);
-                        if (num > 28) num = 28;
-                        if (num < 1 && val !== "0") num = 1;
+                        const maxBase = editorInstrument === "bass" ? 21 - fretCount : 28;
+                        if (num > maxBase) num = maxBase;
+                        if (num < 1) num = 1;
 
                         const oldBase = baseFret || 1;
                         const diff = num - oldBase;
@@ -1092,7 +1134,11 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                   </label>
                   <select
                     value={fretCount}
-                    onChange={(e) => setFretCount(Number(e.target.value))}
+                    onChange={(e) => {
+                      const count = Number(e.target.value);
+                      setFretCount(count);
+                      if (editorInstrument === "bass") setBaseFret(current => Math.min(current || 1, 21 - count));
+                    }}
                     className="w-full bg-surface-container-highest border border-outline-variant/50 rounded px-3 py-2 text-on-surface outline-none focus:border-primary font-mono"
                   >
                     {[5, 6, 7, 8].map((count) => (
@@ -1106,7 +1152,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
             )}
           </div>
 
-          {editorInstrument === "guitar" && (
+          {editorInstrument !== "piano" && (
             <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-4 sm:p-6 shadow-sm flex flex-col items-center overflow-hidden">
               <h2 className="text-lg font-bold mb-4 w-full text-left">
                 Live Preview
@@ -1118,10 +1164,11 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                     {positionLabel || name}
                   </span>
                   <span className="bg-surface-container border border-outline-variant/20 px-2 py-0.5 rounded text-[10px] font-mono text-on-surface shrink-0">
-                    {rootString || `Root on ${root}`}
+                    {editorInstrument === "bass" ? bassLabel : rootString || `Root on ${root}`}
                   </span>
                 </div>
                 <ChordDiagram
+                  instrument={editorInstrument === "bass" ? "bass" : "guitar"}
                   noBackground={true}
                   scale={1.4}
                   compact={true}
@@ -1139,6 +1186,25 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                   fretCount={fretCount}
                 />
               </div>
+
+              {editorInstrument === "bass" && (
+                <div className="w-full mb-4 text-sm font-mono" aria-label="Bass recognition candidates">
+                  <p>{bassLabel} · {bassPitches.map(pitch => `${pitch.note}${pitch.octave}`).join(" ")}</p>
+                  <h3 className="font-bold mt-2">Catalog Candidates</h3>
+                  {recognitionCandidates.length ? recognitionCandidates.map(candidate => (
+                    <button key={`${candidate.root}-${candidate.type}`} type="button"
+                      onClick={() => { setRoot(candidate.root); setChordType(candidate.type); setName(candidate.name); }}
+                      className="block w-full text-left py-1 text-primary">
+                      {candidate.name}{candidate.bassNote !== candidate.root ? `/${candidate.bassNote}` : ""}: {candidate.match}
+                      {candidate.omittedDegrees.length ? ` (omit ${candidate.omittedDegrees.join(", ")})` : ""}
+                    </button>
+                  )) : <p className="text-on-surface-variant">No catalog match</p>}
+                  <button type="button" className="flex items-center gap-2 mt-3" aria-label="Play bass chord"
+                    onClick={() => audioEngine.playChordArpeggio(bassPitches, "bass", 0.05)}>
+                    <BassIcon size={16} /> Play Bass
+                  </button>
+                </div>
+              )}
 
               <button
                 onClick={handleSave}

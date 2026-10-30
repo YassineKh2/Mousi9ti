@@ -5,6 +5,7 @@ import {
   ScaleDefinition,
   Tuning,
   AppSettings,
+  PracticeInstrument,
 } from "../types";
 import {
   ALL_ROOT_NOTES,
@@ -17,7 +18,17 @@ import {
 } from "../data/musicTheory";
 import { Fretboard } from "../components/Fretboard";
 import { PianoKeyboard } from "../components/PianoKeyboard";
+import { BassIcon } from "../components/BassIcon";
 import { audioEngine } from "../lib/audio";
+import { BASS_STANDARD_TUNING, getFrettedNote } from "../lib/frettedInstrument";
+import { getBassScalePlayback, getBassScalePositions } from "../lib/scaleRoutes";
+import type { ScaleInstrumentView } from "../lib/scaleRoutes";
+import {
+  getEnabledInstruments,
+  normalizeInstrumentDisplay,
+  getDisplayedInstruments,
+  getCombinedInstrumentLabel,
+} from "../lib/instrumentDisplay";
 import {
   Volume2,
   Box,
@@ -41,15 +52,17 @@ interface ScalesPageProps {
     scaleId: string;
     root: NoteName;
     boxKey?: string | null;
-    instrumentView?: "guitar" | "piano" | "both";
+    instrumentView?: ScaleInstrumentView;
+    bassPosition?: number | null;
     pianoFocusRange?: "all" | "octave4" | "octave3" | "octave34";
   } | null;
   onScaleRouteChange?: (
     root: NoteName,
     scaleId: string,
     boxKey: string | null,
-    instrumentView: "guitar" | "piano" | "both",
+    instrumentView: ScaleInstrumentView,
     pianoFocusRange: "all" | "octave4" | "octave3" | "octave34",
+    bassPosition?: number | null,
   ) => void;
   settings: AppSettings;
 }
@@ -89,13 +102,38 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
   const [pianoFocusRange, setPianoFocusRange] = useState<
     "all" | "octave4" | "octave3" | "octave34"
   >(initialScaleTarget?.pianoFocusRange ?? "octave4");
-  const [instrumentView, setInstrumentView] = useState<
-    "guitar" | "piano" | "both"
-  >(initialScaleTarget?.instrumentView ?? settings.defaultInstrument);
+  const enabledInstruments = useMemo(() => getEnabledInstruments(settings), [settings.enabledInstruments]);
+  const [selectedInstrumentView, setInstrumentView] = useState<ScaleInstrumentView>(
+    initialScaleTarget?.instrumentView ?? settings.defaultInstrument,
+  );
+  const instrumentView = normalizeInstrumentDisplay(selectedInstrumentView, enabledInstruments);
+  const displayedInstruments = getDisplayedInstruments(instrumentView, enabledInstruments);
+  const showGuitar = displayedInstruments.includes("guitar");
+  const showBass = displayedInstruments.includes("bass");
+  const showPiano = displayedInstruments.includes("piano");
+  const combinedLabel = getCombinedInstrumentLabel(enabledInstruments);
+  const combinedViewLabel = `${enabledInstruments.map(instrument => instrument[0].toUpperCase() + instrument.slice(1)).join(" and ")} view`;
+  const previousDefaultInstrument = useRef(settings.defaultInstrument);
+  const [bassPosition, setBassPosition] = useState<number | null>(
+    initialScaleTarget?.bassPosition ?? null,
+  );
+  const bassPositions = getBassScalePositions(fretCount);
+  const activeBassPosition = bassPosition !== null && bassPositions.includes(bassPosition)
+    ? bassPosition
+    : null;
 
   useEffect(() => {
-    setInstrumentView(settings.defaultInstrument);
+    if (previousDefaultInstrument.current !== settings.defaultInstrument) {
+      previousDefaultInstrument.current = settings.defaultInstrument;
+      setInstrumentView(settings.defaultInstrument);
+    }
   }, [settings.defaultInstrument]);
+
+  useEffect(() => {
+    if (selectedInstrumentView === instrumentView) return;
+    setInstrumentView(instrumentView);
+    onScaleRouteChange?.(selectedRoot, selectedScale.id, activeCagedBox, instrumentView, pianoFocusRange, activeBassPosition);
+  }, [selectedInstrumentView, instrumentView, selectedRoot, selectedScale.id, activeCagedBox, pianoFocusRange, activeBassPosition, onScaleRouteChange]);
 
   // Scale Playback Direction & Animation State
   const [playDirection, setPlayDirection] =
@@ -104,15 +142,12 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
   const [activePlayingNote, setActivePlayingNote] = useState<string | null>(
     null,
   );
-  const [activePlayingOctave, setActivePlayingOctave] = useState<number | null>(
-    null,
-  );
-  const [activePlayingString, setActivePlayingString] = useState<number | null>(
-    null,
-  );
-  const [activePlayingFret, setActivePlayingFret] = useState<number | null>(
-    null,
-  );
+  const [activeInstrumentNotes, setActiveInstrumentNotes] = useState<Partial<Record<PracticeInstrument, {
+    note: NoteName;
+    octave: number;
+    stringIdx?: number;
+    fretNum?: number;
+  }>>>({});
   const [isPlayMenuOpen, setIsPlayMenuOpen] = useState<boolean>(false);
   const playbackTimeoutsRef = useRef<number[]>([]);
 
@@ -139,9 +174,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
     playbackTimeoutsRef.current = [];
     setIsPlaying(false);
     setActivePlayingNote(null);
-    setActivePlayingOctave(null);
-    setActivePlayingString(null);
-    setActivePlayingFret(null);
+    setActiveInstrumentNotes({});
   };
 
   // Sync fretCount from settings when it changes
@@ -192,7 +225,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
     return () => {
       playbackTimeoutsRef.current.forEach((id) => clearTimeout(id));
     };
-  }, [selectedRoot, selectedScale, activeCagedBox, pianoFocusRange]);
+  }, [selectedRoot, selectedScale, activeCagedBox, pianoFocusRange, instrumentView, enabledInstruments, activeBassPosition, currentTuning, fretCount]);
 
   useEffect(() => {
     if (!initialScaleTarget) return;
@@ -212,6 +245,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
         initialScaleTarget.instrumentView ?? settings.defaultInstrument,
       );
       setPianoFocusRange(initialScaleTarget.pianoFocusRange ?? "octave4");
+      setBassPosition(initialScaleTarget.bassPosition ?? null);
       setScaleSearchQuery("");
       setScaleMenuCategory("All");
       setIsScaleMenuOpen(false);
@@ -221,6 +255,14 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
   }, [initialScaleTarget, settings.defaultInstrument]);
 
   const scaleNotes = getScaleNotes(selectedRoot, selectedScale);
+  const bassHighlightedFrets = activeCagedBox || activeBassPosition === null ? [] :
+    BASS_STANDARD_TUNING.strings.flatMap((_, stringIdx) =>
+      Array.from({ length: 4 }, (_, offset) => ({ stringIdx, fret: activeBassPosition + offset }))
+        .filter(({ fret }) => {
+          const pitch = getFrettedNote(BASS_STANDARD_TUNING, stringIdx, fret);
+          return selectedScale.intervals.includes((pitch.midi - NOTE_SEMITONES[selectedRoot] + 12) % 12);
+        }),
+    );
 
   // Piano Focused Range Definition
   const pianoFocusRangeObj = useMemo(() => {
@@ -257,107 +299,155 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
     stopScalePlayback();
     setIsPlaying(true);
 
-    const playingInstrument = instrumentView;
-    const baseOctave = playingInstrument === "piano" ? 4 : 3;
-    const rootSemitone = NOTE_SEMITONES[selectedRoot] ?? 0;
-    const scaleSemitones = new Set(
-      selectedScale.intervals.map((iv) => (rootSemitone + iv) % 12),
-    );
+    const noteDurationSec = 1.2;
+    const noteStepMs = 280;
+    let longestSequence = 0;
 
-    let playSequence: {
-      note: NoteName;
-      octave: number;
-      stringIdx?: number;
-      fretNum?: number;
-    }[] = [];
+    for (const playingInstrument of displayedInstruments) {
+      const baseOctave = playingInstrument === "piano" ? 4 : 3;
+      const rootSemitone = NOTE_SEMITONES[selectedRoot] ?? 0;
+      const scaleSemitones = new Set(
+        selectedScale.intervals.map((iv) => (rootSemitone + iv) % 12),
+      );
 
-    // 1. If a CAGED box pattern / shape is selected (on Guitar or Both view), play only the notes in that shape
-    if (
-      (playingInstrument === "guitar" || playingInstrument === "both") &&
-      activeCagedBox &&
-      selectedScale.cagedBoxes &&
-      selectedScale.cagedBoxes[activeCagedBox]
-    ) {
-      const box = selectedScale.cagedBoxes[activeCagedBox];
-      const lowestStringNote = currentTuning.strings[0];
-      const lowestStringSemitone = NOTE_SEMITONES[lowestStringNote] ?? 4;
-      const rootFretOnLowestString =
-        (rootSemitone - lowestStringSemitone + 12) % 12;
-
-      const rawStartFret = rootFretOnLowestString + box.startFretOffset;
-      const rawEndFret = rootFretOnLowestString + box.endFretOffset;
-
-      // Find primary fret range on guitar neck (0 to 11 start)
-      const k = -Math.floor(rawStartFret / 12);
-      const primaryStart = rawStartFret + 12 * k;
-      const primaryEnd = rawEndFret + 12 * k;
-
-      const shapeNotes: {
+      let playSequence: {
         note: NoteName;
         octave: number;
-        stringIdx: number;
-        fretNum: number;
+        stringIdx?: number;
+        fretNum?: number;
       }[] = [];
 
-      // Traverse from lowest string (6th string, index 0) to highest string (1st string, index 5)
-      for (
-        let stringIdx = 0;
-        stringIdx < currentTuning.strings.length;
-        stringIdx++
-      ) {
-        const openNote = currentTuning.strings[stringIdx];
-        const stringBaseOctave = currentTuning.octaves[stringIdx];
-        const openSemitone = NOTE_SEMITONES[openNote] ?? 0;
+      if (playingInstrument === "bass") {
+        playSequence = getBassScalePlayback(selectedRoot, selectedScale, fretCount, activeBassPosition, direction, activeCagedBox)
+          .map((pitch) => ({
+            ...pitch,
+            note: getSpelledNote(pitch.midi % 12, { root: selectedRoot, scale: selectedScale }),
+          }));
+      }
 
+      // 1. If a CAGED box pattern / shape is selected (on Guitar or Both view), play only the notes in that shape
+      if (
+        playingInstrument === "guitar" &&
+        activeCagedBox &&
+        selectedScale.cagedBoxes &&
+        selectedScale.cagedBoxes[activeCagedBox]
+      ) {
+        const box = selectedScale.cagedBoxes[activeCagedBox];
+        const lowestStringNote = currentTuning.strings[0];
+        const lowestStringSemitone = NOTE_SEMITONES[lowestStringNote] ?? 4;
+        const rootFretOnLowestString =
+          (rootSemitone - lowestStringSemitone + 12) % 12;
+
+        const rawStartFret = rootFretOnLowestString + box.startFretOffset;
+        const rawEndFret = rootFretOnLowestString + box.endFretOffset;
+
+        // Find primary fret range on guitar neck (0 to 11 start)
+        const k = -Math.floor(rawStartFret / 12);
+        const primaryStart = rawStartFret + 12 * k;
+        const primaryEnd = rawEndFret + 12 * k;
+
+        const shapeNotes: {
+          note: NoteName;
+          octave: number;
+          stringIdx: number;
+          fretNum: number;
+        }[] = [];
+
+        // Traverse from lowest string (6th string, index 0) to highest string (1st string, index 5)
         for (
-          let fret = Math.max(0, primaryStart);
-          fret <= Math.min(fretCount, primaryEnd);
-          fret++
+          let stringIdx = 0;
+          stringIdx < currentTuning.strings.length;
+          stringIdx++
         ) {
-          const currentSemitone = (openSemitone + fret) % 12;
-          if (scaleSemitones.has(currentSemitone)) {
-            const noteName = getSpelledNote(currentSemitone, {
-              root: selectedRoot,
-              scale: selectedScale,
-            });
-            const totalSemitonesFromOpen = openSemitone + fret;
-            const octave =
-              stringBaseOctave +
-              Math.floor(totalSemitonesFromOpen / 12) -
-              Math.floor(openSemitone / 12);
-            shapeNotes.push({
-              note: noteName,
-              octave,
-              stringIdx,
-              fretNum: fret,
-            });
+          const openNote = currentTuning.strings[stringIdx];
+          const stringBaseOctave = currentTuning.octaves[stringIdx];
+          const openSemitone = NOTE_SEMITONES[openNote] ?? 0;
+
+          for (
+            let fret = Math.max(0, primaryStart);
+            fret <= Math.min(fretCount, primaryEnd);
+            fret++
+          ) {
+            const currentSemitone = (openSemitone + fret) % 12;
+            if (scaleSemitones.has(currentSemitone)) {
+              const noteName = getSpelledNote(currentSemitone, {
+                root: selectedRoot,
+                scale: selectedScale,
+              });
+              const totalSemitonesFromOpen = openSemitone + fret;
+              const octave =
+                stringBaseOctave +
+                Math.floor(totalSemitonesFromOpen / 12) -
+                Math.floor(openSemitone / 12);
+              shapeNotes.push({
+                note: noteName,
+                octave,
+                stringIdx,
+                fretNum: fret,
+              });
+            }
+          }
+        }
+
+        if (shapeNotes.length > 0) {
+          if (direction === "ascending") {
+            playSequence = shapeNotes;
+          } else if (direction === "descending") {
+            playSequence = [...shapeNotes].reverse();
+          } else if (direction === "both") {
+            playSequence = [...shapeNotes, ...shapeNotes.slice(0, -1).reverse()];
           }
         }
       }
 
-      if (shapeNotes.length > 0) {
+      // 2. If no CAGED shape is active and Piano Focus Range is enabled (on Piano or Both view), play that focused range
+      if (
+        playSequence.length === 0 &&
+        playingInstrument === "piano" &&
+        pianoFocusRange !== "all"
+      ) {
+        const startOct = pianoFocusRange === "octave4" ? 4 : 3;
+        const numOctaves = pianoFocusRange === "octave34" ? 2 : 1;
+        const pianoSequence: { note: NoteName; octave: number }[] = [];
+
+        for (let o = 0; o < numOctaves; o++) {
+          const curBaseOct = startOct + o;
+          selectedScale.intervals.forEach((interval) => {
+            const semitonesTotal = rootSemitone + interval;
+            const noteName = getSpelledNote(semitonesTotal % 12, {
+              root: selectedRoot,
+              scale: selectedScale,
+            });
+            const octaveOffset = Math.floor(semitonesTotal / 12);
+            pianoSequence.push({
+              note: noteName,
+              octave: curBaseOct + octaveOffset,
+            });
+          });
+        }
+
+        // Top closing root note
+        const finalOct = startOct + numOctaves;
+        pianoSequence.push({
+          note: selectedRoot,
+          octave: finalOct,
+        });
+
         if (direction === "ascending") {
-          playSequence = shapeNotes;
+          playSequence = pianoSequence;
         } else if (direction === "descending") {
-          playSequence = [...shapeNotes].reverse();
+          playSequence = [...pianoSequence].reverse();
         } else if (direction === "both") {
-          playSequence = [...shapeNotes, ...shapeNotes.slice(0, -1).reverse()];
+          playSequence = [
+            ...pianoSequence,
+            ...pianoSequence.slice(0, -1).reverse(),
+          ];
         }
       }
-    }
 
-    // 2. If no CAGED shape is active and Piano Focus Range is enabled (on Piano or Both view), play that focused range
-    if (
-      playSequence.length === 0 &&
-      (playingInstrument === "piano" || playingInstrument === "both") &&
-      pianoFocusRange !== "all"
-    ) {
-      const startOct = pianoFocusRange === "octave4" ? 4 : 3;
-      const numOctaves = pianoFocusRange === "octave34" ? 2 : 1;
-      const pianoSequence: { note: NoteName; octave: number }[] = [];
-
-      for (let o = 0; o < numOctaves; o++) {
-        const curBaseOct = startOct + o;
+      // Default full scale playback if no shape is selected or shape produced no notes
+      if (playSequence.length === 0 && playingInstrument !== "bass") {
+        const fullScaleWithOctaves: { note: NoteName; octave: number }[] = [];
         selectedScale.intervals.forEach((interval) => {
           const semitonesTotal = rootSemitone + interval;
           const noteName = getSpelledNote(semitonesTotal % 12, {
@@ -365,99 +455,59 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
             scale: selectedScale,
           });
           const octaveOffset = Math.floor(semitonesTotal / 12);
-          pianoSequence.push({
+          fullScaleWithOctaves.push({
             note: noteName,
-            octave: curBaseOct + octaveOffset,
+            octave: baseOctave + octaveOffset,
           });
         });
-      }
 
-      // Top closing root note
-      const finalOct = startOct + numOctaves;
-      pianoSequence.push({
-        note: selectedRoot,
-        octave: finalOct,
-      });
-
-      if (direction === "ascending") {
-        playSequence = pianoSequence;
-      } else if (direction === "descending") {
-        playSequence = [...pianoSequence].reverse();
-      } else if (direction === "both") {
-        playSequence = [
-          ...pianoSequence,
-          ...pianoSequence.slice(0, -1).reverse(),
-        ];
-      }
-    }
-
-    // Default full scale playback if no shape is selected or shape produced no notes
-    if (playSequence.length === 0) {
-      const fullScaleWithOctaves: { note: NoteName; octave: number }[] = [];
-      selectedScale.intervals.forEach((interval) => {
-        const semitonesTotal = rootSemitone + interval;
-        const noteName = getSpelledNote(semitonesTotal % 12, {
-          root: selectedRoot,
-          scale: selectedScale,
-        });
-        const octaveOffset = Math.floor(semitonesTotal / 12);
+        // Top root note (1 octave higher)
+        const topRootSemitones = rootSemitone + 12;
         fullScaleWithOctaves.push({
-          note: noteName,
-          octave: baseOctave + octaveOffset,
+          note: selectedRoot,
+          octave: baseOctave + Math.floor(topRootSemitones / 12),
         });
-      });
 
-      // Top root note (1 octave higher)
-      const topRootSemitones = rootSemitone + 12;
-      fullScaleWithOctaves.push({
-        note: selectedRoot,
-        octave: baseOctave + Math.floor(topRootSemitones / 12),
-      });
-
-      if (direction === "ascending") {
-        playSequence = fullScaleWithOctaves;
-      } else if (direction === "descending") {
-        playSequence = [...fullScaleWithOctaves].reverse();
-      } else if (direction === "both") {
-        playSequence = [
-          ...fullScaleWithOctaves,
-          ...fullScaleWithOctaves.slice(0, -1).reverse(),
-        ];
+        if (direction === "ascending") {
+          playSequence = fullScaleWithOctaves;
+        } else if (direction === "descending") {
+          playSequence = [...fullScaleWithOctaves].reverse();
+        } else if (direction === "both") {
+          playSequence = [
+            ...fullScaleWithOctaves,
+            ...fullScaleWithOctaves.slice(0, -1).reverse(),
+          ];
+        }
       }
+
+      longestSequence = Math.max(longestSequence, playSequence.length);
+
+      playSequence.forEach((item, idx) => {
+        const tId = window.setTimeout(() => {
+          setActivePlayingNote(item.note);
+          setActiveInstrumentNotes(previous => ({ ...previous, [playingInstrument]: item }));
+
+          if (playingInstrument === "piano") {
+            audioEngine.playPianoNote(item.note, item.octave, noteDurationSec);
+          }
+          if (playingInstrument === "guitar") {
+            audioEngine.playGuitarPluck(item.note, item.octave, noteDurationSec);
+          }
+          if (playingInstrument === "bass") {
+            audioEngine.playBassPluck(item.note, item.octave, noteDurationSec);
+          }
+
+        }, idx * noteStepMs);
+
+        playbackTimeoutsRef.current.push(tId);
+      });
     }
 
-    const noteDurationSec = 1.2;
-    const noteStepMs = 280;
-
-    playSequence.forEach((item, idx) => {
-      const tId = window.setTimeout(() => {
-        setActivePlayingNote(item.note);
-        setActivePlayingOctave(item.octave);
-        setActivePlayingString(item.stringIdx ?? null);
-        setActivePlayingFret(item.fretNum ?? null);
-
-        if (playingInstrument === "piano" || playingInstrument === "both") {
-          audioEngine.playPianoNote(item.note, item.octave, noteDurationSec);
-        }
-        if (playingInstrument === "guitar" || playingInstrument === "both") {
-          audioEngine.playGuitarPluck(item.note, item.octave, noteDurationSec);
-        }
-
-        // If last note in sequence, wrap up playing state
-        if (idx === playSequence.length - 1) {
-          const finishTId = window.setTimeout(() => {
-            setIsPlaying(false);
-            setActivePlayingNote(null);
-            setActivePlayingOctave(null);
-            setActivePlayingString(null);
-            setActivePlayingFret(null);
-          }, noteStepMs);
-          playbackTimeoutsRef.current.push(finishTId);
-        }
-      }, idx * noteStepMs);
-
-      playbackTimeoutsRef.current.push(tId);
-    });
+    if (longestSequence === 0) {
+      setIsPlaying(false);
+      return;
+    }
+    playbackTimeoutsRef.current.push(window.setTimeout(stopScalePlayback, longestSequence * noteStepMs));
   };
 
   // Filter scales for the search dropdown
@@ -530,6 +580,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                               null,
                               instrumentView,
                               pianoFocusRange,
+                              activeBassPosition,
                             );
                             setIsRootMenuOpen(false);
                           }}
@@ -665,6 +716,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                                 null,
                                 instrumentView,
                                 pianoFocusRange,
+                                activeBassPosition,
                               );
                               setIsScaleMenuOpen(false);
                             }}
@@ -734,7 +786,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
 
             {/* Instrument Toggle (Guitar / Piano / Both) */}
             <div className="flex w-fit shrink-0 items-center gap-1 rounded-lg border border-outline-variant/30 bg-surface-container-low p-1">
-              <button
+              {enabledInstruments.includes("guitar") && <button
                 type="button"
                 onClick={() => {
                   setInstrumentView("guitar");
@@ -757,9 +809,29 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
               >
                 <Guitar size={14} />
                 <span className="hidden lg:inline">Guitar</span>
-              </button>
+              </button>}
 
-              <button
+              {enabledInstruments.includes("bass") && <button
+                type="button"
+                onClick={() => {
+                  setInstrumentView("bass");
+                  onScaleRouteChange?.(selectedRoot, selectedScale.id, activeCagedBox, "bass", pianoFocusRange, activeBassPosition);
+                }}
+                aria-label="Bass view"
+                aria-pressed={instrumentView === "bass"}
+                title="Bass view"
+                className={`w-8 lg:w-auto h-8 px-0 lg:px-2 flex items-center justify-center gap-1.5 text-xs font-mono rounded transition-all cursor-pointer ${
+                  instrumentView === "bass"
+                    ? "bg-primary text-on-primary font-bold shadow"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <BassIcon size={14} />
+                <span className="lg:hidden">B</span>
+                <span className="hidden lg:inline">Bass</span>
+              </button>}
+
+              {enabledInstruments.includes("piano") && <button
                 type="button"
                 onClick={() => {
                   setInstrumentView("piano");
@@ -783,9 +855,9 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
               >
                 <Piano size={14} />
                 <span className="hidden lg:inline">Piano</span>
-              </button>
+              </button>}
 
-              <button
+              {enabledInstruments.length >= 2 && <button
                 type="button"
                 onClick={() => {
                   setInstrumentView("both");
@@ -800,11 +872,12 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                     bothBox,
                     "both",
                     pianoFocusRange,
+                    activeBassPosition,
                   );
                 }}
-                aria-label="Guitar and piano view"
+                aria-label={combinedViewLabel}
                 aria-pressed={instrumentView === "both"}
-                title="Guitar and piano view"
+                title={combinedViewLabel}
                 className={`w-8 lg:w-auto h-8 px-0 lg:px-2 flex items-center justify-center gap-1.5 text-xs font-mono rounded transition-all cursor-pointer ${
                   instrumentView === "both"
                     ? "bg-primary text-on-primary font-bold shadow"
@@ -812,8 +885,8 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                 }`}
               >
                 <Layers size={14} />
-                <span className="hidden lg:inline">Both</span>
-              </button>
+                <span className="hidden lg:inline">{combinedLabel}</span>
+              </button>}
             </div>
 
             {/* Play Scale with Integrated Direction Dropdown */}
@@ -981,7 +1054,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
         </div>
 
         {/* CAGED System Box Selector (Shown when Guitar or Both is chosen) */}
-        {(instrumentView === "guitar" || instrumentView === "both") &&
+        {(showGuitar || showBass) &&
           selectedScale.cagedBoxes && (
             <div className="space-y-3 border-t border-outline-variant/30 pt-3">
               <div className="flex items-start gap-2.5">
@@ -1001,12 +1074,12 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                   type="button"
                   onClick={() => {
                     setActiveCagedBox(null);
-                    setInstrumentView("guitar");
+                    setBassPosition(null);
                     onScaleRouteChange?.(
                       selectedRoot,
                       selectedScale.id,
                       null,
-                      "guitar",
+                      instrumentView,
                       pianoFocusRange,
                     );
                   }}
@@ -1041,12 +1114,12 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                       type="button"
                       onClick={() => {
                         setActiveCagedBox(boxKey);
-                        setInstrumentView("guitar");
+                        setBassPosition(null);
                         onScaleRouteChange?.(
                           selectedRoot,
                           selectedScale.id,
                           boxKey,
-                          "guitar",
+                          instrumentView,
                           pianoFocusRange,
                         );
                       }}
@@ -1089,7 +1162,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
           )}
 
         {/* Piano Visible Range / Scale Span Focus (Shown when Piano or Both is chosen) */}
-        {(instrumentView === "piano" || instrumentView === "both") && (
+        {showPiano && (
           <div className="space-y-3 border-t border-outline-variant/30 pt-3">
             <div className="flex items-start gap-2.5">
               <Piano size={16} className="mt-0.5 shrink-0 text-primary" />
@@ -1140,6 +1213,7 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                         activeCagedBox,
                         instrumentView,
                         range,
+                        activeBassPosition,
                       );
                     }}
                     aria-pressed={isActive}
@@ -1186,30 +1260,36 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
 
       {/* Fretboard Visualization */}
       <div data-tour="scales-fretboard">
-        {(instrumentView === "guitar" || instrumentView === "both") && (
+        {displayedInstruments.filter(instrument => instrument !== "piano").map(instrument => (
+          <section key={instrument} aria-label={`${instrument === "bass" ? "Bass" : "Guitar"} scale fretboard`}>
+          {instrumentView === "both" && <h3 className="mt-4 mb-2 text-sm font-mono font-bold text-on-surface">{instrument === "bass" ? "Bass" : "Guitar"}</h3>}
           <Fretboard
-            tuning={currentTuning}
-            onTuningChange={setCurrentTuning}
+            fretRange={instrument === "bass" && !activeCagedBox && activeBassPosition !== null ? { start: activeBassPosition, end: Math.min(fretCount, activeBassPosition + 3) } : undefined}
+            instrument={instrument}
+            tuning={instrument === "bass" ? BASS_STANDARD_TUNING : currentTuning}
+            onTuningChange={instrument === "bass" ? undefined : setCurrentTuning}
             fretCount={fretCount}
             onFretCountChange={setFretCount}
             selectedRoot={selectedRoot}
             selectedScale={selectedScale}
-            activePlayingNote={activePlayingNote}
-            activePlayingString={activePlayingString}
-            activePlayingFret={activePlayingFret}
+            activePlayingNote={activeInstrumentNotes[instrument]?.note ?? null}
+            activePlayingString={activeInstrumentNotes[instrument]?.stringIdx ?? null}
+            activePlayingFret={activeInstrumentNotes[instrument]?.fretNum ?? null}
             displayMode={displayMode}
             onDisplayModeChange={setDisplayMode}
             activeCagedBox={activeCagedBox}
+            highlightedFrets={instrument === "bass" ? bassHighlightedFrets : undefined}
           />
-        )}
+          </section>
+        ))}
 
         {/* Piano Visualizer Sync */}
-        {(instrumentView === "piano" || instrumentView === "both") && (
+        {showPiano && (
           <PianoKeyboard
             selectedRoot={selectedRoot}
             selectedScale={selectedScale}
-            activePlayingNote={activePlayingNote}
-            activePlayingOctave={activePlayingOctave}
+            activePlayingNote={activeInstrumentNotes.piano?.note ?? null}
+            activePlayingOctave={activeInstrumentNotes.piano?.octave ?? null}
             displayMode={displayMode}
             focusRange={pianoFocusRangeObj}
           />

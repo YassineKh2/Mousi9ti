@@ -29,9 +29,11 @@ class AudioEngine {
   private currentInstrument = "acoustic_guitar_nylon";
   private guitarInstrument: any = null;
   private pianoInstrument: any = null;
+  private bassInstrument: any = null;
   private builderInstrumentInstance: any = null;
+  private builderSoundfontSource: string | File | null = null;
   private defaultSoundfontLoadPromises = new Map<
-    "guitar" | "piano",
+    "guitar" | "piano" | "bass",
     Promise<void>
   >();
   private builderSoundfontLoadPromise: Promise<void> | null = null;
@@ -302,21 +304,23 @@ class AudioEngine {
   public async loadSoundfonts(
     guitarSource: string = "acoustic_guitar_nylon",
     pianoSource: string = "acoustic_grand_piano",
+    bassSource: string = "electric_bass_finger",
   ) {
     await Promise.all([
       this.loadDefaultSoundfont("guitar", guitarSource),
       this.loadDefaultSoundfont("piano", pianoSource),
+      this.loadDefaultSoundfont("bass", bassSource),
     ]);
   }
 
   private async loadDefaultSoundfont(
-    instrument: "guitar" | "piano",
+    instrument: "guitar" | "piano" | "bass",
     source = instrument === "guitar"
       ? "acoustic_guitar_nylon"
-      : "acoustic_grand_piano",
+      : instrument === "bass" ? "electric_bass_finger" : "acoustic_grand_piano",
   ) {
     const instrumentKey =
-      instrument === "guitar" ? "guitarInstrument" : "pianoInstrument";
+      instrument === "guitar" ? "guitarInstrument" : instrument === "bass" ? "bassInstrument" : "pianoInstrument";
     if (this[instrumentKey]) return;
 
     const pending = this.defaultSoundfontLoadPromises.get(instrument);
@@ -356,9 +360,11 @@ class AudioEngine {
 
     if (this.builderSoundfontLoadPromise) {
       await this.builderSoundfontLoadPromise;
-      return;
     }
+    if (this.builderSoundfontSource === source && this.builderInstrumentInstance) return;
 
+    this.builderInstrumentInstance = null;
+    this.builderSoundfontSource = source;
     this.isSoundfontLoading = true;
     const isUploadedFile = typeof source !== "string";
     const sourceUrl = isUploadedFile ? URL.createObjectURL(source) : source;
@@ -371,27 +377,29 @@ class AudioEngine {
           this.masterGain || this.compressor || this.ctx!.destination;
 
         if (isUploadedFile || source.toLowerCase().endsWith(".sf2")) {
-          this.builderInstrumentInstance = Soundfont2(this.ctx as any, {
+          const loadedInstrument = Soundfont2(this.ctx as any, {
             url: sourceUrl,
             createSoundfont: (data: ArrayBuffer) =>
               new SoundFont2(new Uint8Array(data)),
             destination,
           });
-          await this.builderInstrumentInstance.ready;
+          await loadedInstrument.ready;
           if (
-            this.builderInstrumentInstance.instrumentNames &&
-            this.builderInstrumentInstance.instrumentNames.length > 0
+            loadedInstrument.instrumentNames &&
+            loadedInstrument.instrumentNames.length > 0
           ) {
-            this.builderInstrumentInstance.loadInstrument(
-              this.builderInstrumentInstance.instrumentNames[0],
+            loadedInstrument.loadInstrument(
+              loadedInstrument.instrumentNames[0],
             );
           }
+          this.builderInstrumentInstance = loadedInstrument;
         } else {
-          this.builderInstrumentInstance = Soundfont(this.ctx as any, {
+          const loadedInstrument = Soundfont(this.ctx as any, {
             instrument: source,
             destination,
           });
-          await this.builderInstrumentInstance.ready;
+          await loadedInstrument.ready;
+          this.builderInstrumentInstance = loadedInstrument;
         }
       } catch (err) {
         console.error("Failed to load builder soundfont:", err);
@@ -403,6 +411,46 @@ class AudioEngine {
     })();
 
     await this.builderSoundfontLoadPromise;
+  }
+
+  private playSampledNote(
+    instrument: "guitar" | "piano" | "bass",
+    note: string,
+    octave: number,
+    duration: number,
+    timeOffset: number,
+    useBuilder: boolean,
+  ) {
+    const context = this.getContext();
+    const instrumentKey = instrument === "guitar" ? "guitarInstrument" : instrument === "bass" ? "bassInstrument" : "pianoInstrument";
+    const requestedTime = context.currentTime + timeOffset + 0.02;
+    const start = (loadedInstrument: any, time: number) => {
+      if (this.isMuted || !loadedInstrument) return;
+      loadedInstrument.start({
+        note: note + octave,
+        time,
+        duration: Math.max(0.3, duration),
+        velocity: Math.floor(this.volume * 95),
+      });
+    };
+    const loadedInstrument = useBuilder ? this.builderInstrumentInstance : this[instrumentKey];
+    if (loadedInstrument) {
+      start(loadedInstrument, requestedTime);
+      return;
+    }
+    const source = this.builderSoundfontSource;
+    const loading = useBuilder
+      ? this.builderSoundfontLoadPromise || this.loadBuilderSoundfont(
+        this.currentInstrument === "bass" ? "electric_bass_finger" : this.currentInstrument,
+      )
+      : this.loadDefaultSoundfont(instrument);
+    void loading.then(() => {
+      if (useBuilder && source !== null && source !== this.builderSoundfontSource) return;
+      start(
+        useBuilder ? this.builderInstrumentInstance : this[instrumentKey],
+        Math.max(requestedTime, context.currentTime + timeOffset + 0.02),
+      );
+    });
   }
 
   // Convert Note Name + Octave to Frequency (Hz)
@@ -432,7 +480,7 @@ class AudioEngine {
     return 440 * Math.pow(2, (midiNumber - 69) / 12);
   }
 
-  // Play a realistic synthesized acoustic guitar pluck
+  // Play a sampled acoustic guitar pluck
   public playGuitarPluck(
     note: string,
     octave: number = 3,
@@ -441,96 +489,21 @@ class AudioEngine {
     useBuilderInst: boolean = false,
   ) {
     if (this.isMuted) return;
-    const ctx = this.getContext();
-    if (!this.guitarInstrument && !useBuilderInst) {
-      void this.loadDefaultSoundfont("guitar");
-    }
-    const startTime = ctx.currentTime + timeOffset + 0.02;
-
-    const instToUse = useBuilderInst
-      ? this.builderInstrumentInstance
-      : this.guitarInstrument;
-
-    if (instToUse) {
-      instToUse.start({
-        note: note + octave,
-        time: startTime,
-        duration: Math.max(0.3, duration),
-        velocity: Math.floor(this.volume * 95),
-      });
-      return;
-    }
-
-    const freq = this.noteToFrequency(note, octave);
-
-    const osc1 = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
-    const osc3 = ctx.createOscillator();
-
-    const gain1 = ctx.createGain();
-    const gain2 = ctx.createGain();
-    const gain3 = ctx.createGain();
-
-    const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(Math.min(freq * 5, 5500), startTime);
-    filter.frequency.exponentialRampToValueAtTime(
-      Math.max(freq * 1.1, 160),
-      startTime + duration,
-    );
-    filter.Q.setValueAtTime(0.707, startTime);
-
-    osc1.type = "triangle";
-    osc1.frequency.setValueAtTime(freq, startTime);
-
-    osc2.type = "sawtooth";
-    osc2.frequency.setValueAtTime(freq * 2, startTime);
-
-    osc3.type = "sine";
-    osc3.frequency.setValueAtTime(freq * 3, startTime);
-
-    const masterPluckGain = ctx.createGain();
-    masterPluckGain.gain.setValueAtTime(0, ctx.currentTime);
-    masterPluckGain.gain.setValueAtTime(0.0001, startTime);
-    masterPluckGain.gain.linearRampToValueAtTime(0.28, startTime + 0.005);
-    masterPluckGain.gain.exponentialRampToValueAtTime(0.1, startTime + 0.12);
-    masterPluckGain.gain.exponentialRampToValueAtTime(
-      0.0001,
-      startTime + duration * 0.96,
-    );
-    masterPluckGain.gain.linearRampToValueAtTime(0, startTime + duration);
-
-    gain1.gain.setValueAtTime(0.7, startTime);
-    gain2.gain.setValueAtTime(0.25, startTime);
-    gain3.gain.setValueAtTime(0.1, startTime);
-
-    osc1.connect(gain1);
-    osc2.connect(gain2);
-    osc3.connect(gain3);
-
-    gain1.connect(filter);
-    gain2.connect(filter);
-    gain3.connect(filter);
-
-    filter.connect(masterPluckGain);
-    if (useBuilderInst && this.masterGain) {
-      masterPluckGain.connect(this.masterGain);
-    } else if (!useBuilderInst && this.compressor) {
-      masterPluckGain.connect(this.compressor);
-    } else {
-      masterPluckGain.connect(ctx.destination);
-    }
-
-    osc1.start(startTime);
-    osc2.start(startTime);
-    osc3.start(startTime);
-
-    osc1.stop(startTime + duration);
-    osc2.stop(startTime + duration);
-    osc3.stop(startTime + duration);
+    this.playSampledNote("guitar", note, octave, duration, timeOffset, useBuilderInst);
   }
 
-  // Play a realistic synthesized acoustic piano tone
+  public playBassPluck(
+    note: string,
+    octave: number = 1,
+    duration: number = 1.8,
+    timeOffset: number = 0,
+    useBuilderInst: boolean = false,
+  ) {
+    if (this.isMuted) return;
+    this.playSampledNote("bass", note, octave, duration, timeOffset, useBuilderInst);
+  }
+
+  // Play a sampled acoustic piano tone
   public playPianoNote(
     note: string,
     octave: number = 4,
@@ -539,93 +512,7 @@ class AudioEngine {
     useBuilderInst: boolean = false,
   ) {
     if (this.isMuted) return;
-    const ctx = this.getContext();
-    if (!this.pianoInstrument && !useBuilderInst) {
-      void this.loadDefaultSoundfont("piano");
-    }
-    const startTime = ctx.currentTime + timeOffset + 0.02;
-
-    const instToUse = useBuilderInst
-      ? this.builderInstrumentInstance
-      : this.pianoInstrument;
-
-    if (instToUse) {
-      instToUse.start({
-        note: note + octave,
-        time: startTime,
-        duration: Math.max(0.3, duration),
-        velocity: Math.floor(this.volume * 95),
-      });
-      return;
-    }
-
-    const freq = this.noteToFrequency(note, octave);
-
-    const osc1 = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
-    const osc3 = ctx.createOscillator();
-
-    const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(Math.min(freq * 6, 7000), startTime);
-    filter.frequency.exponentialRampToValueAtTime(
-      Math.max(freq * 1.5, 250),
-      startTime + duration,
-    );
-    filter.Q.setValueAtTime(0.707, startTime);
-
-    const gainNode = ctx.createGain();
-    gainNode.gain.setValueAtTime(0, ctx.currentTime);
-    gainNode.gain.setValueAtTime(0.0001, startTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.004);
-    gainNode.gain.exponentialRampToValueAtTime(0.15, startTime + 0.18);
-    gainNode.gain.exponentialRampToValueAtTime(
-      0.0001,
-      startTime + duration * 0.96,
-    );
-    gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
-
-    osc1.type = "sine";
-    osc1.frequency.setValueAtTime(freq, startTime);
-
-    osc2.type = "sine";
-    osc2.frequency.setValueAtTime(freq * 2.001, startTime);
-
-    osc3.type = "triangle";
-    osc3.frequency.setValueAtTime(freq * 3, startTime);
-
-    const mix1 = ctx.createGain();
-    const mix2 = ctx.createGain();
-    const mix3 = ctx.createGain();
-
-    mix1.gain.value = 0.8;
-    mix2.gain.value = 0.3;
-    mix3.gain.value = 0.1;
-
-    osc1.connect(mix1);
-    osc2.connect(mix2);
-    osc3.connect(mix3);
-
-    mix1.connect(filter);
-    mix2.connect(filter);
-    mix3.connect(filter);
-
-    filter.connect(gainNode);
-    if (useBuilderInst && this.masterGain) {
-      gainNode.connect(this.masterGain);
-    } else if (!useBuilderInst && this.compressor) {
-      gainNode.connect(this.compressor);
-    } else {
-      gainNode.connect(ctx.destination);
-    }
-
-    osc1.start(startTime);
-    osc2.start(startTime);
-    osc3.start(startTime);
-
-    osc1.stop(startTime + duration);
-    osc2.stop(startTime + duration);
-    osc3.stop(startTime + duration);
+    this.playSampledNote("piano", note, octave, duration, timeOffset, useBuilderInst);
   }
 
   // Play a crystal-clear, bright bell alert chime repeated 3 times
@@ -895,7 +782,9 @@ class AudioEngine {
       targetInstrument.includes("synth") ||
       targetInstrument === "synthesizer";
 
-    if (isSynth) {
+    if (targetInstrument === "bass" || targetInstrument.includes("bass")) {
+      this.playBassPluck(note, octave, duration, timeOffset, useBuilder);
+    } else if (isSynth) {
       const synthType = isSynthPad ? "pad" : isSynthLead ? "lead" : "poly";
       this.playSynthNote(
         note,
@@ -937,7 +826,9 @@ class AudioEngine {
 
     notes.forEach((n, idx) => {
       const offset = globalOffsetSec + idx * staggerSec;
-      if (isSynth) {
+      if (targetInstrument === "bass" || targetInstrument.includes("bass")) {
+        this.playBassPluck(n.note, n.octave, noteDurationSec, offset, useBuilder);
+      } else if (isSynth) {
         const synthType = isSynthPad ? "pad" : isSynthLead ? "lead" : "poly";
         this.playSynthNote(
           n.note,

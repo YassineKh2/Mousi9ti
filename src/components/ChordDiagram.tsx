@@ -3,13 +3,14 @@ import { Volume2 } from "lucide-react";
 import { GuitarVoicing, NoteName } from "../types";
 import { audioEngine } from "../lib/audio";
 import {
-  CHROMATIC_SHARPS,
   GUITAR_TUNINGS,
   NOTE_SEMITONES,
 } from "../data/musicTheory";
 import { useSettingsContext } from "../contexts/SettingsContext";
+import { BASS_STANDARD_TUNING, getFrettedNote, type FrettedInstrument } from "../lib/frettedInstrument";
 
 interface ChordDiagramProps {
+  instrument?: FrettedInstrument;
   chordName?: string;
   voicing: GuitarVoicing;
   root: NoteName;
@@ -21,6 +22,7 @@ interface ChordDiagramProps {
 }
 
 export const ChordDiagram: React.FC<ChordDiagramProps> = ({
+  instrument: requestedInstrument,
   chordName,
   voicing,
   root,
@@ -65,15 +67,16 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
   const width = svgWidth - margin.left - margin.right;
   const height = svgHeight - margin.top - margin.bottom;
 
-  const numStrings = 6;
-  const numFrets = Math.min(8, Math.max(5, fretCount));
+  const instrument = requestedInstrument ?? voicing.instrument ?? "guitar";
+  const numStrings = instrument === "bass" ? 4 : 6;
+  const numFrets = Math.min(8, Math.max(5, voicing.displayFretCount ?? fretCount));
   const stringSpacing = width / (numStrings - 1);
   const fretSpacing = height / numFrets;
 
   const baseFret = voicing.baseFret || 1;
   const isNut = baseFret === 1;
 
-  const tuning = GUITAR_TUNINGS[0]; // E A D G B E
+  const tuning = instrument === "bass" ? BASS_STANDARD_TUNING : GUITAR_TUNINGS[0];
   const barreEntries =
     voicing.barres && voicing.barres.length > 0
       ? voicing.barres
@@ -93,11 +96,9 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
           fret = barre.fret;
         }
       });
-      const stringLabel = `String ${6 - stringIdx} (${tuning.strings[stringIdx]})`;
+      const stringLabel = `String ${numStrings - stringIdx} (${tuning.strings[stringIdx]})`;
       if (fret === null) return `${stringLabel}: muted`;
-      const totalSemi = NOTE_SEMITONES[tuning.strings[stringIdx]] + fret;
-      const note = CHROMATIC_SHARPS[totalSemi % 12];
-      const octave = tuning.octaves[stringIdx] + Math.floor(totalSemi / 12);
+      const { note, octave } = getFrettedNote(tuning, stringIdx, fret);
       return `${stringLabel}: ${fret === 0 ? "open" : `fret ${fret}`}, ${note}${octave}`;
     })
     .join("; ");
@@ -124,18 +125,11 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
         }
       });
       if (fret === null) return; // muted
-      const openNote = tuning.strings[stringIdx];
-      const baseOct = tuning.octaves[stringIdx];
-      const openSemi = NOTE_SEMITONES[openNote];
-      const totalSemi = openSemi + fret;
-      const currentSemi = totalSemi % 12;
-      const noteName = CHROMATIC_SHARPS[currentSemi];
-      const oct =
-        baseOct + Math.floor(totalSemi / 12) - Math.floor(openSemi / 12);
-      notesToPlay.push({ note: noteName, octave: oct });
+      const { note, octave } = getFrettedNote(tuning, stringIdx, fret);
+      notesToPlay.push({ note, octave });
     });
 
-    audioEngine.playChordArpeggio(notesToPlay, "guitar", 0.05);
+    audioEngine.playChordArpeggio(notesToPlay, instrument, 0.05);
   };
 
   const DiagramContainer: React.ElementType = compact ? "div" : "button";
@@ -166,8 +160,13 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
       }}
     >
       <span id={descriptionId} className="sr-only">
-        {description}
+        {instrument === "bass" ? "Four-string bass. " : ""}{description}
       </span>
+      {!!voicing.omittedDegrees?.length && (
+        <span className="text-xs font-mono text-on-surface-variant">
+          Reduced: omit {voicing.omittedDegrees.join(", ")}
+        </span>
+      )}
       {/* Chord Card Header */}
       {!compact && (
         <span className="w-full flex items-center justify-between pb-4 mb-2">

@@ -1,8 +1,55 @@
-import { ALL_ROOT_NOTES, SCALES_DATABASE } from "../data/musicTheory";
+import { ALL_ROOT_NOTES, NOTE_SEMITONES, SCALES_DATABASE } from "../data/musicTheory";
 import type { NoteName, ScaleDefinition } from "../types";
+import { BASS_STANDARD_TUNING, getFrettedNote } from "./frettedInstrument";
 
-export type ScaleInstrumentView = "guitar" | "piano" | "both";
+export type ScaleInstrumentView = "guitar" | "piano" | "bass" | "both";
 export type PianoFocusRange = "all" | "octave4" | "octave3" | "octave34";
+
+export const getBassScalePositions = (fretCount: number) =>
+  Array.from(
+    { length: Math.max(0, Math.floor(fretCount) - 2) },
+    (_, index) => index,
+  );
+
+export const getBassScalePlayback = (
+  root: NoteName,
+  scale: ScaleDefinition,
+  fretCount: number,
+  position: number | null,
+  direction: "ascending" | "descending" | "both",
+  boxKey: string | null = null,
+) => {
+  const semitones = new Set(
+    scale.intervals.map((interval) => (NOTE_SEMITONES[root] + interval) % 12),
+  );
+  const pitches = new Map<
+    number,
+    ReturnType<typeof getFrettedNote> & { stringIdx: number; fretNum: number }
+  >();
+  const box = boxKey ? scale.cagedBoxes?.[boxKey] : undefined;
+  const rootFret = (NOTE_SEMITONES[root] - NOTE_SEMITONES[BASS_STANDARD_TUNING.strings[0]] + 12) % 12;
+  const rawStart = box ? rootFret + box.startFretOffset : 0;
+  const octaveShift = -Math.floor(rawStart / 12) * 12;
+  const start = box ? Math.max(0, rawStart + octaveShift) : position ?? 0;
+  const end = box
+    ? Math.min(fretCount, rootFret + box.endFretOffset + octaveShift)
+    : position === null ? fretCount : Math.min(fretCount, position + 3);
+  BASS_STANDARD_TUNING.strings.forEach((_, stringIdx) => {
+    for (let fretNum = start; fretNum <= end; fretNum++) {
+      const pitch = getFrettedNote(BASS_STANDARD_TUNING, stringIdx, fretNum);
+      if (semitones.has(pitch.midi % 12) && !pitches.has(pitch.midi)) {
+        pitches.set(pitch.midi, { ...pitch, stringIdx, fretNum });
+      }
+    }
+  });
+  const ascending = [...pitches.values()].sort(
+    (first, second) => first.midi - second.midi,
+  );
+  if (direction === "descending") return ascending.reverse();
+  return direction === "both"
+    ? [...ascending, ...ascending.slice(0, -1).reverse()]
+    : ascending;
+};
 
 export type ScaleRouteTarget = {
   root: NoteName;
@@ -10,6 +57,7 @@ export type ScaleRouteTarget = {
   boxKey: string | null;
   instrumentView?: ScaleInstrumentView;
   pianoFocusRange?: PianoFocusRange;
+  bassPosition?: number | null;
 };
 
 export type ResolvedScaleRoute = ScaleRouteTarget & {
@@ -50,9 +98,24 @@ export const buildScaleUrl = (
   boxKey: string | null,
   instrumentView: ScaleInstrumentView,
   pianoFocusRange: PianoFocusRange,
+  bassPosition: number | null = null,
 ) => {
   const scale = SCALES_DATABASE.find((item) => item.id === scaleId);
   if (!scale) return "/scales/";
+
+  if (instrumentView === "bass") {
+    const params = new URLSearchParams({ instrument: "bass" });
+    if (
+      !boxKey &&
+      bassPosition !== null &&
+      Number.isInteger(bassPosition) &&
+      bassPosition >= 0 &&
+      bassPosition <= 21
+    ) {
+      params.set("position", String(bassPosition));
+    }
+    return `${buildScalePath(root, scaleId, boxKey)}?${params}`;
+  }
 
   const firstBox = Object.keys(scale.cagedBoxes ?? {})[0] ?? null;
   const selectedBox =
@@ -126,6 +189,28 @@ export const resolveScaleRoute = (
   const requestedView = params.get("view");
   const requestedInstrument = params.get("instrument");
   const requestedRange = params.get("range");
+  if (requestedInstrument === "bass") {
+    const rawPosition = params.get("position");
+    const position = rawPosition !== null && /^\d+$/.test(rawPosition)
+      ? Number(rawPosition)
+      : NaN;
+    const bassPosition = Number.isInteger(position) && position >= 0 && position <= 21
+      ? position
+      : null;
+    const h1 = `${root} ${scale.name}`;
+    return {
+      path: buildScalePath(root, scale.id, boxKey),
+      root,
+      scaleId: scale.id,
+      boxKey,
+      instrumentView: "bass",
+      bassPosition: boxKey ? null : bassPosition,
+      title: `${h1} Scale | Mousi9ti`,
+      description: `Explore the notes, intervals, and four-string bass positions of the ${root} ${scale.name.toLowerCase()} scale.`,
+      h1,
+      indexable: false,
+    };
+  }
   const hasPianoRange =
     requestedRange === "all" ||
     requestedRange === "octave4" ||

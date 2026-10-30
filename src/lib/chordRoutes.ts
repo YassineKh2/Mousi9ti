@@ -2,7 +2,7 @@ import { ALL_ROOT_NOTES } from "../data/musicTheory";
 import { CHORD_TYPES_CATALOG } from "../data/chordsData";
 import type { NoteName } from "../types";
 
-export type ChordInstrumentView = "guitar" | "piano" | "both";
+export type ChordInstrumentView = "guitar" | "piano" | "bass" | "both";
 
 export type ChordRouteTarget = {
   root: NoteName;
@@ -58,6 +58,7 @@ export const resolveChordRoute = (
   const instrumentView: ChordInstrumentView | undefined =
     requestedInstrument === "guitar" ||
     requestedInstrument === "piano" ||
+    requestedInstrument === "bass" ||
     requestedInstrument === "both"
       ? requestedInstrument
       : undefined;
@@ -70,7 +71,7 @@ export const resolveChordRoute = (
     chordType: chord.type,
     instrumentView,
     title: `${h1} Chord | Mousi9ti`,
-    description: `Explore the ${root} ${chord.name.toLowerCase()} chord, its notes, formula (${chord.formula}), and guitar and piano voicings.`,
+    description: `Explore the ${root} ${chord.name.toLowerCase()} chord, its notes, formula (${chord.formula}), and guitar, four-string bass, and piano voicings.`,
     h1,
     indexable: true,
   };

@@ -25,6 +25,7 @@ import { usePracticeInstrument } from "../contexts/PracticeInstrumentContext";
 import { ChordSelectorWidget } from "../components/ChordSelectorWidget";
 import { Fretboard } from "../components/Fretboard";
 import { PianoKeyboard } from "../components/PianoKeyboard";
+import { BassIcon } from "../components/BassIcon";
 import {
   SCALES_DATABASE,
   ALL_ROOT_NOTES,
@@ -52,6 +53,13 @@ import {
   saveChordSelections,
 } from "../lib/storage";
 import { audioEngine } from "../lib/audio";
+import { BASS_STANDARD_TUNING, type InstrumentDisplay } from "../lib/frettedInstrument";
+import {
+  getEnabledInstruments,
+  normalizeInstrumentDisplay,
+  getDisplayedInstruments,
+  getCombinedInstrumentLabel,
+} from "../lib/instrumentDisplay";
 import {
   parseTaskConfiguration,
   hasRecognizedConfiguration,
@@ -204,7 +212,7 @@ interface DashboardPageProps {
     quickStartInstrument: "guitar" | "piano" | null,
   ) => void;
   onQuickStartTasks: (
-    instrument: "guitar" | "piano",
+    instrument: "guitar" | "piano" | "bass",
     tasks: PracticeTask[],
   ) => void;
   practiceTasks: PracticeTask[];
@@ -659,12 +667,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     setDropTarget(null);
   };
 
-  const [instrumentView, setInstrumentView] = useState<
-    "guitar" | "piano" | "both"
-  >(activeInstrument);
+  const enabledInstruments = useMemo(
+    () => getEnabledInstruments(settings),
+    [settings.enabledInstruments],
+  );
+  const [selectedInstrumentView, setInstrumentView] = useState<InstrumentDisplay>(
+    () => normalizeInstrumentDisplay(activeInstrument, enabledInstruments),
+  );
+  const instrumentView = normalizeInstrumentDisplay(selectedInstrumentView, enabledInstruments);
+  const displayedInstruments = getDisplayedInstruments(instrumentView, enabledInstruments);
+  const combinedInstrumentLabel = getCombinedInstrumentLabel(enabledInstruments);
 
   useEffect(() => {
-    setInstrumentView(activeInstrument);
+    setInstrumentView((view) => normalizeInstrumentDisplay(view, enabledInstruments));
+  }, [enabledInstruments]);
+
+  useEffect(() => {
+    setInstrumentView(normalizeInstrumentDisplay(activeInstrument, enabledInstruments));
   }, [activeInstrument]);
 
   const resetWidgetLayout = () => {
@@ -781,10 +800,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         return (
           <div className="flex flex-col gap-4">
             <div ref={setInstrumentToolbarTarget} />
-            {(instrumentView === "guitar" || instrumentView === "both") && (
+            {displayedInstruments.filter((instrument) => instrument !== "piano").map((instrument) => (
               <Fretboard
-                tuning={currentTuning}
-                onTuningChange={setCurrentTuning}
+                key={instrument}
+                instrument={instrument}
+                tuning={instrument === "bass" ? BASS_STANDARD_TUNING : currentTuning}
+                onTuningChange={instrument === "guitar" ? setCurrentTuning : undefined}
                 fretCount={fretCount}
                 onFretCountChange={setFretCount}
                 selectedRoot={selectedRoot}
@@ -794,8 +815,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 displayMode={displayMode}
                 onDisplayModeChange={setDisplayMode}
               />
-            )}
-            {(instrumentView === "piano" || instrumentView === "both") && (
+            ))}
+            {displayedInstruments.includes("piano") && (
               <PianoKeyboard
                 octaves={3}
                 startOctave={3}
@@ -812,6 +833,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <ChordSelectorWidget
             defaultInstrument={settings.defaultInstrument}
             instrumentView={instrumentView}
+            enabledInstruments={enabledInstruments}
           />
         );
     }
@@ -842,7 +864,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const hiddenWidgets = layout.hiddenWidgets;
 
-  const handleInstrumentToggle = (view: "guitar" | "piano" | "both") => {
+  const handleInstrumentToggle = (view: InstrumentDisplay) => {
     setInstrumentView(view);
   };
 
@@ -1069,7 +1091,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       ))}
                     </div>
 
-                    {instrumentView !== "piano" &&
+                    {displayedInstruments.some((instrument) => instrument !== "piano") &&
                       selectedScale?.cagedBoxes && (
                         <div className="mb-2.5 border-b border-outline-variant/10 pb-3">
                           <div className="mb-2 flex items-center justify-between gap-2">
@@ -1206,10 +1228,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 )}
               </div>
 
-              <div className="dashboard-scale-toolbar__instruments grid h-12 grid-cols-3 items-center gap-1 rounded border border-outline-variant/30 bg-surface-container-low p-1 md:h-9 md:flex">
-                <button
+              <div className="dashboard-scale-toolbar__instruments grid h-12 auto-cols-fr grid-flow-col items-center gap-1 rounded border border-outline-variant/30 bg-surface-container-low p-1 md:h-9 md:flex">
+                {enabledInstruments.includes("guitar") && <button
                   type="button"
                   aria-label="Guitar"
+                  aria-pressed={instrumentView === "guitar"}
                   onClick={() => handleInstrumentToggle("guitar")}
                   className={`flex h-full items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-mono transition-all md:px-3 ${instrumentView === "guitar" ? "bg-primary text-on-primary font-bold shadow" : "text-on-surface-variant hover:text-on-surface"}`}
                 >
@@ -1217,10 +1240,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   <span className="dashboard-scale-toolbar__instrument-label">
                     Guitar
                   </span>
-                </button>
-                <button
+                </button>}
+                {enabledInstruments.includes("bass") && <button
+                  type="button"
+                  aria-label="Bass"
+                  aria-pressed={instrumentView === "bass"}
+                  title="Four-string bass"
+                  onClick={() => handleInstrumentToggle("bass")}
+                  className={`flex h-full items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-mono transition-all md:px-3 ${instrumentView === "bass" ? "bg-primary text-on-primary font-bold shadow" : "text-on-surface-variant hover:text-on-surface"}`}
+                >
+                  <BassIcon size={14} />
+                  <span className="dashboard-scale-toolbar__instrument-label">Bass</span>
+                </button>}
+                {enabledInstruments.includes("piano") && <button
                   type="button"
                   aria-label="Piano"
+                  aria-pressed={instrumentView === "piano"}
                   onClick={() => handleInstrumentToggle("piano")}
                   className={`flex h-full items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-mono transition-all md:px-3 ${instrumentView === "piano" ? "bg-primary text-on-primary font-bold shadow" : "text-on-surface-variant hover:text-on-surface"}`}
                 >
@@ -1228,18 +1263,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   <span className="dashboard-scale-toolbar__instrument-label">
                     Piano
                   </span>
-                </button>
-                <button
+                </button>}
+                {enabledInstruments.length > 1 && <button
                   type="button"
-                  aria-label="Both instruments"
+                  aria-label={`${combinedInstrumentLabel} instruments`}
+                  aria-pressed={instrumentView === "both"}
                   onClick={() => handleInstrumentToggle("both")}
                   className={`flex h-full items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-mono transition-all md:px-3 ${instrumentView === "both" ? "bg-primary text-on-primary font-bold shadow" : "text-on-surface-variant hover:text-on-surface"}`}
                 >
                   <Layers size={14} />
                   <span className="dashboard-scale-toolbar__instrument-label">
-                    Both
+                    {combinedInstrumentLabel}
                   </span>
-                </button>
+                </button>}
               </div>
             </div>
           </div>,

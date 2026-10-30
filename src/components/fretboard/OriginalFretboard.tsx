@@ -10,8 +10,11 @@ import {
 } from "../../data/musicTheory";
 import { audioEngine } from "../../lib/audio";
 import { Volume2 } from "lucide-react";
+import { getFrettedNote, getInstrumentTunings, type FrettedInstrument } from "../../lib/frettedInstrument";
 
 export interface FretboardProps {
+  instrument?: FrettedInstrument;
+  fretRange?: { start: number; end: number };
   tuning?: Tuning;
   onTuningChange?: (tuning: Tuning) => void;
   fretCount?: number;
@@ -29,6 +32,8 @@ export interface FretboardProps {
 }
 
 export const OriginalFretboard: React.FC<FretboardProps> = ({
+  instrument = "guitar",
+  fretRange,
   tuning: controlledTuning,
   onTuningChange,
   fretCount: controlledFretCount,
@@ -46,7 +51,7 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
 }) => {
   // Local state fallbacks for standalone/uncontrolled usage
   const [internalTuning, setInternalTuning] = useState<Tuning>(
-    controlledTuning || GUITAR_TUNINGS[0],
+    controlledTuning || getInstrumentTunings(instrument)[0],
   );
   const [internalFretCount, setInternalFretCount] = useState<number>(
     controlledFretCount || 15,
@@ -67,7 +72,8 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
     if (controlledDisplayMode) setInternalDisplayMode(controlledDisplayMode);
   }, [controlledDisplayMode]);
 
-  const tuning = controlledTuning || internalTuning;
+  const tunings = getInstrumentTunings(instrument);
+  const tuning = controlledTuning || (tunings.includes(internalTuning) ? internalTuning : tunings[0]);
   const fretCount =
     controlledFretCount !== undefined ? controlledFretCount : internalFretCount;
   const displayMode = controlledDisplayMode || internalDisplayMode;
@@ -134,6 +140,7 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
   // Determine if a given fret falls into the active CAGED box
   const isInCagedBox = useCallback(
     (fretNum: number) => {
+      if (fretRange) return fretNum >= fretRange.start && fretNum <= fretRange.end;
       if (
         !activeCagedBox ||
         !selectedScale ||
@@ -160,7 +167,7 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
       }
       return false;
     },
-    [activeCagedBox, selectedScale, selectedRoot, tuning],
+    [activeCagedBox, selectedScale, selectedRoot, tuning, fretRange, instrument],
   );
 
   // Play guitar note on click
@@ -177,21 +184,18 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
       activeRandomNote,
     });
 
-    const totalSemitonesFromOpen = openSemitone + fret;
-    const octave =
-      baseOctave +
-      Math.floor(totalSemitonesFromOpen / 12) -
-      Math.floor(openSemitone / 12);
-
-    audioEngine.playGuitarPluck(noteName, octave);
+    const { octave } = getFrettedNote(tuning, stringIdx, fret);
+    audioEngine.playSingleInstrumentNote(noteName, octave, 1.8, 0, instrument);
   };
 
   // Inlay markers
   const singleInlays = [3, 5, 7, 9, 15, 17, 19, 21];
   const doubleInlays = [12, 24];
+  const minFretWidth = instrument === "bass" ? "54px" : "38px";
+  const minFretWidthHigh = instrument === "bass" ? "44px" : "30px";
 
   return (
-    <div className="w-full bg-surface-container border border-outline-variant/30 rounded-lg p-3 sm:p-5 flex flex-col gap-3 sm:gap-4 shadow-xl select-none">
+    <div data-instrument={instrument} data-fretboard-theme="original" className={`w-full bg-surface-container border border-outline-variant/30 rounded-lg p-3 sm:p-5 flex flex-col gap-3 sm:gap-4 shadow-xl select-none ${instrument === "bass" ? "bass-fretboard" : ""}`}>
       {/* Controls Bar */}
       <div className="flex min-w-0 flex-col items-stretch gap-3 pb-2 border-b border-outline-variant/20 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
         <div className="flex min-w-0 max-w-full flex-col items-stretch gap-3 sm:flex-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
@@ -203,14 +207,14 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
             <select
               value={tuning.name}
               onChange={(e) => {
-                const found = GUITAR_TUNINGS.find(
+                const found = tunings.find(
                   (t) => t.name === e.target.value,
                 );
                 if (found) handleTuningSelect(found);
               }}
               className="min-w-0 w-0 max-w-full flex-1 truncate bg-surface-container-low border border-outline-variant/30 rounded px-2.5 py-1 text-xs font-mono text-on-surface focus:outline-none focus:border-primary/50 cursor-pointer sm:w-auto sm:flex-1"
             >
-              {GUITAR_TUNINGS.map((t) => (
+              {tunings.map((t) => (
                 <option key={t.name} value={t.name}>
                   {t.name} ({t.strings.join(" ")})
                 </option>
@@ -240,10 +244,10 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
 
       {/* Interactive Fretboard Stage */}
       <div className="w-full overflow-x-auto pb-4 pt-2 select-none">
-        <div className="min-w-[900px] relative bg-surface-container-low border border-outline-variant/30 rounded p-2.5">
+        <div className="bass-neck-stage min-w-[900px] relative bg-surface-container-low border border-outline-variant/30 rounded p-2.5">
           {/* Fret Numbers Header */}
           <div className="flex items-center mb-2 text-[10px] font-mono text-on-surface-variant">
-            <div className="w-10 shrink-0 text-center font-bold text-on-surface-variant">
+            <div className="bass-neck-open w-10 shrink-0 text-center font-bold text-on-surface-variant">
               OPEN
             </div>
             <div className="flex-1 flex items-center">
@@ -251,7 +255,7 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
                 <div
                   key={i}
                   className="flex-1 text-center font-bold text-on-surface-variant"
-                  style={{ minWidth: i > 12 ? "30px" : "38px" }}
+                  style={{ minWidth: (instrument === "bass" ? i >= 12 : i > 12) ? minFretWidthHigh : minFretWidth }}
                 >
                   {i + 1}
                 </div>
@@ -260,10 +264,10 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
           </div>
 
           {/* Fretboard Grid Area */}
-          <div className="relative border-y-2 border-outline-variant bg-surface-container-highest/60 rounded-sm py-1 shadow-inner">
+          <div className="bass-neck-board relative border-y-2 border-outline-variant bg-surface-container-highest/60 rounded-sm py-1 shadow-inner">
             {/* Position Inlay Dots (Background Layer) */}
             <div className="absolute inset-0 pointer-events-none flex">
-              <div className="w-10 shrink-0"></div>
+              <div className="bass-neck-open w-10 shrink-0"></div>
               <div className="flex-1 flex h-full">
                 {Array.from({ length: fretCount }).map((_, i) => {
                   const fretNum = i + 1;
@@ -274,15 +278,15 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
                     <div
                       key={fretNum}
                       className="flex-1 h-full relative flex items-center justify-center"
-                      style={{ minWidth: fretNum > 12 ? "30px" : "38px" }}
+                      style={{ minWidth: fretNum > 12 ? minFretWidthHigh : minFretWidth }}
                     >
                       {isSingle && (
-                        <div className="w-2.5 h-2.5 rounded-full bg-outline-variant/60 shadow-inner"></div>
+                        <div className="bass-neck-inlay w-2.5 h-2.5 rounded-full bg-outline-variant/60 shadow-inner"></div>
                       )}
                       {isDouble && (
                         <div className="flex flex-col gap-8">
-                          <div className="w-2 h-2 rounded-full bg-outline-variant/60 shadow-inner"></div>
-                          <div className="w-2 h-2 rounded-full bg-outline-variant/60 shadow-inner"></div>
+                          <div className="bass-neck-inlay w-2 h-2 rounded-full bg-outline-variant/60 shadow-inner"></div>
+                          <div className="bass-neck-inlay w-2 h-2 rounded-full bg-outline-variant/60 shadow-inner"></div>
                         </div>
                       )}
                     </div>
@@ -293,25 +297,27 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
 
             {/* Guitar Strings (High E at top, Low E at bottom or standard 6th to 1st) */}
             {tuning.strings.map((openNote, stringIdx) => {
-              const reversedIdx = 5 - stringIdx;
+              const reversedIdx = tuning.strings.length - 1 - stringIdx;
               const actualOpenNote = tuning.strings[reversedIdx];
               const openSemitone = NOTE_SEMITONES[actualOpenNote];
               // String physical thickness
-              const stringThickness = `${Math.max(1, reversedIdx * 0.5 + 1)}px`;
+              const stringThickness = `${instrument === "bass" ? 3 + stringIdx * 1.1 : Math.max(1, reversedIdx * 0.5 + 1)}px`;
 
               return (
                 <div
                   key={stringIdx}
+                  data-string-index={reversedIdx}
+                  data-open-pitch={`${actualOpenNote}${tuning.octaves[reversedIdx]}`}
                   className="relative h-9 flex items-center group"
                 >
                   {/* String Physical Line */}
                   <div
-                    className="absolute left-10 right-0 bg-outline-variant pointer-events-none z-10"
+                    className="bass-neck-string absolute left-10 right-0 bg-outline-variant pointer-events-none z-10"
                     style={{ height: stringThickness }}
                   ></div>
 
                   {/* Nut (0th Fret / Open String) */}
-                  <div className="w-10 h-full border-r-4 border-outline-variant bg-surface-container-highest flex items-center justify-center z-20 relative">
+                  <div className="bass-neck-nut bass-neck-open w-10 h-full border-r-4 border-outline-variant bg-surface-container-highest flex items-center justify-center z-20 relative">
                     {(() => {
                       const noteSemitone = openSemitone;
                       const noteName = getSpelledNote(noteSemitone, {
@@ -361,6 +367,8 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
 
                       return (
                         <button
+                          type="button"
+                          aria-label={`Play ${noteName}${tuning.octaves[reversedIdx]}, string ${tuning.strings.length - reversedIdx}, open`}
                           onClick={() => handleNoteClick(reversedIdx, 0)}
                           className={`w-6 h-6 rounded flex items-center justify-center font-mono text-[10px] font-bold transition-all shadow-md ${
                             isPlayingActive
@@ -425,14 +433,16 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
                       return (
                         <div
                           key={fretNum}
-                          className="flex-1 h-full border-r border-outline-variant/40 relative flex items-center justify-center z-20"
-                          style={{ minWidth: fretNum > 12 ? "30px" : "38px" }}
+                          className="bass-neck-fret flex-1 h-full border-r border-outline-variant/40 relative flex items-center justify-center z-20"
+                          style={{ minWidth: fretNum > 12 ? minFretWidthHigh : minFretWidth }}
                         >
                           {inScale ||
                           isRandomActive ||
                           isPlayingActive ||
                           isHighlightedFret ? (
                             <button
+                              type="button"
+                              aria-label={`Play ${noteName}${getFrettedNote(tuning, reversedIdx, fretNum).octave}, string ${tuning.strings.length - reversedIdx}, fret ${fretNum}`}
                               onClick={() =>
                                 handleNoteClick(reversedIdx, fretNum)
                               }

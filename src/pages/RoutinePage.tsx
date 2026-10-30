@@ -1151,7 +1151,7 @@ interface RoutinePageProps {
     preferences: Partial<UserTimerPreferences>,
   ) => void;
   onQuickStartTasks?: (
-    instrument: "guitar" | "piano",
+    instrument: "guitar" | "piano" | "bass",
     tasks: PracticeTask[],
   ) => void;
   timer?: ReturnType<typeof useTimer>;
@@ -1948,7 +1948,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
             className="text-on-surface-variant"
             aria-label={`Practice instrument: ${activeInstrument}`}
           >
-            {activeInstrument === "piano" ? "Piano" : "Guitar"}
+            {activeInstrument === "piano" ? "Piano" : activeInstrument === "bass" ? "Bass" : "Guitar"}
           </span>
           <div className="min-w-0 text-on-surface-variant lg:inline">
             <span className="block text-[10px] uppercase tracking-wider lg:inline lg:text-xs lg:normal-case lg:tracking-normal">

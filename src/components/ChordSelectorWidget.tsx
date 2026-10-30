@@ -1,20 +1,41 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Music2, Plus } from "lucide-react";
+import { Guitar, Layers, Music2, Piano, Plus } from "lucide-react";
 import { SwipeableChordCard } from "./SwipeableChordCard";
+import { BassIcon } from "./BassIcon";
 import { ChordSearchInput } from "./ChordSearchInput";
-import { ChordSelection } from "../types";
+import { ChordSelection, PracticeInstrument } from "../types";
+import type { InstrumentDisplay } from "../lib/frettedInstrument";
+import { getCombinedInstrumentLabel, getDisplayedInstruments, getEnabledInstruments, normalizeInstrumentDisplay } from "../lib/instrumentDisplay";
 import { getSavedChordSelections, saveChordSelections } from "../lib/storage";
 import { getCustomChords } from "../data/chordsData";
 
 interface ChordSelectorWidgetProps {
-  defaultInstrument: "guitar" | "piano";
-  instrumentView: "guitar" | "piano" | "both";
+  defaultInstrument: "guitar" | "piano" | "bass";
+  instrumentView: "guitar" | "piano" | "bass" | "both";
+  enabledInstruments?: PracticeInstrument[];
 }
 
 export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
-  defaultInstrument,
   instrumentView,
+  enabledInstruments: enabledInstrumentSettings,
 }) => {
+  const enabledInstruments = React.useMemo(
+    () => getEnabledInstruments({ enabledInstruments: enabledInstrumentSettings }),
+    [enabledInstrumentSettings],
+  );
+  const [selectedView, setSelectedView] = useState<InstrumentDisplay>(instrumentView);
+  const view = normalizeInstrumentDisplay(selectedView, enabledInstruments);
+  const displayedInstruments = getDisplayedInstruments(view, enabledInstruments);
+  const combinedLabel = getCombinedInstrumentLabel(enabledInstruments);
+
+  useEffect(() => {
+    setSelectedView((current) => normalizeInstrumentDisplay(current, enabledInstruments));
+  }, [enabledInstruments]);
+
+  useEffect(() => {
+    setSelectedView(normalizeInstrumentDisplay(instrumentView, enabledInstruments));
+  }, [instrumentView]);
+
   const loadChordSelections = (): ChordSelection[] => {
     const hasSavedSelections =
       localStorage.getItem("Mousi9ti_chord_selections_v1") !== null;
@@ -22,6 +43,7 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
     const normalizeType = (type: string) =>
       type === "maj" ? "major" : type === "min" ? "minor" : type;
     const selections: ChordSelection[] = savedSelections.map((selection) => ({
+      ...selection,
       root: selection.root,
       type: normalizeType(selection.type),
     }));
@@ -37,6 +59,8 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
         selections.unshift({
           root: chord.root,
           type: normalizeType(chord.chordType),
+          customChordId: chord.id,
+          instrument: chord.instrument,
         });
         selectionKeys.add(key);
       }
@@ -110,8 +134,6 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
   const visibleChords = isFullWidth
     ? selectedChords.slice(0, 3)
     : selectedChords.slice(0, 1);
-  const chordInstrument =
-    instrumentView === "both" ? defaultInstrument : instrumentView;
 
   return (
     <div
@@ -125,25 +147,56 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
         </h3>
       </div>
 
+      <div role="group" aria-label="Chord instruments" className="mb-4 flex flex-wrap gap-1">
+        {([...enabledInstruments, ...(enabledInstruments.length > 1 ? ["both" as const] : [])]).map((instrument) => {
+          const label = instrument === "both" ? combinedLabel : instrument === "piano" ? "Piano" : instrument === "bass" ? "Bass" : "Guitar";
+          const Icon = instrument === "both" ? Layers : instrument === "piano" ? Piano : instrument === "bass" ? BassIcon : Guitar;
+          return (
+            <button
+              key={instrument}
+              type="button"
+              title={label}
+              aria-label={instrument === "both" ? `${label} instruments` : label}
+              aria-pressed={view === instrument}
+              onClick={() => setSelectedView(instrument)}
+              className={`flex items-center gap-1.5 rounded px-2 py-1 font-mono text-xs ${view === instrument ? "bg-primary text-on-primary" : "text-on-surface-variant hover:text-on-surface"}`}
+            >
+              <Icon size={14} />
+              <span>{label}</span>
+            </button>
+          );
+        })}
+      </div>
+
       <div
         className={`grid flex-1 gap-4 ${isFullWidth ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}
       >
         {visibleChords.map((chord, i) => (
-          <SwipeableChordCard
-            key={`${chord.root}-${chord.type}-${i}-${chordInstrument}`}
-            root={chord.root}
-            type={chord.type}
-            customChordId={chord.customChordId}
-            instrument={chordInstrument}
-            onRemove={() => handleRemoveChord(i)}
-            onChange={(newRoot, newType) => {
-              setSelectedChords((currentChords) => {
-                const updated = [...currentChords];
-                updated[i] = { root: newRoot, type: newType };
-                return updated;
-              });
-            }}
-          />
+          <div key={`${chord.root}-${chord.type}-${i}`} className="flex min-w-0 flex-col gap-4">
+            {displayedInstruments.map((chordInstrument) => (
+              <div key={chordInstrument} className="min-w-0 flex-1">
+                {displayedInstruments.length > 1 && (
+                  <h4 className="mb-2 text-center font-mono text-xs text-on-surface-variant">
+                    {chordInstrument === "piano" ? "Piano" : chordInstrument === "bass" ? "Bass" : "Guitar"}
+                  </h4>
+                )}
+                <SwipeableChordCard
+                  root={chord.root}
+                  type={chord.type}
+                  customChordId={chord.customChordId}
+                  instrument={chordInstrument}
+                  onRemove={() => handleRemoveChord(i)}
+                  onChange={(newRoot, newType) => {
+                    setSelectedChords((currentChords) => {
+                      const updated = [...currentChords];
+                      updated[i] = { root: newRoot, type: newType };
+                      return updated;
+                    });
+                  }}
+                />
+              </div>
+            ))}
+          </div>
         ))}
 
         {visibleChords.length < (isFullWidth ? 3 : 1) && (

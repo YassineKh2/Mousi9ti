@@ -140,6 +140,7 @@ export const resolvePageRoute = (
         boxKey: scaleRoute.boxKey,
         instrumentView: scaleRoute.instrumentView,
         pianoFocusRange: scaleRoute.pianoFocusRange,
+        bassPosition: scaleRoute.bassPosition,
       },
     };
   }

@@ -363,7 +363,8 @@ export function exportSavedCustomChords(): ChordDefinition[] {
       intervals: baseDefinition.intervals,
       formula: baseDefinition.formula,
       notes: baseDefinition.notes,
-      voicings: exportedVoicings,
+      voicings: chord.instrument === "bass" ? [] : exportedVoicings,
+      bassVoicings: chord.instrument === "bass" ? exportedVoicings.map(voicing => ({ ...voicing, instrument: "bass" as const, ...(chord.fretCount !== undefined ? { displayFretCount: chord.fretCount } : {}) })) : undefined,
       keyboardVoicings: exportedKeyboardVoicings,
     };
   });
@@ -16592,7 +16593,7 @@ export interface CustomChord {
   voicing: GuitarVoicing;
   fretCount?: number;
   pianoVoicing?: KeyboardVoicing;
-  instrument?: "guitar" | "piano";
+  instrument?: "guitar" | "piano" | "bass";
 }
 
 const CUSTOM_CHORDS_KEY = "Mousi9ti_custom_chords_v1";
@@ -16668,6 +16669,27 @@ export function importCustomChords(
     )
       ? (definition.keyboardVoicings as KeyboardVoicing[])
       : [];
+    const bassVoicings: GuitarVoicing[] = Array.isArray(definition.bassVoicings)
+      ? definition.bassVoicings
+      : [];
+    bassVoicings.forEach((voicing, voicingIndex) => {
+      const barres = voicing.barres?.length ? voicing.barres : voicing.barre ? [voicing.barre] : [];
+      if (!Array.isArray(voicing.frets) || voicing.frets.length !== 4 ||
+        !voicing.frets.every(fret => fret === null || (Number.isInteger(fret) && fret >= 0 && fret <= 20)) ||
+        !Array.isArray(voicing.fingers) || voicing.fingers.length !== 4 ||
+        (voicing.displayFretCount !== undefined && (!Number.isInteger(voicing.displayFretCount) || voicing.displayFretCount < 5 || voicing.displayFretCount > 8)) ||
+        barres.some(barre => !Number.isInteger(barre.fret) || barre.fret < 1 || barre.fret > 20 ||
+          !Number.isInteger(barre.fromString) || !Number.isInteger(barre.toString) ||
+          barre.fromString < 0 || barre.toString > 3 || barre.fromString > barre.toString)) {
+        throw new Error(`Invalid four-string bass voicing at index ${definitionIndex}.`);
+      }
+      imported.push({
+        id: `custom-import-${Date.now()}-${definitionIndex}-bass-${voicingIndex}`,
+        root: definition.root as NoteName, chordType,
+        fretCount: voicing.displayFretCount,
+        voicing: { ...voicing, instrument: "bass" }, instrument: "bass",
+      });
+    });
     const fallbackVoicing: GuitarVoicing = {
       name: definition.name || `${definition.root} chord`,
       positionLabel: "Imported Chord",
@@ -16699,7 +16721,7 @@ export function importCustomChords(
       });
     });
 
-    if (guitarVoicings.length === 0 && pianoVoicings.length === 0) {
+    if (guitarVoicings.length === 0 && pianoVoicings.length === 0 && bassVoicings.length === 0) {
       imported.push({
         id: `custom-import-${Date.now()}-${definitionIndex}-guitar`,
         root: definition.root as NoteName,

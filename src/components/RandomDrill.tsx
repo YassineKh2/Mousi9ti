@@ -12,7 +12,7 @@ interface RandomDrillProps {
   currentNote: string;
   onNextNote: (note: string) => void;
   metronomeBpm: number;
-  instrumentView?: "guitar" | "piano" | "both";
+  instrumentView?: "guitar" | "piano" | "bass" | "both";
   showHighlight?: boolean;
   onToggleHighlight?: () => void;
   randomNoteSettings?: RandomNoteSettings;
@@ -92,7 +92,7 @@ export const RandomDrill: React.FC<RandomDrillProps> = ({
     onNextNote(chosen);
 
     // Audio cue
-    audioEngine.playGuitarPluck(chosen, 3, 1.2);
+    audioEngine.playSingleInstrumentNote(chosen, instrumentView === "bass" ? 2 : 3, 1.2, 0, instrumentView === "bass" ? "bass" : "guitar");
   }, [accidentalMode, currentNote, onNextNote]);
 
   // Calculate interval duration in milliseconds based on seconds, not bars

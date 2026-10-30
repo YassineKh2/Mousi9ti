@@ -26,7 +26,7 @@ type InstrumentRecord = {
 };
 
 function isInstrument(value: unknown): value is PracticeInstrument {
-  return value === "guitar" || value === "piano";
+  return value === "guitar" || value === "piano" || value === "bass";
 }
 
 export function normalizeInstrument(value: unknown): PracticeInstrument {

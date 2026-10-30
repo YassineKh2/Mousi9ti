@@ -39,6 +39,8 @@ import {
   readAppBackupFile,
 } from "../lib/appBackup";
 import { ToggleSwitch } from "./ToggleSwitch";
+import { BassIcon } from "./BassIcon";
+import { getEnabledInstruments, INSTRUMENT_ORDER } from "../lib/instrumentDisplay";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -87,6 +89,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleAutoConfigureDashboardFromTask,
 }) => {
   const [activeTab, setActiveTab] = useState("general");
+  const enabledInstruments = getEnabledInstruments(settings);
   const [customDurationDraft, setCustomDurationDraft] = useState(
     String(settings.taskDefaultCustomDuration),
   );
@@ -844,11 +847,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             Instrument
           </span>
 
+          <fieldset className={activeTab === "instrument" ? "min-w-0 space-y-3" : "hidden"}>
+            <legend className="font-mono text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+              Available Instruments
+            </legend>
+            <div className="grid grid-cols-3 gap-2">
+              {INSTRUMENT_ORDER.map(instrument => {
+                const selected = enabledInstruments.includes(instrument);
+                const Icon = instrument === "bass" ? BassIcon : instrument === "piano" ? Piano : Guitar;
+                return (
+                <label key={instrument} className={`relative flex min-h-20 min-w-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border px-2 py-3 font-mono text-xs transition-colors focus-within:ring-2 focus-within:ring-primary/50 ${selected ? "border-primary/50 bg-primary/10 text-primary" : "border-outline-variant/30 bg-surface-container text-on-surface-variant hover:border-outline-variant hover:bg-surface-container-high"}`}>
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    disabled={enabledInstruments.length === 1 && selected}
+                    onChange={event => {
+                      const next = INSTRUMENT_ORDER.filter(candidate => candidate === instrument
+                        ? event.target.checked
+                        : enabledInstruments.includes(candidate));
+                      onUpdateSettings({
+                        enabledInstruments: next,
+                        ...(!next.includes(settings.defaultInstrument) ? { defaultInstrument: next[0] } : {}),
+                      });
+                    }}
+                    className="absolute right-2 top-2 h-3.5 w-3.5 cursor-pointer accent-primary disabled:cursor-default disabled:opacity-60"
+                  />
+                  <Icon size={22} strokeWidth={1.75} />
+                  <span className="capitalize font-semibold">{instrument}</span>
+                </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
           {/* Default Instrument */}
           <div
             className={
               activeTab === "instrument"
-                ? "flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                ? "flex min-w-0 flex-col gap-3 border-t border-outline-variant/20 pt-4"
                 : "hidden"
             }
           >
@@ -862,12 +898,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </span>
             </div>
 
-            <div className="flex items-center self-start sm:self-auto gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant/30 shrink-0">
-              <button
+            <div role="group" aria-label="Default instrument" className="flex min-w-0 items-center gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant/30">
+              {enabledInstruments.includes("guitar") && <button
+                type="button"
+                aria-pressed={settings.defaultInstrument === "guitar"}
                 onClick={() =>
                   onUpdateSettings({ defaultInstrument: "guitar" })
                 }
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all ${
+                className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2 py-2 rounded text-xs font-mono transition-colors ${
                   settings.defaultInstrument === "guitar"
                     ? "bg-primary text-on-primary font-bold"
                     : "text-on-surface-variant hover:text-on-surface"
@@ -875,10 +913,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               >
                 <Guitar size={13} />
                 <span>Guitar</span>
-              </button>
-              <button
+              </button>}
+              {enabledInstruments.includes("bass") && <button
+                type="button"
+                aria-pressed={settings.defaultInstrument === "bass"}
+                onClick={() => onUpdateSettings({ defaultInstrument: "bass" })}
+                className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2 py-2 rounded text-xs font-mono transition-colors ${settings.defaultInstrument === "bass" ? "bg-primary text-on-primary font-bold" : "text-on-surface-variant hover:text-on-surface"}`}
+              >
+                <BassIcon size={13} />
+                <span>Bass</span>
+              </button>}
+              {enabledInstruments.includes("piano") && <button
+                type="button"
+                aria-pressed={settings.defaultInstrument === "piano"}
                 onClick={() => onUpdateSettings({ defaultInstrument: "piano" })}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all ${
+                className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2 py-2 rounded text-xs font-mono transition-colors ${
                   settings.defaultInstrument === "piano"
                     ? "bg-primary text-on-primary font-bold"
                     : "text-on-surface-variant hover:text-on-surface"
@@ -886,7 +935,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               >
                 <Piano size={13} />
                 <span>Piano</span>
-              </button>
+              </button>}
             </div>
           </div>
 

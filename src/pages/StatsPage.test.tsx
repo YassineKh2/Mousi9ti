@@ -20,6 +20,13 @@ import {
 } from "../types";
 
 const durationSeconds = 600;
+it("keeps bass statistics distinct from guitar and piano", () => {
+  const records = [{ instrument: "bass" }, { instrument: "guitar" }, { instrument: "piano" }];
+  assert.deepEqual(filterStatisticsRecords(records, "bass"), [records[0]]);
+  assert.deepEqual(filterStatisticsRecords(records, "guitar"), [records[1]]);
+  assert.equal(getDefaultStatisticsScope("bass"), "bass");
+  assert.equal(filterStatisticsRecords(records, "all").length, 3);
+});
 const settings = (taskTagsColored = false) =>
   ({ taskTagsColored }) as AppSettings;
 
