@@ -857,7 +857,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 Default Instrument
               </span>
               <span className="text-[11px] text-on-surface-variant">
-                Used as the starting instrument across the app
+                Used as the starting instrument across the app, to display its
+                tasks and attribute new practice statistics.
               </span>
             </div>
 

@@ -99,6 +99,8 @@ import {
 } from "../lib/taskDuration";
 import { StreakData } from "../types";
 import { useSettingsContext } from "../contexts/SettingsContext";
+import { usePracticeInstrument } from "../contexts/PracticeInstrumentContext";
+import { resolveRecordInstrument } from "../lib/instruments";
 
 interface RoutineTask extends PracticeTask {
   duration?: TaskDurationPeriod;
@@ -530,6 +532,9 @@ export const mergeRoutineTasks = (
     return {
       ...task,
       ...dailyTask,
+      instrument: task.instrument ?? dailyTask.instrument,
+      instrumentInferred:
+        task.instrumentInferred ?? dailyTask.instrumentInferred,
       createdAt: task.createdAt,
       startsAt: task.startsAt,
       expiresAt: task.expiresAt,
@@ -1177,10 +1182,13 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   onEndSession = () => {},
 }) => {
   const settings = useSettingsContext();
+  const { activeInstrument } = usePracticeInstrument();
+  const isActiveInstrumentTask = (task: PracticeTask) =>
+    resolveRecordInstrument(task) === activeInstrument;
   const needsTaskSetup = Boolean(
     timerPreferences &&
     !timerPreferences.hasSeenDailyTasksOnboarding &&
-    practiceTasks?.length === 0,
+    practiceTasks?.filter(isActiveInstrumentTask).length === 0,
   );
   const internalTimer = useTimer();
   const timer = propTimer || internalTimer;
@@ -1275,8 +1283,12 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 
   const [weeklySchedule, setWeeklySchedule] = useState<DayBlueprint[]>(() => {
     const saved = localStorage.getItem("mous9iti_weekly_schedule");
+    const templateInstrument =
+      quickStartInstrument === "guitar" || quickStartInstrument === "piano"
+        ? quickStartInstrument
+        : activeInstrument;
     let schedule =
-      settings.defaultInstrument === "piano"
+      templateInstrument === "piano"
         ? DEFAULT_PIANO_WEEKLY_SCHEDULE
         : DEFAULT_WEEKLY_SCHEDULE;
     if (quickStartInstrument !== "guitar" && quickStartInstrument !== "piano") {
@@ -1286,50 +1298,47 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const savedIsGuitarDefault = isUnmodifiedDefaultSchedule(
-            parsed,
-            DEFAULT_WEEKLY_SCHEDULE,
-          );
-          const savedIsPianoDefault = isUnmodifiedDefaultSchedule(
-            parsed,
-            DEFAULT_PIANO_WEEKLY_SCHEDULE,
-          );
-          const savedIsPreviousGuitarDefault =
-            isUnmodifiedPreviousGuitarSchedule(parsed);
-          const savedIsPreviousPianoDefault = isUnmodifiedDefaultSchedule(
-            parsed,
-            PREVIOUS_PIANO_DEFAULT_SCHEDULE,
-          );
-          if (
-            quickStartInstrument === "none" &&
-            (savedIsGuitarDefault ||
-              savedIsPianoDefault ||
-              savedIsPreviousGuitarDefault ||
-              savedIsPreviousPianoDefault)
-          ) {
-            schedule = parsed.map((day) => ({ ...day, tasks: [] }));
-          } else if (
-            quickStartInstrument === "piano" &&
-            (savedIsGuitarDefault || savedIsPreviousGuitarDefault)
-          ) {
-            schedule = DEFAULT_PIANO_WEEKLY_SCHEDULE;
-          } else if (
-            quickStartInstrument === "guitar" &&
-            (savedIsPianoDefault || savedIsPreviousPianoDefault)
-          ) {
-            schedule = DEFAULT_WEEKLY_SCHEDULE;
-          } else {
-            schedule = parsed;
-          }
+          schedule = parsed;
         }
       } catch (e) {}
+    }
+
+    if (
+      saved &&
+      (quickStartInstrument === "guitar" || quickStartInstrument === "piano")
+    ) {
+      const template =
+        templateInstrument === "piano"
+          ? DEFAULT_PIANO_WEEKLY_SCHEDULE
+          : DEFAULT_WEEKLY_SCHEDULE;
+      schedule = schedule.map((day) => ({
+        ...day,
+        tasks: mergeRoutineTasks(
+          day.tasks,
+          (template.find((item) => item.day === day.day)?.tasks ?? []).map(
+            (task) => ({
+              ...task,
+              instrument: templateInstrument,
+              instrumentInferred: false,
+            }),
+          ),
+        ),
+      }));
     }
 
     const migrationTimestamp = Date.now();
     schedule = schedule.map((day) => ({
       ...day,
       tasks: day.tasks.map((task) =>
-        withTaskCreationDate(task, migrationTimestamp),
+        withTaskCreationDate(
+          {
+            ...task,
+            instrument: saved
+              ? resolveRecordInstrument(task)
+              : templateInstrument,
+          },
+          migrationTimestamp,
+        ),
       ),
     }));
 
@@ -1341,13 +1350,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
         day.day === getTodayCode()
           ? {
               ...day,
-              tasks:
-                quickStartInstrument === "guitar" ||
-                quickStartInstrument === "piano"
-                  ? currentTasks
-                  : quickStartInstrument === "none"
-                    ? day.tasks
-                    : mergeRoutineTasks(day.tasks, currentTasks),
+              tasks: mergeRoutineTasks(day.tasks, currentTasks),
             }
           : day,
       );
@@ -1377,6 +1380,30 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       return schedule;
     }
   });
+  const previousPracticeTasks = useRef(practiceTasks);
+  const hasIncomingPracticeTasks =
+    previousPracticeTasks.current !== practiceTasks;
+  useEffect(() => {
+    if (!hasIncomingPracticeTasks) return;
+    previousPracticeTasks.current = practiceTasks;
+    if (!practiceTasks) return;
+    setWeeklySchedule((previous) => {
+      const next = previous.map((day) =>
+        day.day === getTodayCode()
+          ? {
+              ...day,
+              tasks: mergeRoutineTasks(
+                day.tasks,
+                practiceTasks.map((task) => withTaskCreationDate(task)),
+              ),
+            }
+          : day,
+      );
+      return JSON.stringify(previous) === JSON.stringify(next)
+        ? previous
+        : next;
+    });
+  }, [practiceTasks, hasIncomingPracticeTasks]);
   useEffect(() => {
     if (quickStartInstrument) onQuickStartSetupHandled?.();
   }, [quickStartInstrument, onQuickStartSetupHandled]);
@@ -1388,8 +1415,13 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   const activeDay =
     weeklySchedule.find((d) => d.day === activeDayCode) || weeklySchedule[3];
   const activeDayDate = getHistoryDateForDay(activeDayCode);
-  const activeDayTasks = getTasksForDate(
+  const allActiveDayTasks = getTasksForDate(
     activeDay.tasks,
+    activeDayDate,
+    taskHistory,
+  );
+  const activeDayTasks = getTasksForDate(
+    activeDay.tasks.filter(isActiveInstrumentTask),
     activeDayDate,
     taskHistory,
   );
@@ -1400,6 +1432,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 
   // Sync state to localStorage
   useEffect(() => {
+    if (hasIncomingPracticeTasks) return;
     localStorage.setItem(
       "mous9iti_weekly_schedule",
       JSON.stringify(weeklySchedule),
@@ -1408,8 +1441,9 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       localStorage.setItem(
         "mous9iti_routine",
         JSON.stringify(
-          activeDayTasks.map((t) => ({
+          allActiveDayTasks.map((t) => ({
             id: t.id,
+            instrument: resolveRecordInstrument(t),
             title: t.text,
             completed: t.completed,
             type: "custom",
@@ -1419,17 +1453,31 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
           })),
         ),
       );
-      localStorage.setItem("mous9iti_tasks", JSON.stringify(activeDayTasks));
+      localStorage.setItem("mous9iti_tasks", JSON.stringify(allActiveDayTasks));
     }
-  }, [weeklySchedule, activeDayCode, historyWeekStart]);
+  }, [
+    weeklySchedule,
+    activeDayCode,
+    historyWeekStart,
+    practiceTasks,
+    hasIncomingPracticeTasks,
+  ]);
 
   useEffect(() => {
+    if (hasIncomingPracticeTasks) return;
     if (activeDay?.day === getTodayCode() && isActiveDayToday) {
       onPracticeTasksChange?.(
-        activeDayTasks.filter((task) => !isExpiredTask(task)),
+        allActiveDayTasks.filter((task) => !isExpiredTask(task)),
       );
     }
-  }, [weeklySchedule, activeDayCode, historyWeekStart, onPracticeTasksChange]);
+  }, [
+    weeklySchedule,
+    activeDayCode,
+    historyWeekStart,
+    onPracticeTasksChange,
+    practiceTasks,
+    hasIncomingPracticeTasks,
+  ]);
 
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
@@ -1603,6 +1651,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       : newTaskDuration;
     const newTask = {
       id: `t-${createdAt}`,
+      instrument: activeInstrument,
       createdAt,
       text: newTaskInput.trim(),
       completed: false,
@@ -1857,8 +1906,9 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
     0,
   );
   const completedMins = weeklySchedule.reduce((acc, d) => {
-    const completedTasksCount = d.tasks.filter((t) => t.completed).length;
-    const totalTasksCount = d.tasks.length || 1;
+    const tasks = d.tasks.filter(isActiveInstrumentTask);
+    const completedTasksCount = tasks.filter((task) => task.completed).length;
+    const totalTasksCount = tasks.length || 1;
     return (
       acc +
       Math.round((completedTasksCount / totalTasksCount) * d.goalDurationMins)
@@ -1894,6 +1944,12 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
           </div>
         </div>
         <div className="grid w-full grid-cols-2 gap-x-4 gap-y-3 font-mono text-xs lg:w-auto lg:flex lg:flex-wrap lg:items-center lg:gap-6">
+          <span
+            className="text-on-surface-variant"
+            aria-label={`Practice instrument: ${activeInstrument}`}
+          >
+            {activeInstrument === "piano" ? "Piano" : "Guitar"}
+          </span>
           <div className="min-w-0 text-on-surface-variant lg:inline">
             <span className="block text-[10px] uppercase tracking-wider lg:inline lg:text-xs lg:normal-case lg:tracking-normal">
               Week target
@@ -2020,7 +2076,11 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       >
         {daysInWeek.map((day) => {
           const historyDate = getHistoryDateForDay(day.day);
-          const dayTasks = getTasksForDate(day.tasks, historyDate, taskHistory);
+          const dayTasks = getTasksForDate(
+            day.tasks.filter(isActiveInstrumentTask),
+            historyDate,
+            taskHistory,
+          );
           const { completed: completedCount, total: totalCount } =
             getTaskCompletionCounts(dayTasks);
           const pct =
@@ -2126,23 +2186,42 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
           {needsTaskSetup ? (
             <PracticeTasksWidget
               startupLayout="routine"
-              tasks={practiceTasks}
+              tasks={practiceTasks?.filter(isActiveInstrumentTask)}
               timerPreferences={timerPreferences}
               onUpdateTimerPreferences={onUpdateTimerPreferences}
               onDismissTour={() =>
                 window.dispatchEvent(new Event("mousi9ti-task-setup-start"))
               }
-              onQuickStartTasks={(instrument, tasks) => {
+              onQuickStartTasks={(_instrument, tasks) => {
                 const schedule =
-                  instrument === "piano"
+                  activeInstrument === "piano"
                     ? DEFAULT_PIANO_WEEKLY_SCHEDULE
                     : DEFAULT_WEEKLY_SCHEDULE;
-                setWeeklySchedule(
-                  schedule.map((day) =>
-                    day.day === getTodayCode() ? { ...day, tasks } : day,
-                  ),
+                const currentTasks = tasks.map((task) => ({
+                  ...task,
+                  instrument: activeInstrument,
+                  instrumentInferred: false,
+                }));
+                setWeeklySchedule((previous) =>
+                  previous.map((day) => {
+                    const template = schedule.find(
+                      (item) => item.day === day.day,
+                    );
+                    const additions =
+                      day.day === getTodayCode()
+                        ? currentTasks
+                        : (template?.tasks ?? []).map((task) => ({
+                            ...task,
+                            instrument: activeInstrument,
+                            instrumentInferred: false,
+                          }));
+                    return {
+                      ...day,
+                      tasks: mergeRoutineTasks(day.tasks, additions),
+                    };
+                  }),
                 );
-                onQuickStartTasks?.(instrument, tasks);
+                onQuickStartTasks?.(activeInstrument, currentTasks);
               }}
               onFinishDailyTasksOnboarding={() => {
                 window.dispatchEvent(new Event("mousi9ti-task-setup-ready"));

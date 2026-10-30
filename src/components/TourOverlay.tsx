@@ -62,6 +62,14 @@ const STEPS: TourStep[] = [
     tab: "dashboard",
   },
   {
+    id: "dashboard-practice-instrument",
+    title: "Practice Instrument",
+    description:
+      "Your Default Instrument in Studio Settings controls Tasks and Practice. Tasks and practice time are saved separately for Guitar and Piano. Changing the default shows that instrument's tasks without moving existing tasks or history.",
+    targetSelector: "[title='Studio Settings']",
+    tab: "dashboard",
+  },
+  {
     id: "metronome",
     title: "Metronome",
     description:
@@ -90,7 +98,7 @@ const STEPS: TourStep[] = [
     id: "instruments-widget",
     title: "Fretboard & Piano",
     description:
-      "Explore notes on the fretboard or piano. Switch between Guitar, Piano, or Both and adjust tuning here, choose your instrument before moving on to Daily Practice Goals.",
+      "Explore notes on the fretboard or piano. Switch between Guitar, Piano, or Both and adjust tuning here. These display controls do not change your practice instrument.",
     targetSelector: "[data-dashboard-widget='instruments']",
     tab: "dashboard",
   },
@@ -227,6 +235,14 @@ const STEPS: TourStep[] = [
     awaitAction: true,
   },
   {
+    id: "routine-practice-instrument",
+    title: "Tasks by Instrument",
+    description:
+      "Tasks follow your Default Instrument in Studio Settings. Each instrument keeps its own goals. New tasks use that instrument, and changing the default never replaces your existing schedule or reassigns recorded practice.",
+    targetSelector: "[title='Studio Settings']",
+    tab: "routine",
+  },
+  {
     id: "routine-schedule",
     title: "Weekly Schedule",
     description:
@@ -288,7 +304,7 @@ const STEPS: TourStep[] = [
     id: "stats-metrics",
     title: "Practice Analytics",
     description:
-      "Review practice totals, streaks, completed practice days, and BPM progress. Your streak counts days when you started or completed at least one task, completed practice days require all planned tasks to be finished. These track consistency and daily goal completion separately.",
+      "Stats starts with your default instrument. Choose Guitar, Piano, or All instruments to report on practice without changing your active instrument. All instruments combines recorded time and task counts, and recalculates rates and streaks from practice dates. BPM progress stays instrument-specific.",
     targetSelector: "[data-tour='stats-metrics']",
     tab: "stats",
   },
@@ -317,13 +333,13 @@ const SECTION_STARTS: Record<number, string> = {
   0: "Intro",
   1: "Navigation",
   2: "Dashboard",
-  11: "Scales",
-  14: "Chords",
-  17: "Builder",
-  21: "Routine",
-  25: "Tools",
-  28: "Stats",
-  31: "Finish",
+  12: "Scales",
+  15: "Chords",
+  18: "Builder",
+  22: "Routine",
+  27: "Tools",
+  30: "Stats",
+  33: "Finish",
 };
 
 // ─── Step Icons ───────────────────────────────────────────────────────────────
@@ -344,6 +360,8 @@ function getStepIcon(id: string, size = 34): React.ReactNode {
     timer: <Clock size={S} />,
     drill: <Guitar size={S} />,
     session: <Play size={S} />,
+    "dashboard-practice-instrument": <Guitar size={S} />,
+    "routine-practice-instrument": <Guitar size={S} />,
     "practice-tasks": <CheckCircle2 size={S} />,
     streak: <Flame size={S} />,
     "dashboard-customize": <Settings2 size={S} />,

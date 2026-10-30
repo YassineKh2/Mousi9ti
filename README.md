@@ -94,6 +94,19 @@ Mousi9ti is a browser-based music practice studio for guitar and piano players. 
 
 The app runs as a client-side web application. Practice data is stored in the browser you use, so switching browsers or clearing site data will not carry sessions, tasks, or settings over automatically.
 
+### Instrument-specific practice
+
+Settings > Instrument > **Default Instrument** controls both Tasks and Practice.
+Tasks and practice time belong to Guitar or Piano, and the current instrument is
+shown without an additional dropdown. Changing the default pauses a pending
+session without changing its recorded instrument or existing task ownership.
+Save that session before starting another instrument. Stats offers independent
+Guitar, Piano, and All instruments reporting scopes.
+
+Existing browser data migrates automatically without losing task progress.
+See [deployment and migration](docs/instrument-migration.md) and
+[statistics aggregation rules](docs/instrument-statistics.md).
+
 ### Custom task durations
 
 In the routine task form, **Custom duration** accepts 1 to 999 whole weeks from the selected starting day. Each week is seven local calendar days. The preview shows the inclusive last day; storage retains the existing `duration: "custom"`, `startsAt`, and exclusive `expiresAt` fields, with expiry at local midnight after the final day. Calendar arithmetic preserves local dates across daylight-saving changes. Week, month, year, and Settings defaults are unchanged.

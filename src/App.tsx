@@ -14,6 +14,7 @@ import {
   AppSettings,
   Exercise,
   NoteName,
+  PracticeInstrument,
   PracticeTask,
   Session,
   StreakData,
@@ -95,6 +96,11 @@ import {
 } from "./data/chordsData";
 import { GlobalSessionToast } from "./components/GlobalSessionToast";
 import { SettingsContext } from "./contexts/SettingsContext";
+import {
+  PracticeInstrumentProvider,
+  usePracticeInstrument,
+} from "./contexts/PracticeInstrumentContext";
+import { normalizeInstrument } from "./lib/instruments";
 const TourOverlay = lazy(() =>
   import("./components/TourOverlay").then((module) => ({
     default: module.TourOverlay,
@@ -148,6 +154,15 @@ const getPracticeTasksForDate = (date: Date): PracticeTask[] => {
 };
 
 export function App() {
+  return (
+    <PracticeInstrumentProvider>
+      <PracticeApp />
+    </PracticeInstrumentProvider>
+  );
+}
+
+function PracticeApp() {
+  const { activeInstrument, setActiveInstrument } = usePracticeInstrument();
   useLayoutEffect(() => {
     document.documentElement.dataset.appReady = "true";
   }, []);
@@ -369,6 +384,34 @@ export function App() {
   const [practiceTasks, setPracticeTasks] = useState<PracticeTask[]>(() => {
     return getPracticeTasksForDate(new Date());
   });
+  const scopedPracticeTasks = practiceTasks.filter(
+    (task) => normalizeInstrument(task.instrument) === activeInstrument,
+  );
+  const updateScopedPracticeTasks = (
+    tasks: PracticeTask[],
+    instrument = activeInstrument,
+  ) => {
+    setPracticeTasks((current) => [
+      ...current.filter(
+        (task) => normalizeInstrument(task.instrument) !== instrument,
+      ),
+      ...tasks.map((task) => ({ ...task, instrument })),
+    ]);
+  };
+  const quickStartTasks = (
+    _instrument: PracticeInstrument,
+    tasks: PracticeTask[],
+  ) => {
+    setPracticeTasks((current) => {
+      const existingIds = new Set(current.map((task) => task.id));
+      return [
+        ...current,
+        ...tasks
+          .filter((task) => !existingIds.has(task.id))
+          .map((task) => ({ ...task, instrument: activeInstrument })),
+      ];
+    });
+  };
   const [quickStartInstrument, setQuickStartInstrument] = useState<
     "guitar" | "piano" | "none" | null
   >(null);
@@ -397,6 +440,7 @@ export function App() {
     tasks: PracticeTask[];
     attributedSeconds: Record<string, number>;
   } | null>(null);
+  const committedSessionIdsRef = useRef(new Set<string>());
   const [showTaskCompletionModal, setShowTaskCompletionModal] = useState(false);
 
   // Initialize timer state from local storage
@@ -423,6 +467,14 @@ export function App() {
     },
   );
   const [currentSessionBpms, setCurrentSessionBpms] = useState<number[]>([]);
+  const sessionInstrumentRef = useRef<PracticeInstrument | null>(
+    localStorage.getItem("Mousi9ti_session_instrument") === null
+      ? null
+      : normalizeInstrument(
+          localStorage.getItem("Mousi9ti_session_instrument"),
+        ),
+  );
+  const previousInstrumentRef = useRef(activeInstrument);
 
   // Metronome State
   const [metronomeBpm, setMetronomeBpm] = useState<number>(120);
@@ -434,11 +486,14 @@ export function App() {
   // Practice Timer
   const timer = useTimer();
   const metronomeStartedAtRef = useRef<number | null>(null);
+  const metronomeInstrumentRef = useRef(activeInstrument);
+  const timerInstrumentRef = useRef(activeInstrument);
   const wasMetronomePlayingBeforePauseRef = useRef<boolean>(false);
   const taskSegmentRef = useRef<{
     taskId: string;
     startedAt: number;
     sessionId: string;
+    instrument: PracticeInstrument;
   } | null>(null);
   const timedTaskIdRef = useRef<string | null>(null);
   const timedTaskAdvanceTimeoutRef = useRef<number | null>(null);
@@ -515,15 +570,24 @@ export function App() {
   const flushTaskAttribution = useCallback((endedAt: number) => {
     const segment = taskSegmentRef.current;
     if (!segment) return;
+    const task = practiceTasksRef.current.find(
+      (item) => item.id === segment.taskId,
+    );
     const durationSeconds = Math.max(
       0,
       Math.floor((endedAt - segment.startedAt) / 1000),
     );
-    if (durationSeconds > 0) {
+    if (
+      durationSeconds > 0 &&
+      task &&
+      normalizeInstrument(task.instrument) === segment.instrument &&
+      segment.instrument === sessionInstrumentRef.current
+    ) {
       saveTaskAttribution({
         id: `${segment.sessionId}-${segment.taskId}-${segment.startedAt}`,
         sessionId: segment.sessionId,
         taskId: segment.taskId,
+        instrument: segment.instrument,
         durationSeconds,
         startedAt: segment.startedAt,
         endedAt,
@@ -550,36 +614,52 @@ export function App() {
   useEffect(() => {
     const now = Date.now();
     const savedSegment = localStorage.getItem("Mousi9ti_task_active_segment");
-    if (savedSegment && !isSessionActive) {
+    if (savedSegment && !taskSegmentRef.current) {
       try {
         const parsed = JSON.parse(savedSegment);
-        taskSegmentRef.current = parsed;
-        flushTaskAttribution(now);
+        if (
+          typeof parsed.taskId === "string" &&
+          typeof parsed.sessionId === "string" &&
+          Number.isFinite(parsed.startedAt)
+        ) {
+          taskSegmentRef.current = {
+            ...parsed,
+            instrument: normalizeInstrument(parsed.instrument),
+          };
+        } else {
+          localStorage.removeItem("Mousi9ti_task_active_segment");
+        }
       } catch {
         localStorage.removeItem("Mousi9ti_task_active_segment");
       }
     }
 
-    if (!isSessionActive || !activeTaskId) {
+    const task = practiceTasks.find((item) => item.id === activeTaskId);
+    if (
+      !isSessionActive ||
+      !task ||
+      normalizeInstrument(task.instrument) !== sessionInstrumentRef.current
+    ) {
       flushTaskAttribution(now);
       return;
     }
 
-    if (taskSegmentRef.current?.taskId === activeTaskId) return;
+    if (taskSegmentRef.current?.taskId === task.id) return;
     flushTaskAttribution(now);
     const sessionId =
       localStorage.getItem("Mousi9ti_task_session_id") || `task-session-${now}`;
     localStorage.setItem("Mousi9ti_task_session_id", sessionId);
     taskSegmentRef.current = {
-      taskId: activeTaskId,
+      taskId: task.id,
       startedAt: now,
       sessionId,
+      instrument: normalizeInstrument(task.instrument),
     };
     localStorage.setItem(
       "Mousi9ti_task_active_segment",
       JSON.stringify(taskSegmentRef.current),
     );
-  }, [activeTaskId, flushTaskAttribution, isSessionActive]);
+  }, [activeTaskId, flushTaskAttribution, isSessionActive, practiceTasks]);
 
   useEffect(() => {
     return () => flushTaskAttribution(Date.now());
@@ -592,8 +672,9 @@ export function App() {
   };
 
   const startDailyTasks = () => {
+    if (!canPracticeInstrument(activeInstrument)) return;
     setIsDailyRoutineActive(true);
-    const firstIncomplete = practiceTasks.find((task) => !task.completed);
+    const firstIncomplete = scopedPracticeTasks.find((task) => !task.completed);
     if (timerPreferences.autoActivateFirstTask && firstIncomplete) {
       setActiveTaskId(firstIncomplete.id);
       localStorage.setItem("Mousi9ti_active_task_id", firstIncomplete.id);
@@ -613,8 +694,15 @@ export function App() {
       timedTaskIdRef.current = null;
     }
     const task = practiceTasks.find((item) => item.id === taskId);
+    if (taskId && !task) return;
     if (task?.completed) return;
     if (task) {
+      if (
+        normalizeInstrument(task.instrument) !== activeInstrument ||
+        !canPracticeInstrument(normalizeInstrument(task.instrument))
+      )
+        return;
+      flushTaskAttribution(Date.now());
       recordTaskActivity(task, "started");
       setStreak(getSavedStreak());
     }
@@ -645,7 +733,11 @@ export function App() {
     );
     if (completed && activeTaskId === taskId) {
       const next = practiceTasks.find(
-        (item) => item.id !== taskId && !item.completed,
+        (item) =>
+          item.id !== taskId &&
+          !item.completed &&
+          normalizeInstrument(item.instrument) ===
+            normalizeInstrument(task.instrument),
       );
       makeTaskActive(next?.id || null);
       if (!next && isSessionActive) {
@@ -709,14 +801,19 @@ export function App() {
   };
 
   const setTaskManualDuration = (taskId: string, minutes: number) => {
+    const task = practiceTasks.find((item) => item.id === taskId);
+    if (!task || !canPracticeInstrument(normalizeInstrument(task.instrument)))
+      return;
     const now = Date.now();
     const sessionId =
-      localStorage.getItem("Mousi9ti_task_session_id") ||
-      `manual-task-session-${now}`;
+      (sessionInstrumentRef.current &&
+        localStorage.getItem("Mousi9ti_task_session_id")) ||
+      `manual-task-session-${normalizeInstrument(task.instrument)}-${now}`;
     saveTaskAttribution({
       id: `manual-${sessionId}-${taskId}`,
       sessionId,
       taskId,
+      instrument: normalizeInstrument(task.instrument),
       durationSeconds: Math.max(0, minutes * 60),
       startedAt: now,
       endedAt: now,
@@ -737,16 +834,28 @@ export function App() {
   };
 
   const saveReviewedTaskDurations = (durations: Record<string, number>) => {
+    if (!sessionReview) return;
+    const reviewedDurations = Object.fromEntries(
+      Object.entries(durations).filter(([taskId]) =>
+        sessionReview.tasks.some(
+          (task) =>
+            task.id === taskId &&
+            normalizeInstrument(task.instrument) ===
+              sessionReview.pendingSession.instrument,
+        ),
+      ),
+    );
     const now = Date.now();
     const sessionId =
       localStorage.getItem("Mousi9ti_task_session_id") ||
       `reviewed-task-session-${now}`;
     replaceTaskAttributionsForSession(
       sessionId,
-      Object.entries(durations).map(([taskId, seconds]) => ({
+      Object.entries(reviewedDurations).map(([taskId, seconds]) => ({
         id: `reviewed-${sessionId}-${taskId}`,
         sessionId,
         practiceSessionId: sessionReview?.practiceSessionId,
+        instrument: sessionReview.pendingSession.instrument,
         taskId,
         durationSeconds: Math.max(0, seconds),
         startedAt: now,
@@ -758,10 +867,13 @@ export function App() {
     );
     setPracticeTasks((current) =>
       current.map((task) =>
-        Object.prototype.hasOwnProperty.call(durations, task.id)
+        Object.prototype.hasOwnProperty.call(reviewedDurations, task.id)
           ? {
               ...task,
-              manuallyConfirmedDurationSeconds: Math.max(0, durations[task.id]),
+              manuallyConfirmedDurationSeconds: Math.max(
+                0,
+                reviewedDurations[task.id],
+              ),
             }
           : task,
       ),
@@ -774,7 +886,9 @@ export function App() {
       const sessionId = localStorage.getItem("Mousi9ti_task_session_id");
       const sessionAttributions = getSavedTaskAttributions().filter(
         (attribution) =>
-          (!sessionId || attribution.sessionId === sessionId) &&
+          Boolean(sessionId) &&
+          attribution.sessionId === sessionId &&
+          attribution.instrument === pendingSession.instrument &&
           attribution.source === "automatic",
       );
       const attributedSeconds = sessionAttributions.reduce<
@@ -788,7 +902,10 @@ export function App() {
         pendingSession,
         practiceSessionId: pendingSession.id,
         globalDurationSeconds: pendingSession.durationSeconds,
-        tasks: practiceTasks,
+        tasks: practiceTasks.filter(
+          (task) =>
+            normalizeInstrument(task.instrument) === pendingSession.instrument,
+        ),
         attributedSeconds,
       });
     },
@@ -806,7 +923,10 @@ export function App() {
         timedTaskId === activeTaskId
       ) {
         const nextTask = practiceTasksRef.current.find(
-          (task) => task.id !== timedTaskId && !task.completed,
+          (task) =>
+            task.id !== timedTaskId &&
+            !task.completed &&
+            normalizeInstrument(task.instrument) === timerInstrumentRef.current,
         );
         const advanceDelaySeconds = timerPreferences.autoAdvanceDelaySeconds;
         if (!nextTask) {
@@ -825,6 +945,7 @@ export function App() {
       flushTaskAttribution(Date.now());
       if (durationSeconds > 0) {
         recordPracticeActivity({
+          instrument: timerInstrumentRef.current,
           source: "timer",
           sourceId: "global-timer",
           startTime: Date.now() - durationSeconds * 1000,
@@ -885,12 +1006,16 @@ export function App() {
       (playing: boolean) => {
         setMetronomeIsPlaying(playing);
         if (playing) {
+          if (!metronomeStartedAtRef.current) {
+            metronomeInstrumentRef.current = activeInstrument;
+          }
           metronomeStartedAtRef.current ||= Date.now();
         } else if (metronomeStartedAtRef.current) {
           const startTime = metronomeStartedAtRef.current;
           const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
           if (durationSeconds >= 30 && !isSessionActive) {
             recordPracticeActivity({
+              instrument: metronomeInstrumentRef.current,
               source: "metronome",
               sourceId: "global-metronome",
               startTime,
@@ -909,7 +1034,7 @@ export function App() {
 
     setMetronomeIsPlaying(audioEngine.isRunning());
     return () => unsubscribe();
-  }, [isSessionActive]);
+  }, [isSessionActive, activeInstrument]);
 
   // Sync Master Volume & Theme to engine and HTML element
   useEffect(() => {
@@ -961,6 +1086,7 @@ export function App() {
 
   const handlePauseSession = () => {
     if (!isSessionActive) return;
+    flushTaskAttribution(Date.now());
     const accumulated = Number(
       localStorage.getItem("Mousi9ti_session_accumulated") || "0",
     );
@@ -980,11 +1106,30 @@ export function App() {
     setIsSessionActive(false);
   };
 
+  const canPracticeInstrument = (instrument: PracticeInstrument) => {
+    if (
+      sessionInstrumentRef.current &&
+      sessionInstrumentRef.current !== instrument
+    ) {
+      window.alert(
+        `Save the paused ${sessionInstrumentRef.current} session before starting ${instrument} practice.`,
+      );
+      return false;
+    }
+    return true;
+  };
+
   const handleResumeSession = () => {
-    if (isSessionActive) return;
+    if (!canPracticeInstrument(activeInstrument) || sessionReview) return false;
+    if (isSessionActive) return true;
+    if (!sessionInstrumentRef.current) {
+      sessionInstrumentRef.current = activeInstrument;
+      localStorage.setItem("Mousi9ti_session_instrument", activeInstrument);
+    }
     localStorage.setItem("Mousi9ti_session_is_active", "true");
     localStorage.setItem("Mousi9ti_session_start_time", Date.now().toString());
     setIsSessionActive(true);
+    return true;
   };
 
   const handleToggleSession = () => {
@@ -1007,7 +1152,7 @@ export function App() {
   };
 
   const handleResumeDailyTasks = () => {
-    handleResumeSession();
+    if (!handleResumeSession()) return;
     window.dispatchEvent(new Event("random-drill-resume"));
     if (timer.status === "paused") {
       timer.resume();
@@ -1024,16 +1169,56 @@ export function App() {
     wasMetronomePlayingBeforePauseRef.current = false;
   };
 
+  useEffect(() => {
+    if (
+      previousInstrumentRef.current === activeInstrument &&
+      (!isSessionActive || sessionInstrumentRef.current === activeInstrument)
+    )
+      return;
+    previousInstrumentRef.current = activeInstrument;
+    handlePauseDailyTasks();
+    timer.reset();
+    makeTaskActive(null);
+    setIsDailyRoutineActive(false);
+    wasMetronomePlayingBeforePauseRef.current = false;
+  }, [activeInstrument]);
+
+  useEffect(() => {
+    if (timer.status === "running") {
+      if (!canPracticeInstrument(activeInstrument)) {
+        timer.reset();
+        return;
+      }
+      timerInstrumentRef.current = activeInstrument;
+    }
+  }, [timer.status, activeInstrument]);
+
   // End and Log Practice Session
   const handleEndSession = useCallback(() => {
-    if (activeSessionDuration === 0) {
+    const now = Date.now();
+    const accumulated = Number(
+      localStorage.getItem("Mousi9ti_session_accumulated") || "0",
+    );
+    const startedAt = Number(
+      localStorage.getItem("Mousi9ti_session_start_time") || now,
+    );
+    const durationSeconds = isSessionActive
+      ? accumulated + Math.max(0, Math.floor((now - startedAt) / 1000))
+      : activeSessionDuration;
+    flushTaskAttribution(now);
+    timer.reset();
+    if (durationSeconds === 0) {
       setIsDailyRoutineActive(false);
       // Nothing to log, just clean up
       localStorage.removeItem("Mousi9ti_session_is_active");
       localStorage.removeItem("Mousi9ti_session_start_time");
       localStorage.removeItem("Mousi9ti_session_accumulated");
+      localStorage.removeItem("Mousi9ti_session_instrument");
+      localStorage.removeItem("Mousi9ti_task_session_id");
+      sessionInstrumentRef.current = null;
       setIsSessionActive(false);
       setActiveSessionDuration(0);
+      setCurrentSessionBpms([]);
       return;
     }
 
@@ -1046,10 +1231,11 @@ export function App() {
 
     const newSession: Session = {
       id: `session-${Date.now()}`,
+      instrument: sessionInstrumentRef.current ?? activeInstrument,
       date: today,
-      startTime: Date.now() - activeSessionDuration * 1000,
+      startTime: Date.now() - durationSeconds * 1000,
       endTime: Date.now(),
-      durationSeconds: activeSessionDuration,
+      durationSeconds,
       bpmsUsed:
         currentSessionBpms.length > 0 ? currentSessionBpms : [metronomeBpm],
       highestBpm,
@@ -1064,15 +1250,19 @@ export function App() {
     localStorage.removeItem("Mousi9ti_session_start_time");
     localStorage.setItem(
       "Mousi9ti_session_accumulated",
-      activeSessionDuration.toString(),
+      durationSeconds.toString(),
     );
+    setActiveSessionDuration(durationSeconds);
     setIsSessionActive(false);
   }, [
     activeSessionDuration,
+    activeInstrument,
+    isSessionActive,
     currentSessionBpms,
     flushTaskAttribution,
     metronomeBpm,
     openSessionReview,
+    timer,
   ]);
 
   // Log BPM to session tracker
@@ -1085,7 +1275,7 @@ export function App() {
     setMetronomeBpm(exercise.suggestedBpm);
     setActiveTab("dashboard");
     if (!isSessionActive) {
-      setIsSessionActive(true);
+      handleResumeSession();
     }
   };
 
@@ -1094,6 +1284,9 @@ export function App() {
     const updated = { ...settings, ...newPartial };
     setSettings(updated);
     saveSettings(updated);
+    if (newPartial.defaultInstrument !== undefined) {
+      setActiveInstrument(normalizeInstrument(updated.defaultInstrument));
+    }
   };
 
   // Export JSON data
@@ -1146,11 +1339,22 @@ export function App() {
       const sessionId =
         localStorage.getItem("Mousi9ti_task_session_id") ||
         `task-session-${startedAt}`;
-      taskSegmentRef.current = { taskId: activeTaskId, startedAt, sessionId };
-      localStorage.setItem(
-        "Mousi9ti_task_active_segment",
-        JSON.stringify(taskSegmentRef.current),
-      );
+      const task = practiceTasks.find((item) => item.id === activeTaskId);
+      if (
+        task &&
+        normalizeInstrument(task.instrument) === sessionInstrumentRef.current
+      ) {
+        taskSegmentRef.current = {
+          taskId: activeTaskId,
+          startedAt,
+          sessionId,
+          instrument: normalizeInstrument(task.instrument),
+        };
+        localStorage.setItem(
+          "Mousi9ti_task_active_segment",
+          JSON.stringify(taskSegmentRef.current),
+        );
+      }
     }
     setSessionReview(null);
   };
@@ -1662,15 +1866,13 @@ export function App() {
                   setActiveTab("routine");
                   window.dispatchEvent(new Event("mousi9ti-task-setup-ready"));
                 }}
-                onQuickStartTasks={(instrument, tasks) => {
-                  handleUpdateSettings({
-                    defaultInstrument: instrument,
-                    taskInstrumentFilter: instrument,
-                  });
-                  setPracticeTasks(tasks);
-                }}
-                practiceTasks={practiceTasks}
-                activeTaskId={activeTaskId}
+                onQuickStartTasks={quickStartTasks}
+                practiceTasks={scopedPracticeTasks}
+                activeTaskId={
+                  scopedPracticeTasks.some((task) => task.id === activeTaskId)
+                    ? activeTaskId
+                    : null
+                }
                 timerPreferences={timerPreferences}
                 onStartDailyTasks={startDailyTasks}
                 isDailyRoutineActive={isDailyRoutineActive}
@@ -1678,11 +1880,19 @@ export function App() {
                 onResumeDailyTasks={handleResumeDailyTasks}
                 onMakeTaskActive={makeTaskActive}
                 onTogglePracticeTask={togglePracticeTask}
-                onPracticeTasksChange={setPracticeTasks}
+                onPracticeTasksChange={updateScopedPracticeTasks}
                 onDeletePracticeTask={deletePracticeTask}
                 onSetTaskManualDuration={setTaskManualDuration}
                 onUpdateTimerPreferences={updateTimerPreferences}
                 onTaskTimerStarted={(taskId) => {
+                  const task = scopedPracticeTasks.find(
+                    (item) => item.id === taskId,
+                  );
+                  if (!task || !canPracticeInstrument(activeInstrument)) {
+                    timer.reset();
+                    return;
+                  }
+                  timerInstrumentRef.current = activeInstrument;
                   timedTaskIdRef.current = taskId;
                 }}
               />
@@ -1733,13 +1943,7 @@ export function App() {
                 onEndSession={handleEndSession}
                 timerPreferences={timerPreferences}
                 onUpdateTimerPreferences={updateTimerPreferences}
-                onQuickStartTasks={(instrument, tasks) => {
-                  handleUpdateSettings({
-                    defaultInstrument: instrument,
-                    taskInstrumentFilter: instrument,
-                  });
-                  setPracticeTasks(tasks);
-                }}
+                onQuickStartTasks={quickStartTasks}
               />
             )}
 
@@ -1844,6 +2048,9 @@ export function App() {
             attributedSeconds={sessionReview.attributedSeconds}
             onClose={() => setSessionReview(null)}
             onSave={(durations) => {
+              const sessionId = sessionReview.pendingSession.id;
+              if (committedSessionIdsRef.current.has(sessionId)) return;
+              committedSessionIdsRef.current.add(sessionId);
               saveSession(sessionReview.pendingSession);
               saveReviewedTaskDurations(durations);
               setSessions(getSavedSessions());
@@ -1852,9 +2059,14 @@ export function App() {
               localStorage.removeItem("Mousi9ti_session_is_active");
               localStorage.removeItem("Mousi9ti_session_start_time");
               localStorage.removeItem("Mousi9ti_session_accumulated");
+              localStorage.removeItem("Mousi9ti_session_instrument");
+              localStorage.removeItem("Mousi9ti_active_task_id");
+              sessionInstrumentRef.current = null;
+              setActiveTaskId(null);
               setIsSessionActive(false);
               setActiveSessionDuration(0);
               setCurrentSessionBpms([]);
+              setSessionReview(null);
               confetti({
                 particleCount: 80,
                 spread: 70,

@@ -12,6 +12,11 @@ import {
   TaskTimeAttribution,
   UserTimerPreferences,
 } from "../types";
+import {
+  migrateInstrumentData,
+  normalizeInstrumentRecord,
+  resolveRecordInstrument,
+} from "./instruments";
 
 const STORAGE_KEYS = {
   SESSIONS: "Mousi9ti_sessions_v1",
@@ -311,6 +316,7 @@ export function getSavedSettings(): AppSettings {
 
 export function saveSettings(settings: AppSettings): void {
   try {
+    migrateInstrumentData();
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
   } catch (e) {
     console.error("Failed to save settings", e);
@@ -350,9 +356,10 @@ export function getSavedTaskAttributions(): TaskTimeAttribution[] {
 export function saveTaskAttribution(attribution: TaskTimeAttribution): void {
   const existing = getSavedTaskAttributions();
   const index = existing.findIndex((item) => item.id === attribution.id);
+  const normalized = normalizeInstrumentRecord(attribution, existing[index]);
   const updated = [...existing];
-  if (index >= 0) updated[index] = attribution;
-  else updated.unshift(attribution);
+  if (index >= 0) updated[index] = normalized;
+  else updated.unshift(normalized);
   localStorage.setItem(
     STORAGE_KEYS.TASK_TIME_ATTRIBUTIONS,
     JSON.stringify(updated.slice(0, 5000)),
@@ -363,12 +370,21 @@ export function replaceTaskAttributionsForSession(
   sessionId: string,
   attributions: TaskTimeAttribution[],
 ): void {
-  const existing = getSavedTaskAttributions().filter(
-    (item) => item.sessionId !== sessionId,
+  const saved = getSavedTaskAttributions();
+  const normalized = attributions.map((attribution) =>
+    normalizeInstrumentRecord(
+      attribution,
+      saved.find((item) => item.id === attribution.id) ??
+        saved.find(
+          (item) =>
+            item.sessionId === sessionId && item.taskId === attribution.taskId,
+        ),
+    ),
   );
+  const existing = saved.filter((item) => item.sessionId !== sessionId);
   localStorage.setItem(
     STORAGE_KEYS.TASK_TIME_ATTRIBUTIONS,
-    JSON.stringify([...attributions, ...existing].slice(0, 5000)),
+    JSON.stringify([...normalized, ...existing].slice(0, 5000)),
   );
 }
 
@@ -428,12 +444,26 @@ export function saveSession(session: Session): void {
   try {
     const existing = getSavedSessions();
     const index = existing.findIndex((s) => s.id === session.id);
+    const activeInstrument = localStorage.getItem(
+      "Mousi9ti_session_instrument",
+    );
+    const restored =
+      localStorage.getItem("Mousi9ti_session_is_active") === "true" ||
+      Number(localStorage.getItem("Mousi9ti_session_accumulated")) > 0;
+    const normalized = normalizeInstrumentRecord(
+      session,
+      existing[index] ??
+        (restored &&
+        (activeInstrument === "guitar" || activeInstrument === "piano")
+          ? { instrument: activeInstrument }
+          : undefined),
+    );
     let updated: Session[];
     if (index >= 0) {
       updated = [...existing];
-      updated[index] = session;
+      updated[index] = normalized;
     } else {
-      updated = [session, ...existing];
+      updated = [normalized, ...existing];
     }
     localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(updated));
     recordPracticeDay(session.date, Math.round(session.durationSeconds / 60));
@@ -526,7 +556,7 @@ export function getSavedTaskActivities(): TaskActivity[] {
 }
 
 export function recordTaskActivity(
-  task: Pick<PracticeTask, "id" | "text">,
+  task: Pick<PracticeTask, "id" | "text" | "instrument" | "instrumentInferred">,
   kind: TaskActivity["kind"],
 ): void {
   try {
@@ -542,6 +572,10 @@ export function recordTaskActivity(
     if (alreadyLogged) return;
     const metadata = getTaskMetadata(task.text);
     const activity: TaskActivity = {
+      instrument: resolveRecordInstrument({
+        instrument: task.instrument,
+        taskId: task.id,
+      }),
       id: `task-activity-${now}-${Math.random().toString(36).slice(2, 7)}`,
       taskId: task.id,
       taskText: task.text,
@@ -594,7 +628,7 @@ export function removeTaskCompletion(taskId: string): void {
 
 /** Single entry point for check/uncheck so every surface counts completions identically. */
 export function setTaskCompletion(
-  task: Pick<PracticeTask, "id" | "text">,
+  task: Pick<PracticeTask, "id" | "text" | "instrument" | "instrumentInferred">,
   completed: boolean,
 ): void {
   if (completed) {
@@ -639,11 +673,11 @@ export function recordPracticeActivity(
   activity: Omit<PracticeActivity, "id" | "date"> & { date?: string },
 ): PracticeActivity {
   const timestamp = activity.startTime || Date.now();
-  const saved: PracticeActivity = {
+  const saved: PracticeActivity = normalizeInstrumentRecord({
     ...activity,
     id: `practice-${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
     date: activity.date || getTodayDateString(),
-  };
+  });
   const activities = [saved, ...getSavedPracticeActivities()].slice(0, 3000);
   localStorage.setItem(
     STORAGE_KEYS.PRACTICE_ACTIVITIES,

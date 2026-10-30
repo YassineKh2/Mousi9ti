@@ -1,3 +1,5 @@
+import { migrateInstrumentData } from "./instruments";
+
 export const BACKUP_CATEGORIES = [
   "stats",
   "chords",
@@ -106,7 +108,7 @@ export function getBackupCategory(key: string): BackupCategory {
     return "chords";
   }
   if (
-    /^(mous9iti_tasks|mous9iti_weekly_schedule|mous9iti_custom_tags|Mousi9ti_active_task_id|Mousi9ti_session_is_active|Mousi9ti_session_accumulated|Mousi9ti_session_start_time|Mousi9ti_task_session_id|Mousi9ti_task_active_segment|Mousi9ti_timer_v1)$/.test(
+    /^(mous9iti_tasks|mous9iti_weekly_schedule|mous9iti_custom_tags|Mousi9ti_active_task_id|Mousi9ti_session_is_active|Mousi9ti_session_accumulated|Mousi9ti_session_start_time|Mousi9ti_session_instrument|Mousi9ti_task_session_id|Mousi9ti_task_active_segment|Mousi9ti_timer_v1)$/.test(
       key,
     )
   ) {
@@ -150,6 +152,7 @@ export function restoreAppBackup(
     Object.entries(restored).forEach(([key, value]) =>
       localStorage.setItem(key, value),
     );
+    migrateInstrumentData();
   } catch (error) {
     try {
       localStorage.clear();

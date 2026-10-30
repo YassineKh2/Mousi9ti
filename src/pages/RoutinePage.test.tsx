@@ -8,6 +8,7 @@ import {
   RoutinePage,
 } from "./RoutinePage";
 import { SettingsContext } from "../contexts/SettingsContext";
+import { PracticeInstrumentProvider } from "../contexts/PracticeInstrumentContext";
 import { AppSettings, PracticeTask, UserTimerPreferences } from "../types";
 
 for (const [duration, label] of [
@@ -123,9 +124,14 @@ function renderRoutine(
   tasks: PracticeTask[] = [],
   savedSchedule?: string,
   timerPreferences?: UserTimerPreferences,
+  selectedInstrument: "guitar" | "piano" = instrument,
 ) {
   const originalStorage = globalThis.localStorage;
   const saved = new Map<string, string>();
+  saved.set(
+    "Mousi9ti_settings_v1",
+    JSON.stringify({ defaultInstrument: selectedInstrument }),
+  );
   if (savedSchedule) saved.set("mous9iti_weekly_schedule", savedSchedule);
   globalThis.localStorage = {
     getItem: (key: string) => saved.get(key) ?? null,
@@ -138,11 +144,13 @@ function renderRoutine(
       <SettingsContext.Provider
         value={{ defaultInstrument: instrument } as AppSettings}
       >
-        <RoutinePage
-          practiceTasks={tasks}
-          quickStartInstrument={quickStartInstrument}
-          timerPreferences={timerPreferences}
-        />
+        <PracticeInstrumentProvider>
+          <RoutinePage
+            practiceTasks={tasks}
+            quickStartInstrument={quickStartInstrument}
+            timerPreferences={timerPreferences}
+          />
+        </PracticeInstrumentProvider>
       </SettingsContext.Provider>,
     );
   } finally {
@@ -339,3 +347,160 @@ it("reports the calculated percentage and handles a zero weekly target", () => {
     /Completed<\/span><strong class="text-primary font-bold">0h 0m \(0%\)<\/strong>/,
   );
 });
+
+function mixedInstrumentSchedule() {
+  return ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => ({
+    day,
+    focusTheme: "Mixed practice",
+    goalDurationMins: 30,
+    defaultBpm: 90,
+    modules: [],
+    tasks: [
+      {
+        id: `guitar-${day}`,
+        instrument: "guitar" as const,
+        text: "Guitar ownership sentinel",
+        completed: true,
+      },
+      {
+        id: `piano-${day}`,
+        instrument: "piano" as const,
+        text: "Piano ownership sentinel",
+        completed: false,
+      },
+    ],
+  }));
+}
+
+for (const instrument of ["guitar", "piano"] as const) {
+  const oppositeInstrument = instrument === "guitar" ? "piano" : "guitar";
+  const label =
+    instrument === "guitar"
+      ? "Guitar ownership sentinel"
+      : "Piano ownership sentinel";
+  const oppositeLabel =
+    instrument === "guitar"
+      ? "Piano ownership sentinel"
+      : "Guitar ownership sentinel";
+
+  it(`filters labels, completion controls, and estimates to selected ${instrument}`, () => {
+    const schedule = mixedInstrumentSchedule();
+    const html = renderRoutine(
+      oppositeInstrument,
+      undefined,
+      [],
+      JSON.stringify(schedule),
+      undefined,
+      instrument,
+    );
+
+    assert.ok(html.includes(label));
+    assert.ok(!html.includes(oppositeLabel));
+    assert.ok(
+      html.includes(
+        `aria-label="Mark task ${instrument === "guitar" ? "incomplete" : "complete"}: ${label}"`,
+      ),
+    );
+    assert.ok(
+      html.includes(
+        `aria-label="Estimated completion: ${instrument === "guitar" ? "3h 30m (100%)" : "0h 0m (0%)"},`,
+      ),
+    );
+  });
+
+  it(`retains mixed ownership when same-ID daily copies claim ${oppositeInstrument}`, () => {
+    const stored = mixedInstrumentSchedule()[0].tasks;
+    const daily = stored.map((task) => ({
+      ...task,
+      instrument: oppositeInstrument as "guitar" | "piano",
+      instrumentInferred: true,
+      completed: !task.completed,
+    }));
+    const storedWithMetadata = stored.map((task) => ({
+      ...task,
+      instrumentInferred: false,
+      createdAt: 1000,
+      startsAt: 2000,
+      expiresAt: 3000,
+      duration: "custom" as const,
+      visibilityHistory: [{ startsAt: 500, expiresAt: 900 }],
+      hiddenDates: ["2026-01-01"],
+    }));
+    const original = structuredClone(storedWithMetadata);
+    const merged = mergeRoutineTasks(storedWithMetadata, daily);
+
+    assert.equal(merged.length, 2);
+    for (const [index, task] of merged.entries()) {
+      assert.equal(task.id, stored[index].id);
+      assert.equal(task.instrument, stored[index].instrument);
+      assert.equal(task.instrumentInferred, false);
+      assert.equal(task.completed, daily[index].completed);
+      assert.equal(task.createdAt, 1000);
+      assert.equal(task.startsAt, 2000);
+      assert.equal(task.expiresAt, 3000);
+      assert.equal(task.duration, "custom");
+    }
+    assert.deepEqual(storedWithMetadata, original);
+    assert.deepEqual(mergeRoutineTasks(merged, daily), merged);
+  });
+
+  it(`preserves new ${instrument} task creation metadata alongside opposite tasks`, () => {
+    const stored = mixedInstrumentSchedule()[0].tasks.filter(
+      (task) => task.instrument === oppositeInstrument,
+    );
+    const added = {
+      id: `new-${instrument}`,
+      instrument,
+      instrumentInferred: false,
+      text: "New practice task",
+      completed: false,
+      createdAt: 1000,
+      startsAt: 2000,
+      expiresAt: 3000,
+      duration: "custom" as const,
+      visibilityHistory: [{ startsAt: 500, expiresAt: 900 }],
+      hiddenDates: ["2026-01-01"],
+    };
+    const merged = mergeRoutineTasks(stored, [added]);
+
+    assert.deepEqual(merged, [...stored, added]);
+    const [existing, updated] = mergeRoutineTasks(merged, [
+      {
+        ...added,
+        instrument: oppositeInstrument,
+        createdAt: 4000,
+        startsAt: 5000,
+        expiresAt: 6000,
+        visibilityHistory: [],
+        hiddenDates: [],
+        completed: true,
+      },
+    ]);
+    assert.deepEqual(existing, stored[0]);
+    assert.deepEqual(updated, {
+      ...added,
+      completed: true,
+      completedByDate: {},
+    });
+  });
+
+  for (const quickStartInstrument of ["guitar", "piano"] as const) {
+    it(`keeps saved ${instrument} tasks visible during ${quickStartInstrument} quick-start initialization`, () => {
+      const schedule = mixedInstrumentSchedule();
+      const html = renderRoutine(
+        instrument,
+        quickStartInstrument,
+        [],
+        JSON.stringify(schedule),
+      );
+
+      assert.ok(html.includes(label));
+      assert.ok(!html.includes(oppositeLabel));
+      assert.ok(
+        html.includes(
+          `aria-label="Mark task ${instrument === "guitar" ? "incomplete" : "complete"}: ${label}"`,
+        ),
+      );
+    });
+  }
+}

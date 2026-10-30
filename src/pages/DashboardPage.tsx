@@ -21,6 +21,7 @@ import { RandomDrill } from "../components/RandomDrill";
 import { SessionWidget } from "../components/SessionWidget";
 import { TimerWidget } from "../components/TimerWidget";
 import { PracticeTasksWidget } from "../components/PracticeTasksWidget";
+import { usePracticeInstrument } from "../contexts/PracticeInstrumentContext";
 import { ChordSelectorWidget } from "../components/ChordSelectorWidget";
 import { Fretboard } from "../components/Fretboard";
 import { PianoKeyboard } from "../components/PianoKeyboard";
@@ -261,6 +262,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onUpdateTimerPreferences,
   onTaskTimerStarted,
 }) => {
+  const { activeInstrument } = usePracticeInstrument();
   const [metronomeTimeSignature, setMetronomeTimeSignature] =
     useState<TimeSignature>(
       () => audioEngine.getMetronomeState().timeSignature as TimeSignature,
@@ -659,11 +661,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const [instrumentView, setInstrumentView] = useState<
     "guitar" | "piano" | "both"
-  >(settings.defaultInstrument);
+  >(activeInstrument);
 
   useEffect(() => {
-    setInstrumentView(settings.defaultInstrument);
-  }, [settings.defaultInstrument]);
+    setInstrumentView(activeInstrument);
+  }, [activeInstrument]);
 
   const resetWidgetLayout = () => {
     setLayout({
@@ -749,7 +751,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             onOpenRoutine={onOpenRoutine}
             onDismissTour={onDismissTour}
             onFinishDailyTasksOnboarding={onFinishDailyTasksOnboarding}
-            onQuickStartTasks={onQuickStartTasks}
+            onQuickStartTasks={(_instrument, tasks) =>
+              onQuickStartTasks?.(
+                activeInstrument,
+                tasks.map((task) => ({
+                  ...task,
+                  instrument: activeInstrument,
+                  instrumentInferred: false,
+                })),
+              )
+            }
             tasks={practiceTasks}
             activeTaskId={activeTaskId}
             timerPreferences={timerPreferences}
@@ -869,7 +880,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           {isDashboardEditMode && (
-            <p className="mt-1 text-xs text-on-surface-variant">
+            <p className="mt-1 text-xs text-on-surface-variant font-mono">
               Drag widgets to rearrange them or hide them.
             </p>
           )}
@@ -1058,58 +1069,59 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       ))}
                     </div>
 
-                    {instrumentView !== "piano" && selectedScale?.cagedBoxes && (
-                      <div className="mb-2.5 border-b border-outline-variant/10 pb-3">
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
-                            Fretboard Position
-                          </span>
-                          <span className="truncate font-mono text-[10px] text-primary">
-                            {activeCagedBox
-                              ? `Position ${Object.keys(selectedScale.cagedBoxes).indexOf(activeCagedBox) + 1}`
-                              : "All positions"}
-                          </span>
-                        </div>
-                        <div className="flex w-full items-center gap-0.5 rounded-lg bg-surface-container-low p-1">
-                          <button
-                            type="button"
-                            title="Full fretboard"
-                            aria-label="Full fretboard"
-                            aria-pressed={activeCagedBox === null}
-                            onClick={() => setActiveCagedBox(null)}
-                            className={`flex h-10 min-w-0 flex-1 flex-col items-center justify-center rounded-md font-mono transition-colors ${activeCagedBox === null ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"}`}
-                          >
-                            <span className="text-[9px] font-bold uppercase leading-none">
-                              All
+                    {instrumentView !== "piano" &&
+                      selectedScale?.cagedBoxes && (
+                        <div className="mb-2.5 border-b border-outline-variant/10 pb-3">
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+                              Fretboard Position
                             </span>
-                            <span className="mt-1 text-[8px] leading-none">
-                              NECK
+                            <span className="truncate font-mono text-[10px] text-primary">
+                              {activeCagedBox
+                                ? `Position ${Object.keys(selectedScale.cagedBoxes).indexOf(activeCagedBox) + 1}`
+                                : "All positions"}
                             </span>
-                          </button>
-                          {Object.keys(selectedScale.cagedBoxes).map(
-                            (boxKey, index) => {
-                              const isSelected = activeCagedBox === boxKey;
-                              const positionNumber = index + 1;
-                              return (
-                                <button
-                                  key={boxKey}
-                                  type="button"
-                                  title={`Position ${positionNumber}`}
-                                  aria-label={`Position ${positionNumber}`}
-                                  aria-pressed={isSelected}
-                                  onClick={() => setActiveCagedBox(boxKey)}
-                                  className={`flex h-10 min-w-0 flex-1 flex-col items-center justify-center rounded-md font-mono transition-colors ${isSelected ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"}`}
-                                >
-                                  <span className="text-sm font-bold leading-none">
-                                    {positionNumber}
-                                  </span>
-                                </button>
-                              );
-                            },
-                          )}
+                          </div>
+                          <div className="flex w-full items-center gap-0.5 rounded-lg bg-surface-container-low p-1">
+                            <button
+                              type="button"
+                              title="Full fretboard"
+                              aria-label="Full fretboard"
+                              aria-pressed={activeCagedBox === null}
+                              onClick={() => setActiveCagedBox(null)}
+                              className={`flex h-10 min-w-0 flex-1 flex-col items-center justify-center rounded-md font-mono transition-colors ${activeCagedBox === null ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"}`}
+                            >
+                              <span className="text-[9px] font-bold uppercase leading-none">
+                                All
+                              </span>
+                              <span className="mt-1 text-[8px] leading-none">
+                                NECK
+                              </span>
+                            </button>
+                            {Object.keys(selectedScale.cagedBoxes).map(
+                              (boxKey, index) => {
+                                const isSelected = activeCagedBox === boxKey;
+                                const positionNumber = index + 1;
+                                return (
+                                  <button
+                                    key={boxKey}
+                                    type="button"
+                                    title={`Position ${positionNumber}`}
+                                    aria-label={`Position ${positionNumber}`}
+                                    aria-pressed={isSelected}
+                                    onClick={() => setActiveCagedBox(boxKey)}
+                                    className={`flex h-10 min-w-0 flex-1 flex-col items-center justify-center rounded-md font-mono transition-colors ${isSelected ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"}`}
+                                  >
+                                    <span className="text-sm font-bold leading-none">
+                                      {positionNumber}
+                                    </span>
+                                  </button>
+                                );
+                              },
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
                     <div className="max-h-60 space-y-1 overflow-y-auto pr-1">
                       <button
@@ -1202,7 +1214,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   className={`flex h-full items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-mono transition-all md:px-3 ${instrumentView === "guitar" ? "bg-primary text-on-primary font-bold shadow" : "text-on-surface-variant hover:text-on-surface"}`}
                 >
                   <Guitar size={14} />
-                  <span className="dashboard-scale-toolbar__instrument-label">Guitar</span>
+                  <span className="dashboard-scale-toolbar__instrument-label">
+                    Guitar
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -1211,7 +1225,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   className={`flex h-full items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-mono transition-all md:px-3 ${instrumentView === "piano" ? "bg-primary text-on-primary font-bold shadow" : "text-on-surface-variant hover:text-on-surface"}`}
                 >
                   <Piano size={14} />
-                  <span className="dashboard-scale-toolbar__instrument-label">Piano</span>
+                  <span className="dashboard-scale-toolbar__instrument-label">
+                    Piano
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -1220,7 +1236,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   className={`flex h-full items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-mono transition-all md:px-3 ${instrumentView === "both" ? "bg-primary text-on-primary font-bold shadow" : "text-on-surface-variant hover:text-on-surface"}`}
                 >
                   <Layers size={14} />
-                  <span className="dashboard-scale-toolbar__instrument-label">Both</span>
+                  <span className="dashboard-scale-toolbar__instrument-label">
+                    Both
+                  </span>
                 </button>
               </div>
             </div>

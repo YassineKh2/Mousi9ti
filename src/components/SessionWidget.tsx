@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Flame, Clock, CheckCircle2, Play, Pause } from "lucide-react";
 import { StreakData } from "../types";
 import { MENTION_REGEX } from "../utils/taskMentions";
+import { usePracticeInstrument } from "../contexts/PracticeInstrumentContext";
+import { normalizeInstrument } from "../lib/instruments";
 
 interface SessionWidgetProps {
   streak: StreakData;
@@ -65,6 +67,15 @@ export const SessionWidget: React.FC<SessionWidgetProps> = ({
   activeTaskTitle,
   highestBpmSession = 120,
 }) => {
+  const { activeInstrument } = usePracticeInstrument();
+  const instrument =
+    (isSessionActive || activeSessionDuration > 0) &&
+    typeof localStorage !== "undefined"
+      ? normalizeInstrument(
+          localStorage.getItem("Mousi9ti_session_instrument") ??
+            activeInstrument,
+        )
+      : activeInstrument;
   // Format seconds to HH:MM:SS
   const formatTime = (seconds: number): string => {
     const hrs = Math.floor(seconds / 3600);
@@ -92,7 +103,7 @@ export const SessionWidget: React.FC<SessionWidgetProps> = ({
         <div className="flex items-center gap-2">
           <Clock size={14} className="text-primary" />
           <span className="font-mono text-xs font-semibold tracking-[0.2em] text-on-surface uppercase">
-            Practice Tracker
+            {instrument === "piano" ? "Piano" : "Guitar"} Practice
           </span>
         </div>
 
@@ -120,7 +131,7 @@ export const SessionWidget: React.FC<SessionWidgetProps> = ({
       {/* Streak Mini Heatmap */}
       <div className="space-y-1.5 my-1">
         <div className="flex items-center justify-between text-[10px] font-mono text-on-surface-variant">
-          <span>7-DAY CONSISTENCY</span>
+          <span>ALL INSTRUMENTS / 7-DAY</span>
           <div className="flex items-center gap-1 text-primary font-bold">
             <Flame size={12} />
             <span>{streak.currentStreak} DAYS</span>

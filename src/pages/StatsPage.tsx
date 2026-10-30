@@ -8,7 +8,7 @@ import {
 } from "../types";
 import {
   getSavedPracticeActivities,
-  getSavedStreak,
+  getSavedSettings,
   getSavedTaskActivities,
   getSavedTaskAttributions,
 } from "../lib/storage";
@@ -64,9 +64,100 @@ interface StatsPageProps {
 }
 
 type Range = "week" | "30" | "90" | "all" | "custom";
+export type StatisticsScope = "guitar" | "piano" | "all";
+const statisticsInstrument = (record: object): "guitar" | "piano" =>
+  (record as { instrument?: string }).instrument === "piano"
+    ? "piano"
+    : "guitar";
+
+export function filterStatisticsRecords<T extends object>(
+  records: T[],
+  scope: StatisticsScope,
+): T[] {
+  return records.filter(
+    (record) => scope === "all" || statisticsInstrument(record) === scope,
+  );
+}
+
+export function getDefaultStatisticsScope(value: unknown): StatisticsScope {
+  return value === "piano" ? "piano" : "guitar";
+}
+
+const statisticsTaskKey = (task: object, id: string) =>
+  `${statisticsInstrument(task)}:${id}`;
+
+export function getStatisticsPracticeDates(
+  activities: { date: string; source: string; durationSeconds: number }[],
+  taskActivities: TaskActivity[],
+  todayTasks: PracticeTask[] | null,
+  tasksByWeekday: ReadonlyMap<string, PracticeTask[]>,
+  today: string,
+): string[] {
+  const completedByDate = new Map<string, Set<string>>();
+  const tasksByDate = new Map<string, Set<string>>();
+  taskActivities.forEach((activity) => {
+    const key = statisticsTaskKey(activity, activity.taskId);
+    const taskIds = tasksByDate.get(activity.date) || new Set<string>();
+    taskIds.add(key);
+    tasksByDate.set(activity.date, taskIds);
+    if (activity.kind === "completed") {
+      const completed = completedByDate.get(activity.date) || new Set<string>();
+      completed.add(key);
+      completedByDate.set(activity.date, completed);
+    }
+  });
+  const dates = new Set([
+    ...activities.map((activity) => activity.date),
+    ...taskActivities.map((activity) => activity.date),
+  ]);
+  const weekdayCodes = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  return [...dates]
+    .filter((date) => {
+      const day = new Date(`${date}T12:00:00`);
+      const scheduled = date === today ? todayTasks : undefined;
+      const planned =
+        scheduled ??
+        tasksByWeekday
+          .get(weekdayCodes[day.getDay()])
+          ?.filter((task) => isTaskVisibleOnDate(task, day));
+      const taskIds = planned?.map((task) =>
+        statisticsTaskKey(task, task.id),
+      ) ?? [...(tasksByDate.get(date) || [])];
+      return isPracticeDayComplete(
+        taskIds,
+        completedByDate.get(date) || new Set(),
+        activities.some(
+          (activity) =>
+            activity.date === date &&
+            activity.source === "Session" &&
+            activity.durationSeconds > 0,
+        ),
+      );
+    })
+    .sort();
+}
+
+export function getStatisticsStreak(dates: string[], today: string) {
+  const ordered = [...new Set(dates)].filter((date) => date <= today).sort();
+  const calendarDay = (date: string) => Date.parse(date) / 86400000;
+  let currentStreak = 0;
+  let longestStreak = 0;
+  ordered.forEach((date, index) => {
+    const gap = index
+      ? calendarDay(date) - calendarDay(ordered[index - 1])
+      : Infinity;
+    currentStreak = gap <= 3 ? currentStreak + 1 : 1;
+    longestStreak = Math.max(longestStreak, currentStreak);
+  });
+  const last = ordered.at(-1);
+  if (!last || calendarDay(today) - calendarDay(last) > 3) currentStreak = 0;
+  return { currentStreak, longestStreak };
+}
+
 type Source = "Task" | "Timer" | "Metronome" | "Session" | "Custom";
 interface AnalyticsActivity {
   id: string;
+  instrument: "guitar" | "piano";
   date: string;
   startTime: number;
   durationSeconds: number;
@@ -127,6 +218,7 @@ const daysSince = (timestamp: number) =>
 function taskToActivity(activity: TaskActivity): AnalyticsActivity {
   return {
     id: activity.id,
+    instrument: statisticsInstrument(activity),
     date: activity.date,
     startTime: activity.timestamp,
     durationSeconds: activity.durationSeconds,
@@ -145,6 +237,7 @@ function taskToActivity(activity: TaskActivity): AnalyticsActivity {
 function sessionToActivity(session: Session): AnalyticsActivity {
   return {
     id: session.id,
+    instrument: statisticsInstrument(session),
     date: session.date,
     startTime: session.startTime,
     durationSeconds: session.durationSeconds || 0,
@@ -165,6 +258,7 @@ function sessionToActivity(session: Session): AnalyticsActivity {
 function genericToActivity(activity: PracticeActivity): AnalyticsActivity {
   return {
     id: activity.id,
+    instrument: statisticsInstrument(activity),
     date: activity.date,
     startTime: activity.startTime,
     durationSeconds: activity.durationSeconds,
@@ -185,8 +279,67 @@ function genericToActivity(activity: PracticeActivity): AnalyticsActivity {
   };
 }
 
-export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
+export function countStatisticsActivities(
+  records: AnalyticsActivity[],
+  legacySessions: AnalyticsActivity[],
+  taskRecords: AnalyticsActivity[],
+  customSegments: AnalyticsActivity[],
+): AnalyticsActivity[] {
+  return records.map((activity) => {
+    if (customSegments.includes(activity)) return activity;
+    const isContained =
+      activity.source !== "Session" &&
+      legacySessions.some(
+        (session) =>
+          session.instrument === activity.instrument &&
+          activity.startTime >= session.startTime &&
+          activity.startTime <=
+            session.startTime + session.durationSeconds * 1000 &&
+          activity.durationSeconds <= session.durationSeconds,
+      );
+    const isEmbeddedInTask =
+      (activity.source === "Timer" || activity.source === "Metronome") &&
+      taskRecords.some(
+        (task) =>
+          task.instrument === activity.instrument &&
+          task.date === activity.date &&
+          task.durationSeconds > 0 &&
+          Math.abs(
+            task.startTime -
+              activity.startTime -
+              activity.durationSeconds * 1000,
+          ) < 120000,
+      );
+    return {
+      ...activity,
+      countedDurationSeconds:
+        activity.source === "Session"
+          ? Math.max(
+              0,
+              activity.durationSeconds -
+                customSegments
+                  .filter(
+                    (segment) =>
+                      segment.practiceSessionId === activity.id &&
+                      segment.instrument === activity.instrument,
+                  )
+                  .reduce((sum, segment) => sum + segment.durationSeconds, 0),
+            )
+          : isContained || isEmbeddedInTask
+            ? 0
+            : activity.durationSeconds,
+    };
+  });
+}
+
+export const StatsPage: React.FC<StatsPageProps> = ({
+  sessions: savedSessions,
+}) => {
   const settings = useSettingsContext();
+  const [scope, setScope] = useState<StatisticsScope>(() =>
+    getDefaultStatisticsScope(getSavedSettings().defaultInstrument),
+  );
+  const sessions = filterStatisticsRecords(savedSessions, scope);
   const [range, setRange] = useState<Range>("week");
   const [isRangeOpen, setIsRangeOpen] = useState(false);
   const rangePickerRef = useRef<HTMLDivElement>(null);
@@ -238,9 +391,14 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, [isCalendarOpen]);
-  const taskActivities = getSavedTaskActivities();
-  const genericActivities = getSavedPracticeActivities();
-  const savedStreak = getSavedStreak();
+  const taskActivities = filterStatisticsRecords(
+    getSavedTaskActivities(),
+    scope,
+  );
+  const genericActivities = filterStatisticsRecords(
+    getSavedPracticeActivities(),
+    scope,
+  );
   const periodStart = useMemo(() => {
     if (range === "custom" && customRange) return customRange.start;
     if (range === "all") return 0;
@@ -285,98 +443,78 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
       const parsed: unknown = JSON.parse(
         localStorage.getItem("mous9iti_tasks") || "[]",
       );
-      if (Array.isArray(parsed)) savedTasks = parsed;
+      if (Array.isArray(parsed))
+        savedTasks = filterStatisticsRecords(parsed, scope);
     } catch {
       savedTasks = [];
     }
-    const customSegments: AnalyticsActivity[] =
-      getSavedTaskAttributions().flatMap((attribution) => {
-        const task = savedTasks.find((item) => item.id === attribution.taskId);
-        const text =
-          task?.text ||
-          taskActivities.find((item) => item.taskId === attribution.taskId)
-            ?.taskText;
-        const name = text?.match(/@custom\(([^)]*)\)/i)?.[1]?.trim();
-        if (!name || !attribution.durationSeconds) return [];
-        const session = attribution.practiceSessionId
+    const customSegments: AnalyticsActivity[] = filterStatisticsRecords(
+      getSavedTaskAttributions(),
+      scope,
+    ).flatMap((attribution) => {
+      const instrument = statisticsInstrument(attribution);
+      const task = savedTasks.find(
+        (item) =>
+          item.id === attribution.taskId &&
+          statisticsInstrument(item) === instrument,
+      );
+      const text =
+        task?.text ||
+        taskActivities.find(
+          (item) =>
+            item.taskId === attribution.taskId &&
+            statisticsInstrument(item) === instrument,
+        )?.taskText;
+      const name = text?.match(/@custom\(([^)]*)\)/i)?.[1]?.trim();
+      if (!name || !attribution.durationSeconds) return [];
+      const session = attribution.practiceSessionId
+        ? legacySessions.find(
+            (item) =>
+              item.id === attribution.practiceSessionId &&
+              item.instrument === instrument,
+          )
+        : attribution.source === "automatic"
           ? legacySessions.find(
-              (item) => item.id === attribution.practiceSessionId,
+              (item) =>
+                item.instrument === instrument &&
+                attribution.startedAt >= item.startTime &&
+                attribution.endedAt <=
+                  item.startTime + item.durationSeconds * 1000,
             )
-          : attribution.source === "automatic"
-            ? legacySessions.find(
-                (item) =>
-                  attribution.startedAt >= item.startTime &&
-                  attribution.endedAt <=
-                    item.startTime + item.durationSeconds * 1000,
-              )
-            : undefined;
-        if (!session) return [];
-        return [
-          {
-            id: attribution.id,
-            date: session.date,
-            startTime: attribution.practiceSessionId
-              ? session.startTime
-              : attribution.startedAt,
-            durationSeconds: attribution.durationSeconds,
-            countedDurationSeconds: attribution.durationSeconds,
-            practiceSessionId: session.id,
-            source: "Custom" as const,
-            area: "Custom",
-            subject: name,
-            task: text,
-            tags: ["custom"],
-          },
-        ];
-      });
+          : undefined;
+      if (!session) return [];
+      return [
+        {
+          id: attribution.id,
+          instrument,
+          date: session.date,
+          startTime: attribution.practiceSessionId
+            ? session.startTime
+            : attribution.startedAt,
+          durationSeconds: attribution.durationSeconds,
+          countedDurationSeconds: attribution.durationSeconds,
+          practiceSessionId: session.id,
+          source: "Custom" as const,
+          area: "Custom",
+          subject: name,
+          task: text,
+          tags: ["custom"],
+        },
+      ];
+    });
     const records = [
       ...legacySessions,
       ...taskRecords,
       ...genericRecords,
       ...customSegments,
     ].sort((a, b) => b.startTime - a.startTime);
-    return records.map((activity) => {
-      if (customSegments.includes(activity)) return activity;
-      const isContained =
-        activity.source !== "Session" &&
-        legacySessions.some(
-          (session) =>
-            activity.startTime >= session.startTime &&
-            activity.startTime <=
-              session.startTime + session.durationSeconds * 1000 &&
-            activity.durationSeconds <= session.durationSeconds,
-        );
-      const isEmbeddedInTask =
-        (activity.source === "Timer" || activity.source === "Metronome") &&
-        taskRecords.some(
-          (task) =>
-            task.date === activity.date &&
-            task.durationSeconds > 0 &&
-            Math.abs(
-              task.startTime -
-                activity.startTime -
-                activity.durationSeconds * 1000,
-            ) < 120000,
-        );
-      return {
-        ...activity,
-        countedDurationSeconds:
-          activity.source === "Session"
-            ? Math.max(
-                0,
-                activity.durationSeconds -
-                  customSegments
-                    .filter(
-                      (segment) => segment.practiceSessionId === activity.id,
-                    )
-                    .reduce((sum, segment) => sum + segment.durationSeconds, 0),
-              )
-            : isContained || isEmbeddedInTask
-              ? 0
-              : activity.durationSeconds,
-      };
-    });
-  }, [genericActivities, sessions, taskActivities]);
+    return countStatisticsActivities(
+      records,
+      legacySessions,
+      taskRecords,
+      customSegments,
+    );
+  }, [genericActivities, sessions, taskActivities, scope]);
   const activities = allActivities.filter(
     (activity) =>
       activity.startTime >= periodStart && activity.startTime <= periodEnd,
@@ -414,14 +552,17 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
         if (day && typeof day.day === "string" && Array.isArray(day.tasks)) {
           tasksByWeekday.set(
             day.day,
-            day.tasks.filter(
-              (task: unknown): task is PracticeTask =>
-                task &&
-                typeof task === "object" &&
-                "id" in task &&
-                typeof task.id === "string" &&
-                "text" in task &&
-                typeof task.text === "string",
+            filterStatisticsRecords(
+              day.tasks.filter(
+                (task: unknown): task is PracticeTask =>
+                  task &&
+                  typeof task === "object" &&
+                  "id" in task &&
+                  typeof task.id === "string" &&
+                  "text" in task &&
+                  typeof task.text === "string",
+              ),
+              scope,
             ),
           );
         }
@@ -435,56 +576,32 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     const parsed: unknown = JSON.parse(
       localStorage.getItem("mous9iti_tasks") || "[]",
     );
-    if (Array.isArray(parsed)) todayTasks = parsed;
+    if (Array.isArray(parsed))
+      todayTasks = filterStatisticsRecords(parsed, scope);
   } catch {
     todayTasks = null;
   }
-  const completedTaskIdsByDate = new Map<string, Set<string>>();
-  const taskIdsByDate = new Map<string, Set<string>>();
   const datesWithTaskActivity = taskActivities.filter(
     (activity) =>
       activity.timestamp >= periodStart && activity.timestamp <= periodEnd,
   );
-  datesWithTaskActivity.forEach((activity) => {
-    const taskIds = taskIdsByDate.get(activity.date) || new Set<string>();
-    taskIds.add(activity.taskId);
-    taskIdsByDate.set(activity.date, taskIds);
-    if (activity.kind === "completed") {
-      const completedIds =
-        completedTaskIdsByDate.get(activity.date) || new Set<string>();
-      completedIds.add(activity.taskId);
-      completedTaskIdsByDate.set(activity.date, completedIds);
-    }
-  });
-  const practiceDayDates = new Set([
-    ...activities.map((activity) => activity.date),
-    ...datesWithTaskActivity.map((activity) => activity.date),
-  ]);
-  const weekdayCodes = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-  const practiceDays = [...practiceDayDates].filter((date) => {
-    const weekday = weekdayCodes[new Date(`${date}T12:00:00`).getDay()];
-    const plannedTaskIds =
-      date === today ? todayTasks?.map((task) => task.id) : undefined;
-    const datedPlannedTaskIds = tasksByWeekday
-      .get(weekday)
-      ?.filter((task) =>
-        isTaskVisibleOnDate(task, new Date(`${date}T12:00:00`)),
-      )
-      .map((task) => task.id);
-    const dayTaskIds = plannedTaskIds ??
-      datedPlannedTaskIds ?? [...(taskIdsByDate.get(date) || [])];
-    const hasGeneralTime = activities.some(
-      (activity) =>
-        activity.date === date &&
-        activity.source === "Session" &&
-        activity.durationSeconds > 0,
-    );
-    return isPracticeDayComplete(
-      dayTaskIds,
-      completedTaskIdsByDate.get(date) || new Set(),
-      hasGeneralTime,
-    );
-  }).length;
+  const practiceDays = getStatisticsPracticeDates(
+    activities,
+    datesWithTaskActivity,
+    todayTasks,
+    tasksByWeekday,
+    today,
+  ).length;
+  const scopedStreak = getStatisticsStreak(
+    getStatisticsPracticeDates(
+      allActivities,
+      taskActivities,
+      todayTasks,
+      tasksByWeekday,
+      today,
+    ),
+    today,
+  );
   const completionRate = taskStarts.length
     ? Math.round((taskCompletions.length / taskStarts.length) * 100)
     : 0;
@@ -783,7 +900,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     {} as Record<string, { seconds: number; sessions: number; tasks: number }>,
   );
   const dailyBpmData = Object.entries(
-    activities.reduce(
+    (scope === "all" ? [] : activities).reduce(
       (days, activity) => {
         if (activity.bpm === undefined) return days;
         days[activity.date] ||= {
@@ -878,6 +995,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
       (activity) =>
         activity.kind === "completed" &&
         activity.timestamp >= periodStart &&
+        activity.timestamp <= periodEnd &&
         activity.plannedDurationSeconds,
     )
     .reduce(
@@ -890,27 +1008,6 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
       },
       {} as Record<string, { planned: number; actual: number }>,
     );
-  if (
-    !sessions.length &&
-    !taskActivities.length &&
-    !genericActivities.length &&
-    !savedCustomTags.size
-  )
-    return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[60vh] space-y-4">
-        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-          <BarChart3 size={32} className="text-primary" />
-        </div>
-        <h2 className="font-mono text-xl font-bold text-on-surface">
-          No Practice Data Yet
-        </h2>
-        <p className="text-on-surface-variant font-mono text-sm max-w-md text-center">
-          Start a task, timer, metronome, or practice session to build your
-          analytics.
-        </p>
-      </div>
-    );
-
   const metricCards = [
     [
       "Total practice",
@@ -938,8 +1035,8 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     ],
     [
       "Current streak",
-      `${savedStreak.currentStreak} ${savedStreak.currentStreak === 1 ? "day" : "days"}`,
-      `Longest: ${savedStreak.longestStreak} ${savedStreak.longestStreak === 1 ? "day" : "days"} (all time)`,
+      `${scopedStreak.currentStreak} ${scopedStreak.currentStreak === 1 ? "day" : "days"}`,
+      `Longest: ${scopedStreak.longestStreak} ${scopedStreak.longestStreak === 1 ? "day" : "days"} (all time)`,
       <Flame size={16} className="text-primary" />,
     ],
   ];
@@ -953,7 +1050,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
     range === "custom" && customRange ? new Date(customRange.end) : new Date();
   const rangeStart =
     range === "all"
-      ? new Date(sessions.at(-1)?.startTime || Date.now())
+      ? new Date(allActivities.at(-1)?.startTime || Date.now())
       : new Date(periodStart);
   const formatRangeDate = (date: Date) =>
     date.toLocaleDateString("en-US", {
@@ -969,6 +1066,31 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
             <BarChart3 size={18} className="text-primary" />
             Practice Analytics
           </h2>
+          <label className="mt-2 inline-flex items-center gap-2 text-[11px] font-mono text-on-surface-variant">
+            Instrument
+            <span className="relative inline-flex items-center">
+              <select
+                aria-label="Statistics instrument"
+                value={scope}
+                onChange={(event) => {
+                  setScope(event.target.value as StatisticsScope);
+                  setSelectedTask(null);
+                  setCustomAnalyticsPage(1);
+                  setPracticeLogPage(1);
+                }}
+                className="h-7 w-32 cursor-pointer appearance-none rounded bg-transparent py-1 pl-1 pr-5 text-[11px] font-mono text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary [&>option]:bg-surface-container [&>option]:text-on-surface"
+              >
+                <option value="guitar">Guitar</option>
+                <option value="piano">Piano</option>
+                <option value="all">All instruments</option>
+              </select>
+              <ChevronDown
+                size={11}
+                aria-hidden="true"
+                className="pointer-events-none absolute right-1 text-on-surface-variant"
+              />
+            </span>
+          </label>
           <p
             className="text-xs font-mono text-on-surface mt-1"
             style={{ color: "var(--color-on-surface)" }}
@@ -1130,7 +1252,9 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
               </ResponsiveContainer>
             ) : (
               <p className="mt-auto text-[10px] font-mono text-on-surface-variant">
-                No BPM data for these dates.
+                {scope === "all"
+                  ? "BPM is instrument-specific."
+                  : "No BPM data for these dates."}
               </p>
             )}
           </div>
@@ -1377,8 +1501,11 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                   <span className="mr-3 inline-block h-3 w-3 rounded-full bg-slate-500" />
                   {Math.max(
                     0,
-                    new Set(taskActivities.map((activity) => activity.taskId))
-                      .size - taskStarts.length,
+                    new Set(
+                      taskActivities.map((activity) =>
+                        statisticsTaskKey(activity, activity.taskId),
+                      ),
+                    ).size - taskStarts.length,
                   )}
                   <span className="ml-4 text-on-surface-variant">
                     Not started
@@ -1472,13 +1599,14 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                 <th className="py-3 px-3">Source</th>
                 <th className="py-3 px-3">Area</th>
                 <th className="py-3 px-3">Duration</th>
-                <th className="py-3 px-3">BPM</th>
+                {scope === "all" && <th className="py-3 px-3">Instrument</th>}
+                {scope !== "all" && <th className="py-3 px-3">BPM</th>}
                 <th className="py-3 px-3">Tags</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/30">
               {practiceLogActivities.map((activity) => (
-                <tr key={activity.id}>
+                <tr key={`${activity.instrument}:${activity.id}`}>
                   <td className="py-3 px-3 text-on-surface-variant">
                     {activity.date}
                   </td>
@@ -1493,7 +1621,11 @@ export const StatsPage: React.FC<StatsPageProps> = ({ sessions, streak }) => {
                     {formatDuration(activity.durationSeconds)}
                   </td>
                   <td className="py-3 px-3 text-on-surface">
-                    {activity.bpm || "-"}
+                    {scope === "all"
+                      ? activity.instrument === "piano"
+                        ? "Piano"
+                        : "Guitar"
+                      : activity.bpm || "-"}
                   </td>
                   <td className="py-3 px-3 text-on-surface-variant">
                     {activity.tags.join(", ") || "-"}

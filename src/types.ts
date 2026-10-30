@@ -29,6 +29,8 @@ export type AccidentalPreference = "sharp" | "flat" | "both";
 
 export type InstrumentView = "fretboard" | "piano";
 
+export type PracticeInstrument = "guitar" | "piano";
+
 export type MetronomeSound = "click" | "woodblock" | "tick" | "beep";
 
 export type MetronomeSubdivision =
@@ -166,6 +168,8 @@ export interface Exercise {
 }
 
 export interface Session {
+  instrument?: PracticeInstrument;
+  instrumentInferred?: boolean;
   id: string;
   date: string; // ISO date string "2026-08-31"
   startTime: number; // Unix timestamp ms
@@ -187,6 +191,8 @@ export type PracticeActivitySource =
   | "custom";
 
 export interface PracticeActivity {
+  instrument?: PracticeInstrument;
+  instrumentInferred?: boolean;
   id: string;
   source: PracticeActivitySource;
   sourceId?: string;
@@ -206,6 +212,8 @@ export interface PracticeActivity {
 }
 
 export interface TaskActivity {
+  instrument?: PracticeInstrument;
+  instrumentInferred?: boolean;
   id: string;
   taskId: string;
   taskText: string;
@@ -222,6 +230,8 @@ export interface TaskActivity {
 }
 
 export interface PracticeTask {
+  instrument?: PracticeInstrument;
+  instrumentInferred?: boolean;
   id: string;
   text: string;
   completed: boolean;
@@ -238,6 +248,8 @@ export interface PracticeTask {
 export type TaskAttributionSource = "automatic" | "manual";
 
 export interface TaskTimeAttribution {
+  instrument?: PracticeInstrument;
+  instrumentInferred?: boolean;
   id: string;
   sessionId: string;
   practiceSessionId?: string;
