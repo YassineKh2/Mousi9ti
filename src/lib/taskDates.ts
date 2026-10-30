@@ -1,5 +1,6 @@
 interface DatedTask {
   id?: string;
+  createdAt?: number;
   startsAt?: number;
   expiresAt?: number;
   visibilityHistory?: { startsAt?: number; expiresAt?: number }[];
@@ -46,26 +47,35 @@ export const getMondayMonthWeeks = (month: Date) => {
   return weeks.slice(0, 5);
 };
 
-const getTaskStart = (task: DatedTask) => {
-  if (Number.isFinite(task.startsAt)) return task.startsAt;
-
-  const legacyTimestamp = task.id?.match(/^(?:t-)?(\d{13})$/)?.[1];
+export const getTaskCreatedAt = (task: DatedTask) => {
+  if (Number.isFinite(task.createdAt)) return task.createdAt;
+  const legacyTimestamp = task.id?.match(/^(?:t-)?(\d{13})(?:-\d+)?$/)?.[1];
   return legacyTimestamp ? Number(legacyTimestamp) : undefined;
 };
 
-export const preserveTaskHistoryBefore = (
-  task: DatedTask,
-  cutoff: number,
-) => {
+export const withTaskCreationDate = <T extends DatedTask>(
+  task: T,
+  fallbackTimestamp = Date.now(),
+): T & { createdAt: number } => ({
+  ...task,
+  createdAt:
+    getTaskCreatedAt(task) ??
+    (Number.isFinite(task.startsAt) ? task.startsAt! : fallbackTimestamp),
+});
+
+const getTaskStart = (task: DatedTask) => {
+  if (Number.isFinite(task.startsAt)) return task.startsAt;
+  return getTaskCreatedAt(task);
+};
+
+export const preserveTaskHistoryBefore = (task: DatedTask, cutoff: number) => {
   const startsAt = getTaskStart(task);
   if (startsAt !== undefined && startsAt >= cutoff) {
     return task.visibilityHistory ?? [];
   }
 
   const expiresAt =
-    task.expiresAt === undefined
-      ? cutoff
-      : Math.min(task.expiresAt, cutoff);
+    task.expiresAt === undefined ? cutoff : Math.min(task.expiresAt, cutoff);
   if (expiresAt <= (startsAt ?? Number.NEGATIVE_INFINITY)) {
     return task.visibilityHistory ?? [];
   }
@@ -83,7 +93,10 @@ const isRangeVisibleOnDate = (
 
 export const isTaskActiveAt = (task: DatedTask, timestamp: number) => {
   const startsAt = getTaskStart(task);
+  const createdAt = getTaskCreatedAt(task);
   return (
+    (createdAt === undefined ||
+      getDayBoundaryAfter(createdAt, 0) <= timestamp) &&
     (startsAt === undefined || startsAt <= timestamp) &&
     !isTaskExpiredAt(task, timestamp)
   );
@@ -105,10 +118,16 @@ export const isTaskVisibleOnDate = (task: DatedTask, date: Date) => {
   ).getTime();
   const startsAt = getTaskStart(task);
 
+  const createdAt = getTaskCreatedAt(task);
+  if (createdAt !== undefined && createdAt >= nextDayStart) return false;
   if (task.hiddenDates?.includes(getTaskDateKey(date))) return false;
 
   return (
-    isRangeVisibleOnDate({ startsAt, expiresAt: task.expiresAt }, dayStart, nextDayStart) ||
+    isRangeVisibleOnDate(
+      { startsAt, expiresAt: task.expiresAt },
+      dayStart,
+      nextDayStart,
+    ) ||
     task.visibilityHistory?.some((range) =>
       isRangeVisibleOnDate(range, dayStart, nextDayStart),
     ) === true

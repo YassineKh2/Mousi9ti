@@ -86,13 +86,15 @@ import {
   getTaskCompletionCounts,
   getTaskDateKey,
   isTaskExpiredAt,
-  preserveTaskHistoryBefore,
+  withTaskCreationDate,
 } from "../lib/taskDates";
 import { SessionWidget } from "../components/SessionWidget";
 import { CustomWeekDuration } from "../components/CustomWeekDuration";
 import {
   getTaskExpiration,
   TaskDurationPeriod,
+  applyTaskDurationRange,
+  getTaskRenewalExpiration,
   validateCustomWeekDuration,
 } from "../lib/taskDuration";
 import { StreakData } from "../types";
@@ -135,9 +137,9 @@ const getDefaultTaskDurationLabel = (
   >,
 ) => {
   if (settings.taskDefaultDuration === "forever") return "No limit";
-  if (settings.taskDefaultDuration === "week") return "1 week";
-  if (settings.taskDefaultDuration === "month") return "1 month";
-  if (settings.taskDefaultDuration === "year") return "1 year";
+  if (settings.taskDefaultDuration === "week") return "This week";
+  if (settings.taskDefaultDuration === "month") return "This month";
+  if (settings.taskDefaultDuration === "year") return "This year";
   return `${settings.taskDefaultCustomDuration} ${settings.taskDefaultCustomUnit}`;
 };
 
@@ -217,6 +219,24 @@ const TASK_DURATION_OPTIONS: { value: TaskDurationPeriod; label: string }[] = [
   { value: "custom", label: "Custom duration" },
 ];
 
+export const getTaskDurationMenuOptions = (
+  defaultDuration?: TaskDurationPeriod,
+  defaultDurationLabel?: string,
+): { value: TaskDurationPeriod; label: string }[] => {
+  if (!defaultDurationLabel) return TASK_DURATION_OPTIONS;
+  if (defaultDuration && defaultDuration !== "custom") {
+    return TASK_DURATION_OPTIONS.map((option) =>
+      option.value === defaultDuration
+        ? { ...option, value: "default" }
+        : option,
+    );
+  }
+  return [
+    { value: "default", label: defaultDurationLabel },
+    ...TASK_DURATION_OPTIONS,
+  ];
+};
+
 const TaskDurationMenu: React.FC<{
   value: TaskDurationPeriod;
   onChange: (value: TaskDurationPeriod) => void;
@@ -228,6 +248,7 @@ const TaskDurationMenu: React.FC<{
   hiddenDates?: string[];
   existingRange?: { startsAt: number; expiresAt: number };
   defaultDurationLabel?: string;
+  defaultDuration?: TaskDurationPeriod;
   iconOnly?: boolean;
   className?: string;
 }> = ({
@@ -241,6 +262,7 @@ const TaskDurationMenu: React.FC<{
   hiddenDates,
   existingRange,
   defaultDurationLabel,
+  defaultDuration,
   iconOnly = false,
   className = "",
 }) => {
@@ -254,15 +276,10 @@ const TaskDurationMenu: React.FC<{
   const [menuPosition, setMenuPosition] = useState<React.CSSProperties | null>(
     null,
   );
-  const durationOptions = defaultDurationLabel
-    ? [
-        {
-          value: "default" as const,
-          label: defaultDurationLabel ?? "Default",
-        },
-        ...TASK_DURATION_OPTIONS,
-      ]
-    : TASK_DURATION_OPTIONS;
+  const durationOptions = getTaskDurationMenuOptions(
+    defaultDuration,
+    defaultDurationLabel,
+  );
   const selectedLabel =
     durationOptions.find((option) => option.value === value)?.label ??
     "No limit";
@@ -501,7 +518,7 @@ interface DayBlueprint {
   tasks: RoutineTask[];
 }
 
-const mergeRoutineTasks = (
+export const mergeRoutineTasks = (
   storedTasks: RoutineTask[],
   dailyTasks: PracticeTask[],
 ): RoutineTask[] => {
@@ -513,6 +530,12 @@ const mergeRoutineTasks = (
     return {
       ...task,
       ...dailyTask,
+      createdAt: task.createdAt,
+      startsAt: task.startsAt,
+      expiresAt: task.expiresAt,
+      duration: task.duration,
+      visibilityHistory: task.visibilityHistory,
+      hiddenDates: task.hiddenDates,
       completedByDate: {
         ...task.completedByDate,
         ...dailyTask.completedByDate,
@@ -1302,8 +1325,18 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       } catch (e) {}
     }
 
+    const migrationTimestamp = Date.now();
+    schedule = schedule.map((day) => ({
+      ...day,
+      tasks: day.tasks.map((task) =>
+        withTaskCreationDate(task, migrationTimestamp),
+      ),
+    }));
+
     if (practiceTasks) {
-      const currentTasks = practiceTasks.filter((task) => !isExpiredTask(task));
+      const currentTasks = practiceTasks
+        .filter((task) => !isExpiredTask(task))
+        .map((task) => withTaskCreationDate(task, migrationTimestamp));
       return schedule.map((day) =>
         day.day === getTodayCode()
           ? {
@@ -1331,7 +1364,11 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
               ...day,
               tasks: mergeRoutineTasks(
                 day.tasks,
-                parsedTasks.filter((task) => !isExpiredTask(task)),
+                parsedTasks
+                  .filter((task) => !isExpiredTask(task))
+                  .map((task) =>
+                    withTaskCreationDate(task, migrationTimestamp),
+                  ),
               ),
             }
           : day,
@@ -1403,7 +1440,15 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
           setWeeklySchedule((prev) =>
             prev.map((d) => {
               if (d.day === getTodayCode()) {
-                return { ...d, tasks: mergeRoutineTasks(d.tasks, parsed) };
+                return {
+                  ...d,
+                  tasks: mergeRoutineTasks(
+                    d.tasks,
+                    parsed.map((task: PracticeTask) =>
+                      withTaskCreationDate(task),
+                    ),
+                  ),
+                };
               }
               return d;
             }),
@@ -1558,6 +1603,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
       : newTaskDuration;
     const newTask = {
       id: `t-${createdAt}`,
+      createdAt,
       text: newTaskInput.trim(),
       completed: false,
       duration: taskDuration,
@@ -1588,7 +1634,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   };
 
   const updateTaskDuration = (taskId: string, duration: TaskDurationPeriod) => {
-    const changeStartsAt = getStartOfDay(activeDayDate.getTime());
+    const changeStartsAt = getStartOfDay(Date.now());
     setWeeklySchedule((prev) =>
       prev.map((day) =>
         day.day === activeDayCode
@@ -1597,25 +1643,25 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
               tasks: day.tasks.map((task) =>
                 task.id === taskId
                   ? {
-                      ...task,
+                      ...applyTaskDurationRange(task, {
+                        startsAt:
+                          duration === "custom" && task.duration === "custom"
+                            ? Math.max(
+                                task.startsAt ?? changeStartsAt,
+                                changeStartsAt,
+                              )
+                            : changeStartsAt,
+                        expiresAt:
+                          duration === "custom"
+                            ? task.duration === "custom"
+                              ? task.expiresAt
+                              : undefined
+                            : getTaskRenewalExpiration(
+                                duration,
+                                changeStartsAt,
+                              ),
+                      }),
                       duration,
-                      visibilityHistory: preserveTaskHistoryBefore(
-                        task,
-                        changeStartsAt,
-                      ),
-                      startsAt:
-                        duration === "custom" && task.duration === "custom"
-                          ? Math.max(
-                              task.startsAt ?? changeStartsAt,
-                              changeStartsAt,
-                            )
-                          : changeStartsAt,
-                      expiresAt:
-                        duration === "custom"
-                          ? task.duration === "custom"
-                            ? task.expiresAt
-                            : undefined
-                          : getTaskExpiration(duration, changeStartsAt),
                     }
                   : task,
               ),
@@ -1629,7 +1675,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
     const task = activeDay.tasks.find((item) => item.id === taskId);
     if (!task) return;
     const { range } = validateCustomWeekDuration(
-      activeDayDate.getTime(),
+      Date.now(),
       weeks,
       activeDayDate.getDay(),
       task.hiddenDates,
@@ -1643,14 +1689,8 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
               tasks: day.tasks.map((task) =>
                 task.id === taskId
                   ? {
-                      ...task,
+                      ...applyTaskDurationRange(task, range),
                       duration: "custom",
-                      visibilityHistory: preserveTaskHistoryBefore(
-                        task,
-                        range.startsAt,
-                      ),
-                      startsAt: range.startsAt,
-                      expiresAt: range.expiresAt,
                     }
                   : task,
               ),
@@ -2176,14 +2216,13 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                           {task.startsAt !== undefined &&
                             task.expiresAt !== undefined && (
                               <span className="mt-1 block text-[10px] font-mono text-on-surface-variant">
-                                {new Date(task.startsAt).toLocaleDateString(
-                                  undefined,
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  },
-                                )}
+                                {new Date(
+                                  task.createdAt ?? task.startsAt,
+                                ).toLocaleDateString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}
                                 {" - "}
                                 {new Date(
                                   task.expiresAt - 1,
@@ -2198,7 +2237,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                         <div className="ml-auto flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <TaskDurationMenu
                             value={task.duration ?? "forever"}
-                            startDate={activeDayDate.getTime()}
+                            startDate={getStartOfDay(Date.now())}
                             weekday={activeDayDate.getDay()}
                             hiddenDates={task.hiddenDates}
                             existingRange={
@@ -2357,6 +2396,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                         ?.focus();
                     }}
                     defaultDurationLabel={getDefaultTaskDurationLabel(settings)}
+                    defaultDuration={settings.taskDefaultDuration}
                     onChange={(duration) => {
                       setNewTaskDuration(duration);
                     }}

@@ -40,16 +40,20 @@ export const TaskDeleteDialog: React.FC<TaskDeleteDialogProps> = ({
       const parsed = parseParams(tool, params);
       let label = tool;
 
-      if (tool === "metronome") label = `${parsed.bpm} BPM · ${parsed.signature}`;
-      else if (tool === "scale") label = parsed.label || `${parsed.root} ${parsed.type}`;
-      else if (tool === "chord") label = parsed.label || `${parsed.root} ${parsed.type}`;
+      if (tool === "metronome")
+        label = `${parsed.bpm} BPM · ${parsed.signature}`;
+      else if (tool === "scale")
+        label = parsed.label || `${parsed.root} ${parsed.type}`;
+      else if (tool === "chord")
+        label = parsed.label || `${parsed.root} ${parsed.type}`;
       else if (tool === "timer" || tool === "time") {
         label = formatDurationLabel(parsed.minutes);
       } else if (tool === "custom") label = parsed.text || "Custom";
       else if (tool === "tuning") label = parsed.tuning || "Tuning";
       else if (tool === "key") label = parsed.key || "Key";
       else if (tool === "technique") label = parsed.technique || "Technique";
-      else if (tool === "bpm") label = `${parsed.bpm} BPM · ${parsed.signature}`;
+      else if (tool === "bpm")
+        label = `${parsed.bpm} BPM · ${parsed.signature}`;
       else if (tool === "exercise") label = parsed.exercise || "Exercise";
       else if (tool === "random") {
         const modeLabels: Record<string, string> = {
@@ -73,7 +77,9 @@ export const TaskDeleteDialog: React.FC<TaskDeleteDialogProps> = ({
     }
 
     if (lastIndex < taskName.length) {
-      parts.push(<span key={`text-${lastIndex}`}>{taskName.slice(lastIndex)}</span>);
+      parts.push(
+        <span key={`text-${lastIndex}`}>{taskName.slice(lastIndex)}</span>,
+      );
     }
 
     return parts;
@@ -81,7 +87,7 @@ export const TaskDeleteDialog: React.FC<TaskDeleteDialogProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4 font-mono backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-task-dialog-title"

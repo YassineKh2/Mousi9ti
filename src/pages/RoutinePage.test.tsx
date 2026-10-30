@@ -2,9 +2,120 @@ import assert from "node:assert/strict";
 import { it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { RoutinePage } from "./RoutinePage";
+import {
+  getTaskDurationMenuOptions,
+  mergeRoutineTasks,
+  RoutinePage,
+} from "./RoutinePage";
 import { SettingsContext } from "../contexts/SettingsContext";
 import { AppSettings, PracticeTask, UserTimerPreferences } from "../types";
+
+for (const [duration, label] of [
+  ["forever", "No limit"],
+  ["week", "This week"],
+  ["month", "This month"],
+  ["year", "This year"],
+] as const) {
+  it(`selects the existing ${duration} option for the configured default without duplicating it`, () => {
+    const options = getTaskDurationMenuOptions(duration, label);
+    assert.equal(options.length, 5);
+    assert.deepEqual(
+      options.filter((option) => option.label === label),
+      [{ value: "default", label }],
+    );
+    assert.equal(
+      options.filter((option) => option.value === "default").length,
+      1,
+    );
+    assert.ok(options.some((option) => option.value === "custom"));
+  });
+}
+
+it("keeps a separate configured custom duration alongside the custom editor", () => {
+  const options = getTaskDurationMenuOptions("custom", "6 months");
+  assert.equal(options.length, 6);
+  assert.deepEqual(options[0], { value: "default", label: "6 months" });
+  assert.ok(options.some((option) => option.value === "custom"));
+});
+
+it("keeps existing-task duration menus independent of the creation default", () => {
+  const options = getTaskDurationMenuOptions();
+  assert.equal(options.length, 5);
+  assert.equal(
+    options.some((option) => option.value === "default"),
+    false,
+  );
+  assert.ok(options.some((option) => option.value === "forever"));
+});
+
+it("does not let stale daily tasks undo finite to forever to finite duration edits", () => {
+  const createdAt = new Date(2026, 4, 21).getTime();
+  const staleTask = {
+    id: `t-${createdAt}`,
+    text: "Practice",
+    completed: false,
+    createdAt,
+    startsAt: createdAt,
+    expiresAt: new Date(2026, 5, 18).getTime(),
+    duration: "custom" as const,
+  };
+  const changedAt = new Date(2026, 5, 1).getTime();
+  const history = [{ startsAt: createdAt, expiresAt: changedAt }];
+  const foreverTask = {
+    ...staleTask,
+    startsAt: changedAt,
+    expiresAt: undefined,
+    duration: "forever" as const,
+    visibilityHistory: history,
+    hiddenDates: ["2026-06-02"],
+    completedByDate: { "2026-05-21": true },
+  };
+  const dailyUpdate = {
+    ...staleTask,
+    text: "Practice scales",
+    completed: true,
+    completedByDate: { "2026-06-01": true },
+  };
+  const [merged] = mergeRoutineTasks([foreverTask], [dailyUpdate]);
+  assert.equal(merged.expiresAt, undefined);
+  assert.equal(merged.duration, "forever");
+  assert.equal(merged.createdAt, createdAt);
+  assert.equal(merged.startsAt, changedAt);
+  assert.deepEqual(merged.visibilityHistory, history);
+  assert.deepEqual(merged.hiddenDates, ["2026-06-02"]);
+  assert.equal(merged.text, "Practice scales");
+  assert.deepEqual(merged.completedByDate, {
+    "2026-05-21": true,
+    "2026-06-01": true,
+  });
+
+  const finiteTask = {
+    ...foreverTask,
+    duration: "week" as const,
+    startsAt: new Date(2026, 5, 8).getTime(),
+    expiresAt: new Date(2026, 5, 15).getTime(),
+  };
+  const [finiteMerged] = mergeRoutineTasks([finiteTask], [merged]);
+  assert.equal(finiteMerged.duration, "week");
+  assert.equal(finiteMerged.startsAt, finiteTask.startsAt);
+  assert.equal(finiteMerged.expiresAt, finiteTask.expiresAt);
+});
+
+it("keeps new daily tasks and scheduled tasks that have no daily copy", () => {
+  const stored = { id: "scheduled", text: "Scheduled", completed: false };
+  const added = { id: "new", text: "New", completed: false };
+  assert.deepEqual(mergeRoutineTasks([stored], [added]), [stored, added]);
+});
+
+for (const duration of ["week", "month", "year"] as const) {
+  it(`labels ${duration} duration options using this-period wording`, () => {
+    const tasks = [
+      { id: "renewal", text: "Practice", completed: false, duration },
+    ];
+    const html = renderRoutine("guitar", undefined, tasks);
+    assert.ok(html.includes(`aria-label="Task duration: This ${duration}"`));
+  });
+}
 
 function renderRoutine(
   instrument: "guitar" | "piano",
@@ -64,6 +175,49 @@ it("keeps custom tasks without adding a default routine", () => {
     { id: "custom-task", text: "My personal practice goal", completed: false },
   ]);
   assert.match(html, /My personal practice goal/);
+});
+
+it("shows the creation date rather than the updated duration start", () => {
+  const today = new Date();
+  const createdAt = new Date(
+    today.getFullYear(),
+    today.getMonth() - 2,
+    1,
+  ).getTime();
+  const startsAt = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  ).getTime();
+  const expiresAt = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() + 28,
+  ).getTime();
+  const formatDate = (timestamp: number) =>
+    new Date(timestamp).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  const html = renderRoutine("guitar", undefined, [
+    {
+      id: `t-${createdAt}`,
+      text: "Extended practice task",
+      completed: false,
+      createdAt,
+      startsAt,
+      expiresAt,
+    },
+  ]);
+
+  assert.ok(
+    html.includes(`${formatDate(createdAt)} - ${formatDate(expiresAt - 1)}`),
+  );
+  assert.equal(
+    html.includes(`${formatDate(startsAt)} - ${formatDate(expiresAt - 1)}`),
+    false,
+  );
 });
 
 it("provides a named submit control for adding tasks after choosing a duration", () => {

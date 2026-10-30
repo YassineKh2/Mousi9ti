@@ -1,4 +1,19 @@
-import { getDayBoundaryAfter, isTaskVisibleOnDate } from "./taskDates";
+import {
+  getDayBoundaryAfter,
+  isTaskVisibleOnDate,
+  preserveTaskHistoryBefore,
+  withTaskCreationDate,
+} from "./taskDates";
+import type { PracticeTask } from "../types";
+
+export const applyTaskDurationRange = <T extends PracticeTask>(
+  task: T,
+  range: { startsAt: number; expiresAt?: number },
+) => ({
+  ...withTaskCreationDate(task),
+  visibilityHistory: preserveTaskHistoryBefore(task, range.startsAt),
+  ...range,
+});
 
 export type TaskDurationPeriod =
   | "default"
@@ -28,6 +43,27 @@ export const getTaskExpiration = (
 };
 
 export const MAX_CUSTOM_WEEKS = 999;
+
+export const getTaskRenewalExpiration = (
+  period: TaskDurationPeriod,
+  referenceDate = Date.now(),
+): number | undefined => {
+  if (period !== "month" && period !== "year") {
+    return getTaskExpiration(period, referenceDate);
+  }
+
+  const expiration = new Date(getDayBoundaryAfter(referenceDate, 0));
+  const originalDay = expiration.getDate();
+  expiration.setDate(1);
+  expiration.setMonth(expiration.getMonth() + (period === "month" ? 1 : 12));
+  const lastDay = new Date(
+    expiration.getFullYear(),
+    expiration.getMonth() + 1,
+    0,
+  ).getDate();
+  expiration.setDate(Math.min(originalDay, lastDay));
+  return expiration.getTime();
+};
 
 export const validateCustomWeekDuration = (
   startDate: number,

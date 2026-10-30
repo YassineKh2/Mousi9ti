@@ -62,7 +62,11 @@ import {
 } from "../lib/storage";
 import { useSettingsContext } from "../contexts/SettingsContext";
 import { TaskDeleteDialog } from "./TaskDeleteDialog";
-import { deleteTaskFromSchedule, getTaskDateKey } from "../lib/taskDates";
+import {
+  deleteTaskFromSchedule,
+  getTaskDateKey,
+  withTaskCreationDate,
+} from "../lib/taskDates";
 import { ToggleSwitchIndicator } from "./ToggleSwitch";
 import {
   CUSTOM_TASK_TAGS_CHANGED_EVENT,
@@ -874,7 +878,12 @@ export const getSavedPracticeTasks = (): PracticeTask[] => {
 
   try {
     const parsed = JSON.parse(saved);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    const tasks = parsed.map((task: PracticeTask) =>
+      withTaskCreationDate(task),
+    );
+    localStorage.setItem("mous9iti_tasks", JSON.stringify(tasks));
+    return tasks;
   } catch (error) {
     console.error("Failed to parse tasks", error);
     return [];
@@ -955,9 +964,15 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
     e.preventDefault();
     if (!newTaskText.trim()) return;
     setCustomTags(rememberCustomTags(newTaskText));
+    const createdAt = Date.now();
     setTasks([
       ...tasks,
-      { id: Date.now().toString(), text: newTaskText.trim(), completed: false },
+      {
+        id: createdAt.toString(),
+        createdAt,
+        text: newTaskText.trim(),
+        completed: false,
+      },
     ]);
     setNewTaskText("");
     setCursor(0);
@@ -1304,6 +1319,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
         instrument,
         taskTexts.map((text, index) => ({
           id: `${createdAt}-${index}`,
+          createdAt,
           text,
           completed: false,
         })),

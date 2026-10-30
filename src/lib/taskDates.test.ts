@@ -9,9 +9,76 @@ import {
   getTasksForDate,
   isTaskActiveAt,
   isTaskVisibleOnDate,
+  withTaskCreationDate,
 } from "./taskDates";
 
 describe("task date visibility", () => {
+  it("backfills creation dates without overwriting an existing timestamp", () => {
+    const createdAt = new Date(2026, 4, 21, 15, 30).getTime();
+    const fallback = new Date(2026, 9, 30).getTime();
+    assert.equal(
+      withTaskCreationDate({ id: `t-${createdAt}` }, fallback).createdAt,
+      createdAt,
+    );
+    assert.equal(
+      withTaskCreationDate({ id: `${createdAt}-1` }, fallback).createdAt,
+      createdAt,
+    );
+    assert.equal(
+      withTaskCreationDate({ startsAt: createdAt }, fallback).createdAt,
+      createdAt,
+    );
+    assert.equal(
+      withTaskCreationDate({ id: "unknown" }, fallback).createdAt,
+      fallback,
+    );
+    assert.equal(
+      withTaskCreationDate({ createdAt, startsAt: fallback }, fallback)
+        .createdAt,
+      createdAt,
+    );
+    const migrated = withTaskCreationDate({ id: "unknown" }, fallback);
+    assert.equal(
+      withTaskCreationDate(migrated, fallback + 86400000).createdAt,
+      fallback,
+    );
+  });
+
+  it("never shows a task before creation, even with earlier schedule ranges", () => {
+    const createdAt = new Date(2026, 4, 21, 15, 30).getTime();
+    const task = {
+      id: "created-task",
+      createdAt,
+      startsAt: new Date(2026, 0, 1).getTime(),
+      expiresAt: new Date(2026, 4, 28).getTime(),
+      visibilityHistory: [{ startsAt: new Date(2026, 0, 1).getTime() }],
+    };
+
+    assert.equal(isTaskVisibleOnDate(task, new Date(2026, 0, 10)), false);
+    assert.equal(isTaskVisibleOnDate(task, new Date(2026, 4, 20)), false);
+    assert.equal(isTaskVisibleOnDate(task, new Date(2026, 4, 21)), true);
+    assert.equal(isTaskActiveAt(task, new Date(2026, 4, 20).getTime()), false);
+    assert.equal(isTaskActiveAt(task, new Date(2026, 4, 21).getTime()), true);
+    assert.equal(
+      isTaskVisibleOnDate(
+        { ...task, visibilityHistory: [] },
+        new Date(2026, 4, 28),
+      ),
+      false,
+    );
+  });
+
+  it("uses indexed widget task IDs as legacy creation timestamps", () => {
+    const createdAt = new Date(2026, 4, 21, 15, 30).getTime();
+    const task = {
+      id: `${createdAt}-0`,
+      startsAt: new Date(2026, 0, 1).getTime(),
+    };
+
+    assert.equal(isTaskVisibleOnDate(task, new Date(2026, 0, 10)), false);
+    assert.equal(isTaskVisibleOnDate(task, new Date(2026, 4, 21)), true);
+  });
+
   const monday = new Date(2026, 9, 12);
   const nextMonday = new Date(2026, 9, 19);
   const previousMonday = new Date(2026, 9, 5);
@@ -25,10 +92,7 @@ describe("task date visibility", () => {
 
   it("shows a one-week task on dates in its active week only", () => {
     assert.equal(isTaskVisibleOnDate(task, monday), true);
-    assert.equal(
-      isTaskVisibleOnDate(task, new Date(2026, 9, 18)),
-      true,
-    );
+    assert.equal(isTaskVisibleOnDate(task, new Date(2026, 9, 18)), true);
     assert.equal(isTaskVisibleOnDate(task, nextMonday), false);
     assert.equal(isTaskVisibleOnDate(task, previousMonday), false);
   });
@@ -42,11 +106,26 @@ describe("task date visibility", () => {
       expiresAt: new Date(2026, 9, 17, 23, 59, 59, 999).getTime(),
     };
 
-    assert.equal(getTasksForDate([customTask], new Date(2026, 9, 13)).length, 0);
-    assert.equal(getTasksForDate([customTask], new Date(2026, 9, 14)).length, 1);
-    assert.equal(getTasksForDate([customTask], new Date(2026, 9, 16)).length, 1);
-    assert.equal(getTasksForDate([customTask], new Date(2026, 9, 17)).length, 1);
-    assert.equal(getTasksForDate([customTask], new Date(2026, 9, 18)).length, 0);
+    assert.equal(
+      getTasksForDate([customTask], new Date(2026, 9, 13)).length,
+      0,
+    );
+    assert.equal(
+      getTasksForDate([customTask], new Date(2026, 9, 14)).length,
+      1,
+    );
+    assert.equal(
+      getTasksForDate([customTask], new Date(2026, 9, 16)).length,
+      1,
+    );
+    assert.equal(
+      getTasksForDate([customTask], new Date(2026, 9, 17)).length,
+      1,
+    );
+    assert.equal(
+      getTasksForDate([customTask], new Date(2026, 9, 18)).length,
+      0,
+    );
   });
 
   it("considers a task expired at the start of the next Monday", () => {
@@ -78,7 +157,10 @@ describe("task date visibility", () => {
       januaryWeeks.map((week) => week.getDate()),
       [27, 3, 10, 17, 24],
     );
-    assert.equal(januaryWeeks.every((week) => week.getDay() === 1), true);
+    assert.equal(
+      januaryWeeks.every((week) => week.getDay() === 1),
+      true,
+    );
     assert.equal(februaryWeeks[0].getTime(), new Date(2022, 0, 31).getTime());
   });
 
@@ -87,10 +169,7 @@ describe("task date visibility", () => {
       isTaskVisibleOnDate({ id: "t-1791800000000" }, previousMonday),
       false,
     );
-    assert.equal(
-      isTaskVisibleOnDate({ id: "t-1791800000000" }, monday),
-      true,
-    );
+    assert.equal(isTaskVisibleOnDate({ id: "t-1791800000000" }, monday), true);
   });
 
   it("keeps completion state separate for each date and counts visible tasks", () => {
@@ -104,10 +183,7 @@ describe("task date visibility", () => {
       },
     };
 
-    const thisMondayTasks = getTasksForDate(
-      [taskWithDateCompletion],
-      monday,
-    );
+    const thisMondayTasks = getTasksForDate([taskWithDateCompletion], monday);
     const nextMondayTasks = getTasksForDate(
       [taskWithDateCompletion],
       nextMonday,

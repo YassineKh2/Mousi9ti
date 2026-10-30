@@ -87,6 +87,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleAutoConfigureDashboardFromTask,
 }) => {
   const [activeTab, setActiveTab] = useState("general");
+  const [customDurationDraft, setCustomDurationDraft] = useState(
+    String(settings.taskDefaultCustomDuration),
+  );
   const [customTags, setCustomTags] = useState(getSavedCustomTagEntries);
   const [newCustomTag, setNewCustomTag] = useState("");
   const [newCustomTagCategory, setNewCustomTagCategory] =
@@ -99,6 +102,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [notificationError, setNotificationError] = useState("");
   const importFileRef = useRef<HTMLInputElement>(null);
   const importModeRef = useRef<"full" | "selected" | null>(null);
+
+  useEffect(() => {
+    setCustomDurationDraft(String(settings.taskDefaultCustomDuration));
+  }, [settings.taskDefaultCustomDuration, isOpen]);
 
   useEffect(() => {
     const refreshTags = () => setCustomTags(getSavedCustomTagEntries());
@@ -401,9 +408,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 className="w-full shrink-0 rounded-md border border-outline-variant/40 bg-surface-container-high px-3 py-2 font-mono text-xs text-on-surface outline-none transition-colors focus:border-primary sm:w-44"
               >
                 <option value="forever">No limit</option>
-                <option value="week">1 week</option>
-                <option value="month">1 month</option>
-                <option value="year">1 year</option>
+                <option value="week">This week</option>
+                <option value="month">This month</option>
+                <option value="year">This year</option>
                 <option value="custom">Custom duration</option>
               </select>
             </div>
@@ -421,9 +428,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   min={1}
                   max={999}
                   step={1}
-                  value={settings.taskDefaultCustomDuration}
+                  value={customDurationDraft}
+                  onFocus={(event) => event.currentTarget.select()}
+                  onClick={(event) => event.currentTarget.select()}
                   onChange={(event) => {
-                    const duration = Number(event.target.value);
+                    const value = event.target.value;
+                    setCustomDurationDraft(value);
+                    const duration = Number(value);
                     if (
                       Number.isInteger(duration) &&
                       duration >= 1 &&
@@ -432,6 +443,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       onUpdateSettings({ taskDefaultCustomDuration: duration });
                     }
                   }}
+                  onBlur={() =>
+                    setCustomDurationDraft(
+                      String(settings.taskDefaultCustomDuration),
+                    )
+                  }
                   className="w-16 [appearance:textfield] rounded-md border border-outline-variant/40 bg-surface-container-high px-2 py-2 text-center font-mono text-xs text-on-surface outline-none focus:border-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
                 <select
@@ -439,7 +455,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onChange={(event) =>
                     onUpdateSettings({
                       taskDefaultCustomUnit: event.target.value as
-                        | "days"
                         | "weeks"
                         | "months"
                         | "years",
@@ -448,7 +463,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   aria-label="Custom task duration unit"
                   className="rounded-md border border-outline-variant/40 bg-surface-container-high px-2 py-2 font-mono text-xs text-on-surface outline-none focus:border-primary"
                 >
-                  <option value="days">days</option>
+                  {settings.taskDefaultCustomUnit === "days" && (
+                    <option value="days" hidden disabled>
+                      days (legacy)
+                    </option>
+                  )}
                   <option value="weeks">weeks</option>
                   <option value="months">months</option>
                   <option value="years">years</option>
