@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./light-theme.css";
 
 .daily-practice-widget-container {
   container-type: inline-size;
@@ -952,11 +953,8 @@
 .task-duration-calendar-view > button:first-child {
   margin-bottom: 0.5rem;
   padding-bottom: 0.65rem;
-  border-bottom: 1px solid color-mix(
-    in srgb,
-    var(--color-outline-variant) 35%,
-    transparent
-  );
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--color-outline-variant) 35%, transparent);
   border-radius: 0;
 }
 
@@ -1374,11 +1372,15 @@
   font-size: 0.62rem;
   padding: 0.3rem 1.3rem 0.3rem 0.25rem;
   appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, #9eb5d7 50%),
+  background-image:
+    linear-gradient(45deg, transparent 50%, #9eb5d7 50%),
     linear-gradient(135deg, #9eb5d7 50%, transparent 50%);
-  background-position: calc(100% - 0.9rem) calc(50% - 0.125rem),
+  background-position:
+    calc(100% - 0.9rem) calc(50% - 0.125rem),
     calc(100% - 0.65rem) calc(50% - 0.125rem);
-  background-size: 0.35rem 0.35rem, 0.35rem 0.35rem;
+  background-size:
+    0.35rem 0.35rem,
+    0.35rem 0.35rem;
   background-repeat: no-repeat;
   cursor: pointer;
 }
@@ -1754,7 +1756,10 @@
   color: var(--color-on-surface-variant);
 }
 
-.light .stats-calendar-popover .stats-calendar-grid button.is-muted:not(.is-selected) {
+.light
+  .stats-calendar-popover
+  .stats-calendar-grid
+  button.is-muted:not(.is-selected) {
   color: #858b98;
 }
 
