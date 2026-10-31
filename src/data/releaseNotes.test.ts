@@ -1,20 +1,88 @@
 import assert from "node:assert/strict";
 import { it } from "node:test";
-import { isMajorVersionAhead, RELEASE_CHANGES } from "./releaseNotes";
+import {
+  getMajorMinorVersion,
+  isMajorOrMinorVersionAhead,
+  RELEASES,
+} from "./releaseNotes";
+import { resolvePageRoute } from "../lib/pageRoutes";
 
-it("announces only a newer major version", () => {
-  assert.equal(isMajorVersionAhead("2.0.0", "1"), true);
-  assert.equal(isMajorVersionAhead("1.8.0", "1"), false);
-  assert.equal(isMajorVersionAhead("1.0.0", "2"), false);
+it("announces newer major or minor versions, but not patch versions", () => {
+  assert.equal(isMajorOrMinorVersionAhead("3.0.0", "2.9.9"), true);
+  assert.equal(isMajorOrMinorVersionAhead("2.2.0", "2.1.9"), true);
+  assert.equal(isMajorOrMinorVersionAhead("2.1.4", "2.1.3"), false);
+  assert.equal(isMajorOrMinorVersionAhead("2.1.0", "2.2.0"), false);
 });
 
-it("ignores malformed version values", () => {
-  assert.equal(isMajorVersionAhead("next", "1"), false);
-  assert.equal(isMajorVersionAhead("2.0.0", "v1"), false);
+it("normalizes the major and minor version for release tracking", () => {
+  assert.equal(getMajorMinorVersion("v02.003.4"), "2.3");
+  assert.equal(getMajorMinorVersion("next"), null);
 });
 
-it("provides new features and fixes for the release feed", () => {
-  assert.ok(RELEASE_CHANGES.some((change) => change.category === "new"));
-  assert.ok(RELEASE_CHANGES.some((change) => change.category === "fixed"));
-  assert.ok(RELEASE_CHANGES.some((change) => change.featured));
+it("ignores malformed version values when comparing releases", () => {
+  assert.equal(isMajorOrMinorVersionAhead("next", "2.1.0"), false);
+  assert.equal(isMajorOrMinorVersionAhead("2.2.0", "next"), false);
+});
+
+it("lists all four releases in descending version order", () => {
+  assert.deepEqual(
+    RELEASES.map((release) => release.version),
+    ["1.3.0", "1.2.0", "1.1.0", "1.0.0"],
+  );
+});
+
+it("documents the headline changes in their requested releases", () => {
+  const releaseTitles = Object.fromEntries(
+    RELEASES.map((release) => [
+      release.version,
+      release.changes.map((change) => change.title),
+    ]),
+  );
+
+  assert.ok(releaseTitles["1.3.0"].some((title) => title.includes("Bass")));
+  assert.ok(releaseTitles["1.2.0"].some((title) => title.includes("light mode")));
+  assert.ok(releaseTitles["1.1.0"].some((title) => title.includes("Shareable")));
+  assert.ok(releaseTitles["1.0.0"].some((title) => title.includes("dashboard")));
+  assert.ok(
+    RELEASES.find((release) => release.version === "1.2.0")?.changes.some(
+      (change) => change.category === "fixed",
+    ),
+  );
+  assert.ok(
+    RELEASES.find((release) => release.version === "1.1.0")?.changes.some(
+      (change) => change.category === "fixed",
+    ),
+  );
+  assert.ok(
+    RELEASES.find((release) => release.version === "1.1.0")?.changes.some(
+      (change) => change.id === "search-and-playback",
+    ),
+  );
+  assert.ok(
+    RELEASES.find((release) => release.version === "1.3.0")?.changes.some(
+      (change) => change.id === "compact-chord-selector",
+    ),
+  );
+  assert.ok(
+    RELEASES.every((release) =>
+      release.changes.every((change) => change.description.length > 0),
+    ),
+  );
+});
+
+it("uses the requested highlights in the latest release", () => {
+  const latestRelease = RELEASES[0];
+  const latestTitles = latestRelease.changes.map((change) => change.title);
+
+  assert.ok(latestTitles.includes("A more refined light mode"));
+  assert.ok(latestTitles.includes("Shareable chord and scale pages"));
+  assert.ok(!latestTitles.includes("Consistent instrument experience"));
+});
+
+it("links each release note to a valid app page", () => {
+  for (const release of RELEASES) {
+    for (const change of release.changes) {
+      assert.ok(resolvePageRoute(change.href), `${change.title} has a valid link`);
+    }
+  }
 });

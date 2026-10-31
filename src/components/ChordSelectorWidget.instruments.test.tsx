@@ -24,15 +24,25 @@ function renderSelector(enabledInstruments?: PracticeInstrument[], instrumentVie
 test("combined selector renders guitar, bass and piano instead of the default instrument", () => {
   const html = renderSelector(["guitar", "bass", "piano"]);
   assert.match(html, /aria-label="All instruments"/);
+  assert.match(html, /relative mb-4 flex min-w-0 items-start justify-between gap-2/);
+  assert.match(html, /font-mono text-xs font-semibold tracking-\[0\.2em\] text-on-surface uppercase/);
+  assert.match(html, /absolute right-0 top-0/);
+  assert.match(html, /h-6 w-6 px-0/);
+  assert.doesNotMatch(html, /<span>All instruments<\/span>/);
   assert.match(html, /String 6 \(E\)/);
   assert.match(html, /Four-string bass/);
   assert.match(html, />Piano<\/h4>/);
+  assert.match(html, /overflow-y-auto/);
+  assert.match(html, /font-mono text-sm font-semibold text-on-surface-variant/);
+  assert.match(html, /class="min-w-0 flex-1 mt-4"/);
+  assert.doesNotMatch(html, /border-t border-outline-variant\/40/);
 });
 
 test("single bass normalizes disabled selection and hides other controls", () => {
   const html = renderSelector(["bass"], "guitar");
   assert.match(html, /Four-string bass/);
   assert.match(html, /aria-label="Bass" aria-pressed="true"/);
+  assert.doesNotMatch(html, /overflow-y-auto/);
   assert.doesNotMatch(html, /aria-label="(?:Guitar|Piano|Both instruments|All instruments)"/);
   assert.doesNotMatch(html, /String [56]/);
 });

@@ -4,7 +4,7 @@
    <img src="public/Mousi9tiWhite.svg" alt="Mousi9ti logo" width="320">
 </p>
 
-Mousi9ti is a browser-based music practice studio for guitar and piano players. It combines theory exploration, daily practice planning, timing tools, and progress tracking into one workspace for structured, repeatable practice.
+Mousi9ti is a browser-based music practice studio for guitar, bass, and piano players. It combines theory exploration, daily practice planning, timing tools, and progress tracking into one workspace for structured, repeatable practice.
 
 ### Practice dashboard and workflow
 
@@ -19,7 +19,7 @@ Mousi9ti is a browser-based music practice studio for guitar and piano players. 
 
 ### Music theory and instrument learning
 
-- Guitar fretboard explorer with tuning, fret count, note display modes, and fretboard styling options
+- Guitar and four-string bass fretboard explorers with tuning, fret count, note display modes, and fretboard styling options
 - Piano keyboard visualization for scales and chords
 - Scale library with root selection, scale categories, degree/interval naming, and playback directions
 - Chord library with root selection, chord type search, inversions, and piano/guitar voicing previews

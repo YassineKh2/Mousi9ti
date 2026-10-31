@@ -248,7 +248,9 @@ export const resolveScaleRoute = (
   const path = buildScalePath(root, scale.id, boxKey);
   const shapeName = boxKey?.match(/\(([^)]+)\)/)?.[1];
   const h1 = `${root} ${scale.name}`;
-  const description = `Explore the notes, intervals, and guitar positions of the ${root} ${scale.name.toLowerCase()} scale${shapeName ? ` in CAGED ${shapeName} shape` : ""}.`;
+  const description = shapeName
+    ? `Explore the ${root} ${scale.name.toLowerCase()} scale notes, intervals, and guitar CAGED ${shapeName} shape, with bass and piano views.`
+    : `Explore the ${root} ${scale.name.toLowerCase()} scale on guitar, four-string bass, and piano, including notes, intervals, and patterns.`;
 
   return {
     path,

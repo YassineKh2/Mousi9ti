@@ -34,6 +34,7 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
 
   useEffect(() => {
     setSelectedView(normalizeInstrumentDisplay(instrumentView, enabledInstruments));
+    setCompactCombinedHeight(null);
   }, [instrumentView]);
 
   const loadChordSelections = (): ChordSelection[] => {
@@ -82,7 +83,12 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
   });
   const [isFullWidth, setIsFullWidth] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [compactCombinedHeight, setCompactCombinedHeight] = useState<number | null>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isFullWidth) setCompactCombinedHeight(null);
+  }, [isFullWidth]);
 
   useEffect(() => {
     saveChordSelections(selectedChords);
@@ -139,13 +145,28 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
     <div
       ref={widgetRef}
       className="light-shadow-widget flex h-full flex-col rounded-2xl border border-outline-variant/30 bg-surface-container p-5 shadow-sm"
+      style={
+        compactCombinedHeight === null
+          ? undefined
+          : { height: compactCombinedHeight }
+      }
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-mono text-sm font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
+      <div className="relative mb-4 flex min-w-0 items-start justify-between gap-2">
+        <h3
+          className={`flex min-w-0 items-center gap-2 font-mono text-xs font-semibold tracking-[0.2em] text-on-surface uppercase ${
+            isFullWidth ? "" : "pr-[7.5rem]"
+          }`}
+        >
           <Music2 size={16} className="shrink-0 text-primary" />
           Chord Selector
         </h3>
-        <div role="group" aria-label="Chord instruments" className="flex w-fit shrink-0 items-center gap-1 rounded-lg border border-outline-variant/30 bg-surface-container-low p-1">
+        <div
+          role="group"
+          aria-label="Chord instruments"
+          className={`flex w-fit shrink-0 items-center gap-1 rounded-lg border border-outline-variant/30 bg-surface-container-low p-1 ${
+            isFullWidth ? "" : "absolute right-0 top-0"
+          }`}
+        >
           {([...enabledInstruments, ...(enabledInstruments.length > 1 ? ["both" as const] : [])]).map((instrument) => {
             const label = instrument === "both" ? combinedLabel : instrument === "piano" ? "Piano" : instrument === "bass" ? "Bass" : "Guitar";
             const Icon = instrument === "both" ? Layers : instrument === "piano" ? Piano : instrument === "bass" ? BassIcon : Guitar;
@@ -156,15 +177,24 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
                 title={`${label} view`}
                 aria-label={instrument === "both" ? `${label} instruments` : label}
                 aria-pressed={view === instrument}
-                onClick={() => setSelectedView(instrument)}
-                className={`h-7 w-7 px-0 lg:w-auto lg:px-2 flex items-center justify-center gap-1.5 text-xs font-mono rounded transition-all cursor-pointer ${
+                onClick={() => {
+                  if (instrument === "both" && !isFullWidth && widgetRef.current) {
+                    setCompactCombinedHeight(widgetRef.current.getBoundingClientRect().height);
+                  } else {
+                    setCompactCombinedHeight(null);
+                  }
+                  setSelectedView(instrument);
+                }}
+                className={`flex items-center justify-center gap-1.5 rounded font-mono text-xs transition-all cursor-pointer ${
+                  isFullWidth ? "h-7 w-auto px-2" : "h-6 w-6 px-0"
+                } ${
                   view === instrument
                     ? "bg-primary text-on-primary font-bold shadow"
                     : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >
                 <Icon size={14} />
-                <span className="hidden lg:inline">{label}</span>
+                {isFullWidth && <span>{label}</span>}
               </button>
             );
           })}
@@ -172,14 +202,23 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
       </div>
 
       <div
-        className={`grid flex-1 gap-4 ${isFullWidth ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}
+        className={`grid min-h-0 flex-1 gap-4 ${isFullWidth ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"} ${
+          isFullWidth && displayedInstruments.length > 1 ? "pb-4" : ""
+        } ${
+          !isFullWidth && displayedInstruments.length > 1
+            ? "overflow-y-auto"
+            : ""
+        }`}
       >
         {visibleChords.map((chord, i) => (
           <div key={`${chord.root}-${chord.type}-${i}`} className="flex min-w-0 flex-col gap-4">
-            {displayedInstruments.map((chordInstrument) => (
-              <div key={chordInstrument} className="min-w-0 flex-1">
+            {displayedInstruments.map((chordInstrument, instrumentIndex) => (
+              <div
+                key={chordInstrument}
+                className={`min-w-0 flex-1 ${instrumentIndex > 0 ? "mt-4" : ""}`}
+              >
                 {displayedInstruments.length > 1 && (
-                  <h4 className="mb-2 text-center font-mono text-xs text-on-surface-variant">
+                  <h4 className="mb-2 text-center font-mono text-sm font-semibold text-on-surface-variant">
                     {chordInstrument === "piano" ? "Piano" : chordInstrument === "bass" ? "Bass" : "Guitar"}
                   </h4>
                 )}

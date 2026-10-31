@@ -40,6 +40,35 @@ it("resolves the patch notes page as an indexable updates route", () => {
   assert.equal(getPageRouteForTab("updates").path, "/patch-notes/");
 });
 
+it("includes bass in core instrument metadata and keeps bass scale variants canonical", () => {
+  for (const path of ["/", "/scales/", "/chords/"]) {
+    const route = resolvePageRoute(path);
+    assert.ok(route?.title.toLowerCase().includes("bass"), path);
+  }
+
+  for (const path of [
+    "/",
+    "/scales/",
+    "/chords/",
+    "/chord-progression-builder/",
+    "/timer/",
+    "/custom-chord-builder/",
+  ]) {
+    const route = resolvePageRoute(path);
+    assert.ok(route?.description.toLowerCase().includes("bass"), path);
+  }
+
+  const scaleRoute = resolvePageRoute("/scale/a/pentatonic");
+  assert.ok(scaleRoute?.description.toLowerCase().includes("bass"));
+
+  const bassScaleRoute = resolvePageRoute(
+    "/scale/a/pentatonic",
+    "?instrument=bass",
+  );
+  assert.equal(bassScaleRoute?.indexable, false);
+  assert.equal(bassScaleRoute?.path, scaleRoute?.path);
+});
+
 it("resolves each practice tool to its own shareable route", () => {
   const tools = [
     ["timer", "/timer/"],

@@ -47,9 +47,13 @@ import {
   GlobalSearchResult,
 } from "./components/Navigation";
 import { SettingsModal } from "./components/SettingsModal";
-import { MajorReleaseAnnouncement } from "./components/MajorReleaseAnnouncement";
+import { ReleaseNotesModal } from "./components/ReleaseNotesModal";
 import { APP_VERSION } from "./lib/version";
-import { isMajorVersionAhead } from "./data/releaseNotes";
+import {
+  getMajorMinorVersion,
+  isMajorOrMinorVersionAhead,
+  RELEASES,
+} from "./data/releaseNotes";
 const DashboardPage = lazy(() =>
   import("./pages/DashboardPage").then((module) => ({
     default: module.DashboardPage,
@@ -228,6 +232,15 @@ function PracticeApp() {
     resolvePageRoute(window.location.pathname, window.location.search),
   );
   const activeTab: ActiveTab = route?.tab ?? "dashboard";
+  useEffect(() => {
+    if (
+      route?.tab === "dashboard" &&
+      localStorage.getItem("Mousi9ti_tour_done") !== "true"
+    ) {
+      setIsTourOpen(true);
+    }
+  }, [route]);
+
   const [toolsInitialTool, setToolsInitialTool] = useState<ToolRoute | null>(
     () => route?.tool ?? null,
   );
@@ -394,36 +407,44 @@ function PracticeApp() {
     getSavedSettings(),
   );
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-  const [isMajorReleaseAnnouncementOpen, setIsMajorReleaseAnnouncementOpen] =
-    useState(false);
+  const [isReleaseNotesModalOpen, setIsReleaseNotesModalOpen] = useState(false);
+  const currentRelease = RELEASES.find(
+    (release) => release.version === APP_VERSION,
+  );
+  const [isReturningReleaseNotesUser] = useState(
+    () => localStorage.getItem("Mousi9ti_last_seen_major_version") !== null,
+  );
+  const [hasSeenCurrentRelease, setHasSeenCurrentRelease] = useState(() => {
+    const lastSeenVersion = localStorage.getItem(
+      "Mousi9ti_last_seen_release_version",
+    );
+    return (
+      lastSeenVersion !== null &&
+      !isMajorOrMinorVersionAhead(APP_VERSION, lastSeenVersion)
+    );
+  });
 
-  useEffect(() => {
-    const releaseKey = "Mousi9ti_last_seen_major_version";
-    const lastSeenMajor = localStorage.getItem(releaseKey);
-    const currentMajor = APP_VERSION.split(".")[0];
-
-    if (lastSeenMajor === null) {
-      localStorage.setItem(releaseKey, currentMajor);
-      return;
+  const dismissReleaseNotesModal = useCallback(() => {
+    const majorMinorVersion = getMajorMinorVersion(APP_VERSION);
+    if (majorMinorVersion) {
+      localStorage.setItem(
+        "Mousi9ti_last_seen_release_version",
+        majorMinorVersion,
+      );
     }
-
-    setIsMajorReleaseAnnouncementOpen(
-      isMajorVersionAhead(APP_VERSION, lastSeenMajor),
-    );
+    setHasSeenCurrentRelease(true);
+    setIsReleaseNotesModalOpen(false);
   }, []);
 
-  const dismissMajorReleaseAnnouncement = useCallback(() => {
-    localStorage.setItem(
-      "Mousi9ti_last_seen_major_version",
-      APP_VERSION.split(".")[0],
-    );
-    setIsMajorReleaseAnnouncementOpen(false);
+  const openReleaseNotesManually = useCallback(() => {
+    setIsSettingsOpen(false);
+    setIsReleaseNotesModalOpen(true);
   }, []);
 
-  const openReleaseNotesFromAnnouncement = useCallback(() => {
-    dismissMajorReleaseAnnouncement();
+  const openReleaseNotesFromModal = useCallback(() => {
+    dismissReleaseNotesModal();
     setActiveTab("updates");
-  }, [dismissMajorReleaseAnnouncement, setActiveTab]);
+  }, [dismissReleaseNotesModal, setActiveTab]);
 
   // Practice & Sessions State
   const [sessions, setSessions] = useState<Session[]>(() => getSavedSessions());
@@ -2067,6 +2088,12 @@ function PracticeApp() {
         <SettingsModal
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
+          canOpenReleaseAnnouncement={
+            isReturningReleaseNotesUser &&
+            Boolean(currentRelease) &&
+            !hasSeenCurrentRelease
+          }
+          onOpenReleaseAnnouncement={openReleaseNotesManually}
           onOpenUpdates={() => {
             setIsSettingsOpen(false);
             setActiveTab("updates");
@@ -2100,12 +2127,14 @@ function PracticeApp() {
           }
         />
 
-        {isMajorReleaseAnnouncementOpen &&
+        {isReleaseNotesModalOpen &&
+          currentRelease &&
           !isTourOpen &&
           !isSettingsOpen && (
-            <MajorReleaseAnnouncement
-              onClose={dismissMajorReleaseAnnouncement}
-              onOpenReleaseNotes={openReleaseNotesFromAnnouncement}
+            <ReleaseNotesModal
+              release={currentRelease}
+              onClose={dismissReleaseNotesModal}
+              onOpenReleaseNotes={openReleaseNotesFromModal}
             />
           )}
 

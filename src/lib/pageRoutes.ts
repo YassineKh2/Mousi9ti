@@ -28,9 +28,9 @@ export const PAGE_ROUTES: PageRoute[] = [
   {
     path: "/",
     tab: "dashboard",
-    title: "Mousi9ti — Music Practice Studio for Guitar & Piano",
+    title: "Mousi9ti - Music Practice Studio for Guitar, Bass & Piano",
     description:
-      "Mousi9ti is a music practice studio for guitar and piano players with daily routines, theory tools, metronome, timer, scales, chords, and progress tracking.",
+      "Practice guitar, bass, and piano with Mousi9ti: explore theory, scales, and chords, use the metronome, and track your progress.",
     h1: "Your Music Practice Studio",
     indexable: true,
   },
@@ -39,26 +39,26 @@ export const PAGE_ROUTES: PageRoute[] = [
     tab: "updates",
     title: "Patch Notes and New Features | Mousi9ti",
     description:
-      "See what’s new in Mousi9ti, including shareable music pages and bass for practice, scales, and chords.",
+      "Browse Mousi9ti releases from 1.0.0 to 1.3.0, including shareable music pages, a refined light mode, and bass support.",
     h1: "Patch notes",
     indexable: true,
   },
   {
     path: "/scales/",
     tab: "scales",
-    title: "Guitar & Piano Scales | Mousi9ti",
+    title: "Guitar, Bass & Piano Scales | Mousi9ti",
     description:
-      "Explore guitar and piano scales, root notes, intervals, and scale patterns with an interactive music theory workspace.",
-    h1: "Guitar & Piano Scales",
+      "Explore guitar, four-string bass, and piano scales, root notes, intervals, and scale patterns with an interactive music theory workspace.",
+    h1: "Guitar, Bass & Piano Scales",
     indexable: true,
     scaleTarget: { root: "A", scaleId: "pentatonic_minor", boxKey: null },
   },
   {
     path: "/chords/",
     tab: "chords",
-    title: "Guitar & Piano Chords | Mousi9ti",
+    title: "Guitar, Bass & Piano Chords | Mousi9ti",
     description:
-      "Find guitar and piano chords, voicings, inversions, and chord progressions in one music practice workspace.",
+      "Find guitar, four-string bass, and piano chords, voicings, inversions, and chord progressions in one music practice workspace.",
     h1: "Chord Library",
     indexable: true,
   },
@@ -67,7 +67,7 @@ export const PAGE_ROUTES: PageRoute[] = [
     tab: "builder",
     title: "Chord Progression Builder | Mousi9ti",
     description:
-      "Build and practice chord progressions, loop ideas, and arrangements with a flexible music builder for guitar and piano.",
+      "Build and practice chord progressions, loop ideas, and arrangements with a flexible music builder for guitar, bass, and piano.",
     h1: "Chord Progression Builder",
     indexable: true,
   },
@@ -84,7 +84,7 @@ export const PAGE_ROUTES: PageRoute[] = [
     tab: "routine",
     title: "Daily Practice Routine | Mousi9ti",
     description:
-      "Plan a daily music practice routine with task scheduling, timers, streak tracking, and focused sessions for guitar and piano work.",
+      "Plan a daily music practice routine with task scheduling, timers, streak tracking, and focused sessions for guitar, bass, and piano.",
     h1: "Daily Practice Routine",
   },
   {
@@ -102,7 +102,7 @@ export const PAGE_ROUTES: PageRoute[] = [
     tab: "tools",
     title: "Online Practice Timer | Mousi9ti",
     description:
-      "Stay focused with a practice timer for guitar and piano. Set a duration, track focused sessions, and build a consistent practice habit.",
+      "Stay focused with a practice timer for guitar, bass, and piano. Set a duration, track focused sessions, and build a consistent practice habit.",
     h1: "Online Practice Timer",
     tool: "timer",
     indexable: true,
@@ -142,7 +142,7 @@ export const PAGE_ROUTES: PageRoute[] = [
     tab: "tools",
     title: "Custom Chord Builder | Mousi9ti",
     description:
-      "Create custom guitar and piano chord shapes, explore voicings, and visualize your own chord ideas with the Mousi9ti chord builder.",
+      "Create custom guitar, bass, and piano chord shapes, explore voicings, and visualize your own chord ideas with the Mousi9ti chord builder.",
     h1: "Custom Chord Builder",
     tool: "custom-chord",
     indexable: true,

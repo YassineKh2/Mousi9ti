@@ -73,9 +73,14 @@ export const MajorReleaseAnnouncement = ({
             <X aria-hidden="true" size={18} />
           </button>
         </div>
-        <p className="mt-5 text-sm font-medium text-primary">
+        <button
+          type="button"
+          onClick={onOpenReleaseNotes}
+          className="mt-5 cursor-pointer bg-transparent p-0 text-left text-sm font-medium text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+          aria-label="Open patch notes"
+        >
           Mousi9ti version {APP_VERSION}
-        </p>
+        </button>
         <h2
           id="major-release-title"
           className="mt-2 text-2xl font-bold text-on-surface"

@@ -41,11 +41,16 @@ import {
 } from "../lib/appBackup";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { BassIcon } from "./BassIcon";
-import { getEnabledInstruments, INSTRUMENT_ORDER } from "../lib/instrumentDisplay";
+import {
+  getEnabledInstruments,
+  INSTRUMENT_ORDER,
+} from "../lib/instrumentDisplay";
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  canOpenReleaseAnnouncement?: boolean;
+  onOpenReleaseAnnouncement?: () => void;
   onOpenUpdates: () => void;
   settings: AppSettings;
   onUpdateSettings: (newSettings: Partial<AppSettings>) => void;
@@ -72,6 +77,8 @@ interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
+  canOpenReleaseAnnouncement = false,
+  onOpenReleaseAnnouncement,
   onOpenUpdates,
   settings,
   onUpdateSettings,
@@ -366,31 +373,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               }
               className="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary"
             />
-          </div>
-
-          <div
-            className={
-              activeTab === "general"
-                ? "flex flex-col gap-3 border-t border-outline-variant/20 pt-4 sm:flex-row sm:items-center sm:justify-between"
-                : "hidden"
-            }
-          >
-            <div>
-              <span className="flex items-center gap-2 font-mono text-xs font-semibold text-on-surface">
-                <Newspaper size={14} className="text-primary" />
-                What’s new
-              </span>
-              <span className="mt-1 block text-[11px] text-on-surface-variant">
-                Read about the latest features and changes.
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={onOpenUpdates}
-              className="min-h-11 rounded-md border border-outline-variant/40 bg-surface-container-high px-3 py-2 text-left text-xs font-medium text-on-surface transition-colors hover:border-primary/50 hover:bg-surface-container-highest focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 sm:text-center"
-            >
-              View patch notes
-            </button>
           </div>
 
           <span
@@ -875,34 +857,52 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             Instrument
           </span>
 
-          <fieldset className={activeTab === "instrument" ? "min-w-0 space-y-3" : "hidden"}>
+          <fieldset
+            className={
+              activeTab === "instrument" ? "min-w-0 space-y-3" : "hidden"
+            }
+          >
             <legend className="font-mono text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
               Available Instruments
             </legend>
             <div className="grid grid-cols-3 gap-2">
-              {INSTRUMENT_ORDER.map(instrument => {
+              {INSTRUMENT_ORDER.map((instrument) => {
                 const selected = enabledInstruments.includes(instrument);
-                const Icon = instrument === "bass" ? BassIcon : instrument === "piano" ? Piano : Guitar;
+                const Icon =
+                  instrument === "bass"
+                    ? BassIcon
+                    : instrument === "piano"
+                      ? Piano
+                      : Guitar;
                 return (
-                <label key={instrument} className={`relative flex min-h-20 min-w-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border px-2 py-3 font-mono text-xs transition-colors focus-within:ring-2 focus-within:ring-primary/50 ${selected ? "border-primary/50 bg-primary/10 text-primary" : "border-outline-variant/30 bg-surface-container text-on-surface-variant hover:border-outline-variant hover:bg-surface-container-high"}`}>
-                  <input
-                    type="checkbox"
-                    checked={selected}
-                    disabled={enabledInstruments.length === 1 && selected}
-                    onChange={event => {
-                      const next = INSTRUMENT_ORDER.filter(candidate => candidate === instrument
-                        ? event.target.checked
-                        : enabledInstruments.includes(candidate));
-                      onUpdateSettings({
-                        enabledInstruments: next,
-                        ...(!next.includes(settings.defaultInstrument) ? { defaultInstrument: next[0] } : {}),
-                      });
-                    }}
-                    className="absolute right-2 top-2 h-3.5 w-3.5 cursor-pointer accent-primary disabled:cursor-default disabled:opacity-60"
-                  />
-                  <Icon size={22} strokeWidth={1.75} />
-                  <span className="capitalize font-semibold">{instrument}</span>
-                </label>
+                  <label
+                    key={instrument}
+                    className={`relative flex min-h-20 min-w-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border px-2 py-3 font-mono text-xs transition-colors focus-within:ring-2 focus-within:ring-primary/50 ${selected ? "border-primary/50 bg-primary/10 text-primary" : "border-outline-variant/30 bg-surface-container text-on-surface-variant hover:border-outline-variant hover:bg-surface-container-high"}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      disabled={enabledInstruments.length === 1 && selected}
+                      onChange={(event) => {
+                        const next = INSTRUMENT_ORDER.filter((candidate) =>
+                          candidate === instrument
+                            ? event.target.checked
+                            : enabledInstruments.includes(candidate),
+                        );
+                        onUpdateSettings({
+                          enabledInstruments: next,
+                          ...(!next.includes(settings.defaultInstrument)
+                            ? { defaultInstrument: next[0] }
+                            : {}),
+                        });
+                      }}
+                      className="absolute right-2 top-2 h-3.5 w-3.5 cursor-pointer accent-primary disabled:cursor-default disabled:opacity-60"
+                    />
+                    <Icon size={22} strokeWidth={1.75} />
+                    <span className="capitalize font-semibold">
+                      {instrument}
+                    </span>
+                  </label>
                 );
               })}
             </div>
@@ -926,44 +926,58 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </span>
             </div>
 
-            <div role="group" aria-label="Default instrument" className="flex min-w-0 items-center gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant/30">
-              {enabledInstruments.includes("guitar") && <button
-                type="button"
-                aria-pressed={settings.defaultInstrument === "guitar"}
-                onClick={() =>
-                  onUpdateSettings({ defaultInstrument: "guitar" })
-                }
-                className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2 py-2 rounded text-xs font-mono transition-colors ${
-                  settings.defaultInstrument === "guitar"
-                    ? "bg-primary text-on-primary font-bold"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                <Guitar size={13} />
-                <span>Guitar</span>
-              </button>}
-              {enabledInstruments.includes("bass") && <button
-                type="button"
-                aria-pressed={settings.defaultInstrument === "bass"}
-                onClick={() => onUpdateSettings({ defaultInstrument: "bass" })}
-                className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2 py-2 rounded text-xs font-mono transition-colors ${settings.defaultInstrument === "bass" ? "bg-primary text-on-primary font-bold" : "text-on-surface-variant hover:text-on-surface"}`}
-              >
-                <BassIcon size={13} />
-                <span>Bass</span>
-              </button>}
-              {enabledInstruments.includes("piano") && <button
-                type="button"
-                aria-pressed={settings.defaultInstrument === "piano"}
-                onClick={() => onUpdateSettings({ defaultInstrument: "piano" })}
-                className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2 py-2 rounded text-xs font-mono transition-colors ${
-                  settings.defaultInstrument === "piano"
-                    ? "bg-primary text-on-primary font-bold"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                <Piano size={13} />
-                <span>Piano</span>
-              </button>}
+            <div
+              role="group"
+              aria-label="Default instrument"
+              className="flex min-w-0 items-center gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant/30"
+            >
+              {enabledInstruments.includes("guitar") && (
+                <button
+                  type="button"
+                  aria-pressed={settings.defaultInstrument === "guitar"}
+                  onClick={() =>
+                    onUpdateSettings({ defaultInstrument: "guitar" })
+                  }
+                  className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2 py-2 rounded text-xs font-mono transition-colors ${
+                    settings.defaultInstrument === "guitar"
+                      ? "bg-primary text-on-primary font-bold"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                >
+                  <Guitar size={13} />
+                  <span>Guitar</span>
+                </button>
+              )}
+              {enabledInstruments.includes("bass") && (
+                <button
+                  type="button"
+                  aria-pressed={settings.defaultInstrument === "bass"}
+                  onClick={() =>
+                    onUpdateSettings({ defaultInstrument: "bass" })
+                  }
+                  className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2 py-2 rounded text-xs font-mono transition-colors ${settings.defaultInstrument === "bass" ? "bg-primary text-on-primary font-bold" : "text-on-surface-variant hover:text-on-surface"}`}
+                >
+                  <BassIcon size={13} />
+                  <span>Bass</span>
+                </button>
+              )}
+              {enabledInstruments.includes("piano") && (
+                <button
+                  type="button"
+                  aria-pressed={settings.defaultInstrument === "piano"}
+                  onClick={() =>
+                    onUpdateSettings({ defaultInstrument: "piano" })
+                  }
+                  className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2 py-2 rounded text-xs font-mono transition-colors ${
+                    settings.defaultInstrument === "piano"
+                      ? "bg-primary text-on-primary font-bold"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                >
+                  <Piano size={13} />
+                  <span>Piano</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -1180,6 +1194,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
           </section>
+
+          <div
+            className={
+              activeTab === "general"
+                ? "flex flex-col gap-3 border-t border-outline-variant/20 pt-4 sm:flex-row sm:items-center sm:justify-between"
+                : "hidden"
+            }
+          >
+            <div>
+              <span className="flex items-center gap-2 font-mono text-xs font-semibold text-on-surface">
+                What’s new
+              </span>
+              <span className="mt-1 block text-[11px] text-on-surface-variant">
+                Read about the latest features and changes.
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {canOpenReleaseAnnouncement && onOpenReleaseAnnouncement && (
+                <button
+                  type="button"
+                  onClick={onOpenReleaseAnnouncement}
+                  className="flex shrink-0 items-center justify-center gap-1.5 rounded border border-outline-variant/30 bg-surface-container px-3.5 py-2 font-mono text-xs text-on-surface transition-colors hover:bg-surface-container-high"
+                >
+                  View latest update
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onOpenUpdates}
+                className="flex shrink-0 items-center justify-center gap-1.5 rounded border border-outline-variant/30 bg-surface-container px-3.5 py-2 font-mono text-xs text-on-surface transition-colors hover:bg-surface-container-high"
+              >
+                View patch notes
+              </button>
+            </div>
+          </div>
 
           {/* Fretboard Theme */}
           <div
