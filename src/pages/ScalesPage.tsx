@@ -827,7 +827,6 @@ export const ScalesPage: React.FC<ScalesPageProps> = ({
                 }`}
               >
                 <BassIcon size={14} />
-                <span className="lg:hidden">B</span>
                 <span className="hidden lg:inline">Bass</span>
               </button>}
 

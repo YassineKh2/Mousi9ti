@@ -664,7 +664,7 @@ export const CustomChordEditor: React.FC<CustomChordEditorProps> = ({
                 aria-pressed={editorInstrument === "bass"}
                 onClick={() => changeEditorInstrument("bass")}
                 className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 ${editorInstrument === "bass" ? "bg-primary text-on-primary" : "text-on-surface-variant"}`}>
-                <BassIcon size={14} /><span>Bass</span>
+                <BassIcon size={14} /><span className="hidden sm:inline">Bass</span>
               </button>
             </div>
           </div>

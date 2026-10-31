@@ -27,6 +27,28 @@ it("uses one native playback button and describes actual frets and notes", () =>
   assert.doesNotMatch(html, /role="button"|tabindex|<div/);
 });
 
+it("fills the available card width for guitar and bass diagrams", () => {
+  for (const instrument of ["guitar", "bass"] as const) {
+    const html = renderToStaticMarkup(
+      <SettingsContext.Provider value={{} as AppSettings}>
+        <ChordDiagram
+          instrument={instrument}
+          root="E"
+          voicing={
+            {
+              name: "Open position",
+              frets: instrument === "bass" ? [0, 0, 0, 0] : [0, 0, 0, 0, 0, 0],
+            } as GuitarVoicing
+          }
+        />
+      </SettingsContext.Provider>,
+    );
+
+    assert.match(html, /class="group flex w-full cursor-pointer/);
+    assert.match(html, /<svg aria-hidden="true" viewBox="0 0 240 270" class="[^"]*h-auto w-full"/);
+  }
+});
+
 it("describes notes covered by a barre consistently with playback", () => {
   const html = renderToStaticMarkup(
     <SettingsContext.Provider value={{} as AppSettings}>

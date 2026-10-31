@@ -7,6 +7,7 @@ import { GUITAR_TUNINGS } from "../data/musicTheory";
 import { audioEngine } from "../lib/audio";
 import { AppSettings } from "../types";
 import { useTimer } from "../lib/useTimer";
+import type { ToolRoute } from "../lib/pageRoutes";
 import {
   Compass,
   Volume2,
@@ -32,11 +33,9 @@ interface ToolsPageProps {
   onMetronomePlayingChange?: (playing: boolean) => void;
   metronomeBarCycleMode?: boolean;
   onBarCycleModeChange?: (enabled: boolean) => void;
-  initialTool?: "custom-chord" | "metronome" | "timer" | null;
+  initialTool?: ToolRoute | null;
   onInitialToolHandled?: () => void;
-  onToolRouteChange?: (
-    tool: "timer" | "metronome" | "circle" | "tuner" | "ear" | "custom-chord",
-  ) => void;
+  onToolRouteChange?: (tool: ToolRoute) => void;
 }
 
 export const ToolsPage: React.FC<ToolsPageProps> = ({
@@ -54,16 +53,14 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
   onInitialToolHandled,
   onToolRouteChange,
 }) => {
-  const [activeTool, setActiveTool] = useState<
-    "timer" | "metronome" | "circle" | "tuner" | "ear" | "custom-chord"
-  >(initialTool ?? "timer");
+  const [activeTool, setActiveTool] = useState<ToolRoute>(
+    initialTool ?? "timer",
+  );
   const [selectedTuning, setSelectedTuning] = useState(GUITAR_TUNINGS[0]);
   const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
   const toolMenuRef = useRef<HTMLDivElement>(null);
 
-  const changeActiveTool = (
-    tool: "timer" | "metronome" | "circle" | "tuner" | "ear" | "custom-chord",
-  ) => {
+  const changeActiveTool = (tool: ToolRoute) => {
     setActiveTool(tool);
     onToolRouteChange?.(tool);
   };

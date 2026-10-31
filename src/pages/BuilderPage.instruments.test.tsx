@@ -19,25 +19,24 @@ function render(enabledInstruments?: PracticeInstrument[], defaultInstrument: Pr
   return renderToStaticMarkup(<SettingsContext.Provider value={settings}><BuilderPage settings={settings} /></SettingsContext.Provider>);
 }
 
-it("defaults Builder to Guitar and Piano options without enabling Bass", () => {
+it("defaults Builder to the configured instrument without a voicing selector", () => {
   const html = render();
-  assert.match(html, /aria-label="Guitar view" aria-pressed="true"/);
-  assert.match(html, /aria-label="Piano view"/);
-  assert.match(html, /aria-label="Both view"/);
-  assert.doesNotMatch(html, /aria-label="Bass view"|optgroup label="Bass"/);
   assert.match(html, /data-voicing-instrument="guitar"/);
+  assert.doesNotMatch(html, /Voicing instrument view|aria-label=".* view"/);
+  assert.doesNotMatch(html, /optgroup label="Bass"/);
 });
 
-it("filters Builder display and playback families for every enabled subset", () => {
+it("filters playback options and defaults voicings for every enabled subset", () => {
   const subsets: PracticeInstrument[][] = [["guitar"], ["bass"], ["piano"], ["guitar", "bass"], ["bass", "piano"], ["guitar", "piano"], ["guitar", "bass", "piano"]];
   for (const enabled of subsets) {
     const html = render(enabled);
     for (const [instrument, label, group] of [["guitar", "Guitar", "Guitars"], ["bass", "Bass", "Bass"], ["piano", "Piano", "Pianos &amp; Keys"]]) {
-      assert.equal(html.includes(`aria-label="${label} view"`), enabled.includes(instrument as PracticeInstrument));
       assert.equal(html.includes(`optgroup label="${group}"`), enabled.includes(instrument as PracticeInstrument));
     }
-    assert.equal(html.includes('aria-label="Both view"'), enabled.length === 2);
-    assert.equal(html.includes('aria-label="All view"'), enabled.length === 3);
+    const expectedVoicingInstrument = enabled.includes("guitar") ? "guitar" : enabled[0];
+    assert.match(html, new RegExp(`data-voicing-instrument="${expectedVoicingInstrument}"`));
+    assert.equal((html.match(/data-voicing-instrument=/g) || []).length, 1);
+    assert.doesNotMatch(html, /Voicing instrument view|aria-label=".* view"/);
     assert.match(html, /optgroup label="Synthesizers"/);
     assert.match(html, /option value="custom"/);
   }
@@ -50,7 +49,7 @@ it("filters Builder display and playback families for every enabled subset", () 
 const chrome = [process.env.CHROME_BIN, "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/chromium"]
   .find(candidate => candidate && existsSync(candidate));
 
-it("keeps combined sections, mixed queue attribution, and audio independent through settings changes", {
+it("selects voicing families from playback while preserving mixed queue attribution", {
   skip: chrome ? false : "Chrome not found; set CHROME_BIN for browser coverage",
   timeout: 60000,
 }, async () => {
@@ -103,10 +102,11 @@ it("keeps combined sections, mixed queue attribution, and audio independent thro
           ...(instrument === 'piano' ? { pianoVoicing: { id: 'custom-keys', name: 'Custom piano', notes: [{ note: 'C', octave: 5, degree: '1' }] } } : {}),
         });
         await render();
-        await click('[aria-label="All view"]');
-        check(sections() === 'guitar,bass,piano', 'All must render all three sections');
+        check(sections() === 'guitar', 'Default playback instrument selects guitar voicings');
         check(audio() === 'acoustic_guitar_nylon', 'Display must not change audio');
-        for (const instrument of ['guitar', 'bass', 'piano']) {
+        for (const [instrument, playback] of [['guitar', 'acoustic_guitar_nylon'], ['bass', 'bass'], ['piano', 'acoustic_grand_piano']]) {
+          await selectAudio(playback);
+          check(sections() === instrument, 'Playback instrument selects matching voicings');
           const section = document.querySelector('[data-voicing-instrument="' + instrument + '"]');
           check(section.querySelector('[data-diagram="' + instrument + '"]'), 'Correct diagram family');
           check(section.querySelectorAll('[data-custom="true"]').length === 1, 'Custom chord stays in its own section');
@@ -139,25 +139,22 @@ it("keeps combined sections, mixed queue attribution, and audio independent thro
           check(queueLabels() === originalLabels, 'Queue labels follow source rather than playback');
         }
         await selectAudio('bass');
-        check(sections() === 'guitar,bass,piano', 'Audio must not change display');
+        check(sections() === 'bass', 'Bass playback selects bass voicings');
         window.calls = [];
         await click('[title="Preview Chord Sound"]');
         const preview = window.calls.find(call => call[0] === 'playChordArpeggio');
         check(preview[2] === 'bass' && JSON.stringify(preview[1]) === JSON.stringify(getVoicingPitches(bass)), 'Cross-family preview uses bass first voicing');
         await selectAudio('acoustic_grand_piano');
-        await click('[aria-label="Piano view"]');
         check(sections() === 'piano', 'Single selection renders only piano');
         await selectAudio('synth_pad');
         settings = { ...settings, enabledInstruments: ['bass', 'piano'] };
         await render();
-        await click('[aria-label="Both view"]');
-        check(sections() === 'bass,piano', 'Both must show enabled pair');
+        check(sections() === 'bass', 'Unmapped playback sound uses the default enabled voicing family');
         check(audio() === 'synth_pad', 'Membership preserves independent synth sound');
         check(!document.querySelector('optgroup[label="Guitars"]'), 'Disabled guitar sounds hidden');
         settings = { ...settings, enabledInstruments: ['bass'] };
         await render();
-        check(sections() === 'bass', 'Combined normalizes to single enabled instrument');
-        check(!document.querySelector('[aria-label="Both view"]'), 'No combined toggle for singleton');
+        check(sections() === 'bass', 'Single enabled instrument remains the voicing family');
         check(!document.querySelector('optgroup[label="Pianos & Keys"]'), 'Disabled piano sounds hidden');
         check(JSON.stringify(await save()) === JSON.stringify(before), 'Settings and display must preserve mixed queue metadata');
         settings = { ...settings, enabledInstruments: ['bass', 'piano'] };
@@ -170,8 +167,8 @@ it("keeps combined sections, mixed queue attribution, and audio independent thro
         for (const pair of [['guitar', 'bass'], ['guitar', 'piano'], ['bass', 'piano']]) {
           settings = { ...settings, enabledInstruments: pair };
           await render();
-          await click('[aria-label="Both view"]');
-          check(sections() === pair.join(), 'Combined membership follows each enabled pair');
+          await selectAudio(pair[1] === 'bass' ? 'bass' : pair[1] === 'piano' ? 'acoustic_grand_piano' : 'acoustic_guitar_nylon');
+          check(sections() === pair[1], 'Playback instrument selects an enabled voicing family');
         }
         await act(async () => mounted.unmount());
         document.getElementById('result').textContent = 'passed';

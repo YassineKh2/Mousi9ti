@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { it } from "node:test";
 import {
+  getPageRouteForTool,
   getPageRouteForTab,
   PAGE_ROUTES,
   resolvePageRoute,
@@ -32,6 +33,33 @@ it("maps the dedicated metronome URL to the existing tools view", () => {
   assert.equal(route?.title, "Online Metronome | Mousi9ti");
 });
 
+it("resolves the patch notes page as an indexable updates route", () => {
+  const route = resolvePageRoute("/patch-notes");
+  assert.equal(route?.tab, "updates");
+  assert.equal(route?.indexable, true);
+  assert.equal(getPageRouteForTab("updates").path, "/patch-notes/");
+});
+
+it("resolves each practice tool to its own shareable route", () => {
+  const tools = [
+    ["timer", "/timer/"],
+    ["metronome", "/metronome/"],
+    ["circle", "/circle-of-fifths/"],
+    ["tuner", "/guitar-tuner/"],
+    ["ear", "/interval-ear-trainer/"],
+    ["custom-chord", "/custom-chord-builder/"],
+  ] as const;
+
+  for (const [tool, path] of tools) {
+    const route = resolvePageRoute(path);
+    assert.equal(route?.tab, "tools", path);
+    assert.equal(route?.tool, tool, path);
+    assert.equal(route?.indexable, true, path);
+    assert.equal(getPageRouteForTool(tool).path, path, path);
+    assert.equal(resolvePageRoute(path.slice(0, -1))?.tool, tool, path);
+  }
+});
+
 it("does not treat unknown paths as the dashboard", () => {
   assert.equal(resolvePageRoute("/not-a-page/"), null);
 });
@@ -42,7 +70,12 @@ it("maps each navigation tab to its canonical page route", () => {
     getPageRouteForTab("builder").path,
     "/chord-progression-builder/",
   );
-  assert.equal(getPageRouteForTab("tools").path, "/tools/");
+  assert.equal(getPageRouteForTab("tools").path, "/timer/");
+});
+
+it("uses the practice timer as the default tools page", () => {
+  assert.equal(resolvePageRoute("/tools/")?.path, "/timer/");
+  assert.equal(resolvePageRoute("/tools/")?.tool, "timer");
 });
 
 it("resolves readable chord routes and instrument query values", () => {

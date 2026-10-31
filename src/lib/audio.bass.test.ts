@@ -135,6 +135,19 @@ it("does not load a soundfont while muted", () => {
   assert.equal(state.oscillators(), 0);
 });
 
+it("notifies listeners when an instrument soundfont starts and finishes loading", async () => {
+  const state = fixture();
+  const updates: string[][] = [];
+  state.engine.onSoundfontLoadingChange(labels => updates.push(labels));
+
+  state.engine.playBassPluck("E", 1);
+  assert.deepEqual(updates, [[], ["bass"]]);
+
+  state.finishLoading();
+  await Promise.all(state.pending());
+  assert.deepEqual(updates, [[], ["bass"], []]);
+});
+
 it("stays silent and retries after a failed bass download", async test => {
   const state = fixture(true);
   test.mock.method(console, "error", () => {});

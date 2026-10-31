@@ -27,6 +27,13 @@ test("combined ChordsPage renders exactly the enabled toggles and sections for a
       const label = instrument[0].toUpperCase() + instrument.slice(1);
       assert.equal(html.includes(`aria-label="${label} view"`), enabled.includes(instrument), `${enabled}: ${instrument} toggle`);
     }
+    if (enabled.includes("guitar") && enabled.includes("bass")) {
+      assert.ok(
+        html.indexOf('aria-label="Guitar view"') <
+          html.indexOf('aria-label="Bass view"'),
+        "Guitar toggle should appear before Bass",
+      );
+    }
     assert.equal(html.includes("Guitar Voicings"), enabled.includes("guitar"));
     assert.equal(html.includes("Guitar Bass"), enabled.includes("bass"));
     assert.equal(html.includes("Piano Voicing"), enabled.includes("piano"));

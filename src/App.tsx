@@ -47,6 +47,9 @@ import {
   GlobalSearchResult,
 } from "./components/Navigation";
 import { SettingsModal } from "./components/SettingsModal";
+import { MajorReleaseAnnouncement } from "./components/MajorReleaseAnnouncement";
+import { APP_VERSION } from "./lib/version";
+import { isMajorVersionAhead } from "./data/releaseNotes";
 const DashboardPage = lazy(() =>
   import("./pages/DashboardPage").then((module) => ({
     default: module.DashboardPage,
@@ -87,6 +90,11 @@ const RoutinePage = lazy(() =>
     default: module.RoutinePage,
   })),
 );
+const PatchNotesPage = lazy(() =>
+  import("./pages/PatchNotesPage").then((module) => ({
+    default: module.PatchNotesPage,
+  })),
+);
 import { ALL_ROOT_NOTES, SCALES_DATABASE } from "./data/musicTheory";
 import { searchBaseScales, searchChords } from "./utils/musicSearch";
 import {
@@ -95,6 +103,7 @@ import {
   getCustomChords,
 } from "./data/chordsData";
 import { GlobalSessionToast } from "./components/GlobalSessionToast";
+import { SoundfontLoadingToast } from "./components/SoundfontLoadingToast";
 import { SettingsContext } from "./contexts/SettingsContext";
 import {
   PracticeInstrumentProvider,
@@ -122,7 +131,12 @@ import {
   downloadAppBackup,
   restoreAppBackup,
 } from "./lib/appBackup";
-import { getPageRouteForTab, resolvePageRoute } from "./lib/pageRoutes";
+import {
+  getPageRouteForTab,
+  getPageRouteForTool,
+  resolvePageRoute,
+  type ToolRoute,
+} from "./lib/pageRoutes";
 import { buildScaleUrl } from "./lib/scaleRoutes";
 import { buildChordUrl } from "./lib/chordRoutes";
 
@@ -163,9 +177,16 @@ export function App() {
 
 function PracticeApp() {
   const { activeInstrument, setActiveInstrument } = usePracticeInstrument();
+  const [loadingSoundfontLabels, setLoadingSoundfontLabels] = useState<
+    string[]
+  >([]);
   useLayoutEffect(() => {
     document.documentElement.dataset.appReady = "true";
   }, []);
+  useEffect(
+    () => audioEngine.onSoundfontLoadingChange(setLoadingSoundfontLabels),
+    [],
+  );
 
   type PendingChordTarget = {
     chordType: string;
@@ -207,9 +228,9 @@ function PracticeApp() {
     resolvePageRoute(window.location.pathname, window.location.search),
   );
   const activeTab: ActiveTab = route?.tab ?? "dashboard";
-  const [toolsInitialTool, setToolsInitialTool] = useState<
-    "custom-chord" | "metronome" | "timer" | null
-  >(() => route?.tool ?? null);
+  const [toolsInitialTool, setToolsInitialTool] = useState<ToolRoute | null>(
+    () => route?.tool ?? null,
+  );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(
     () => localStorage.getItem("Mousi9ti_sidebar_collapsed") === "true",
   );
@@ -229,21 +250,15 @@ function PracticeApp() {
     }
   }, []);
 
-  const handleToolRouteChange = useCallback(
-    (
-      tool: "timer" | "metronome" | "circle" | "tuner" | "ear" | "custom-chord",
-    ) => {
-      const nextPath = tool === "metronome" ? "/metronome/" : "/tools/";
-      const nextRoute = resolvePageRoute(nextPath);
-      if (!nextRoute) return;
+  const handleToolRouteChange = useCallback((tool: ToolRoute) => {
+      const nextRoute = getPageRouteForTool(tool);
+      const nextPath = nextRoute.path;
       if (window.location.pathname !== nextPath) {
         window.history.pushState({}, "", nextPath);
       }
       setRoute(nextRoute);
-      setToolsInitialTool(tool === "metronome" ? "metronome" : null);
-    },
-    [],
-  );
+      setToolsInitialTool(tool);
+    }, []);
 
   const handleScaleRouteChange = useCallback(
     (
@@ -379,6 +394,36 @@ function PracticeApp() {
     getSavedSettings(),
   );
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isMajorReleaseAnnouncementOpen, setIsMajorReleaseAnnouncementOpen] =
+    useState(false);
+
+  useEffect(() => {
+    const releaseKey = "Mousi9ti_last_seen_major_version";
+    const lastSeenMajor = localStorage.getItem(releaseKey);
+    const currentMajor = APP_VERSION.split(".")[0];
+
+    if (lastSeenMajor === null) {
+      localStorage.setItem(releaseKey, currentMajor);
+      return;
+    }
+
+    setIsMajorReleaseAnnouncementOpen(
+      isMajorVersionAhead(APP_VERSION, lastSeenMajor),
+    );
+  }, []);
+
+  const dismissMajorReleaseAnnouncement = useCallback(() => {
+    localStorage.setItem(
+      "Mousi9ti_last_seen_major_version",
+      APP_VERSION.split(".")[0],
+    );
+    setIsMajorReleaseAnnouncementOpen(false);
+  }, []);
+
+  const openReleaseNotesFromAnnouncement = useCallback(() => {
+    dismissMajorReleaseAnnouncement();
+    setActiveTab("updates");
+  }, [dismissMajorReleaseAnnouncement, setActiveTab]);
 
   // Practice & Sessions State
   const [sessions, setSessions] = useState<Session[]>(() => getSavedSessions());
@@ -1786,6 +1831,12 @@ function PracticeApp() {
         {skeletonPanel("h-64")}
       </div>
     ),
+    updates: (
+      <div className="space-y-5">
+        {skeletonTitle}
+        {skeletonPanel("h-64")}
+      </div>
+    ),
   };
   const pageFallback = (
     <div aria-busy="true" className="min-h-[40vh]">
@@ -1833,12 +1884,14 @@ function PracticeApp() {
           aria-label="Mousi9ti music practice workspace"
           className={`flex-1 ${isSidebarCollapsed ? "lg:pl-20" : "lg:pl-72"} pt-4 pb-20 lg:pb-0 px-4 lg:px-8 max-w-[1600px] w-full mx-auto transition-[padding] duration-200`}
         >
-          <div className="sr-only">
-            <h1>{route?.h1 ?? "Page Not Found"}</h1>
-            <p>
-              {route?.description ?? "The requested page could not be found."}
-            </p>
-          </div>
+          {activeTab !== "updates" && (
+            <div className="sr-only">
+              <h1>{route?.h1 ?? "Page Not Found"}</h1>
+              <p>
+                {route?.description ?? "The requested page could not be found."}
+              </p>
+            </div>
+          )}
           <Suspense fallback={pageFallback}>
             {activeTab === "dashboard" && (
               <DashboardPage
@@ -1914,8 +1967,7 @@ function PracticeApp() {
                 onInitialChordHandled={() => setPendingChordSearch(null)}
                 onChordRouteChange={handleChordRouteChange}
                 onOpenCustomChord={() => {
-                  setActiveTab("tools");
-                  setToolsInitialTool("custom-chord");
+                  handleToolRouteChange("custom-chord");
                 }}
                 settings={settings}
               />
@@ -1970,6 +2022,8 @@ function PracticeApp() {
             {activeTab === "stats" && (
               <StatsPage sessions={sessions} streak={streak} />
             )}
+
+            {activeTab === "updates" && <PatchNotesPage />}
           </Suspense>
         </main>
 
@@ -2013,6 +2067,10 @@ function PracticeApp() {
         <SettingsModal
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
+          onOpenUpdates={() => {
+            setIsSettingsOpen(false);
+            setActiveTab("updates");
+          }}
           settings={settings}
           onUpdateSettings={handleUpdateSettings}
           onExportData={handleExportData}
@@ -2041,6 +2099,15 @@ function PracticeApp() {
             updateTimerPreferences({ autoConfigureDashboardFromTask: enabled })
           }
         />
+
+        {isMajorReleaseAnnouncementOpen &&
+          !isTourOpen &&
+          !isSettingsOpen && (
+            <MajorReleaseAnnouncement
+              onClose={dismissMajorReleaseAnnouncement}
+              onOpenReleaseNotes={openReleaseNotesFromAnnouncement}
+            />
+          )}
 
         {sessionReview && (
           <SessionReviewModal
@@ -2107,6 +2174,7 @@ function PracticeApp() {
             onEndSession={handleEndSession}
           />
         )}
+        <SoundfontLoadingToast instruments={loadingSoundfontLabels} />
       </div>
     </SettingsContext.Provider>
   );

@@ -1,6 +1,24 @@
 @import "tailwindcss";
 @import "./light-theme.css";
 
+html,
+body {
+  overflow-x: clip;
+}
+
+.piano-keyboard [data-piano-key]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+@media (hover: hover) {
+  .piano-keyboard:not(.piano-chord-diagram-keyboard) [data-piano-key]:hover {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+    filter: brightness(1.08);
+  }
+}
+
 .bass-fretboard [data-string-index] {
   min-height: 3.5rem;
 }
@@ -396,6 +414,10 @@
 .light .piano-keyboard .piano-chord-inactive-key {
   background-color: var(--color-surface-container-highest);
   color: var(--color-on-surface-variant);
+}
+
+.light .piano-keyboard .bg-primary.text-on-primary:hover {
+  background-color: var(--color-primary);
 }
 
 @layer base {

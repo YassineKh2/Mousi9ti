@@ -17,6 +17,7 @@ import {
   Github,
   Plus,
   ChevronDown,
+  Newspaper,
 } from "lucide-react";
 import { AppSettings, TaskCompletionBehavior } from "../types";
 import { GUITAR_TUNINGS } from "../data/musicTheory";
@@ -45,6 +46,7 @@ import { getEnabledInstruments, INSTRUMENT_ORDER } from "../lib/instrumentDispla
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenUpdates: () => void;
   settings: AppSettings;
   onUpdateSettings: (newSettings: Partial<AppSettings>) => void;
   onExportData: () => void;
@@ -70,6 +72,7 @@ interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
+  onOpenUpdates,
   settings,
   onUpdateSettings,
   onExportData,
@@ -363,6 +366,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               }
               className="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary"
             />
+          </div>
+
+          <div
+            className={
+              activeTab === "general"
+                ? "flex flex-col gap-3 border-t border-outline-variant/20 pt-4 sm:flex-row sm:items-center sm:justify-between"
+                : "hidden"
+            }
+          >
+            <div>
+              <span className="flex items-center gap-2 font-mono text-xs font-semibold text-on-surface">
+                <Newspaper size={14} className="text-primary" />
+                What’s new
+              </span>
+              <span className="mt-1 block text-[11px] text-on-surface-variant">
+                Read about the latest features and changes.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenUpdates}
+              className="min-h-11 rounded-md border border-outline-variant/40 bg-surface-container-high px-3 py-2 text-left text-xs font-medium text-on-surface transition-colors hover:border-primary/50 hover:bg-surface-container-highest focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 sm:text-center"
+            >
+              View patch notes
+            </button>
           </div>
 
           <span

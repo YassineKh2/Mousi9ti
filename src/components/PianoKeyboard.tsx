@@ -316,6 +316,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                       <div key={wIdx} className="relative">
                         {/* White Key */}
                         <button
+                          data-piano-key="true"
                           data-chord-key={inChord ? "true" : undefined}
                           data-scale-key={
                             inScale &&
@@ -328,7 +329,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                           onClick={() =>
                             handleKeyClick(spelledNote, currentOctave)
                           }
-                          className={`rounded-b-md border-r border-l border-b border-outline-variant/30 flex flex-col justify-end pb-2 sm:pb-3 items-center transition-all ${currSize.whiteKey} ${
+                          className={`rounded-b-md border-r border-l border-b border-outline-variant/30 flex flex-col justify-end pb-2 sm:pb-3 items-center transition-all hover:brightness-95 ${currSize.whiteKey} ${
                             isDimmed
                               ? "opacity-25 hover:opacity-50 grayscale bg-surface-container-lowest/50 text-on-surface-variant/20 shadow-none border-outline-variant/10 cursor-pointer"
                               : isExactOctavePlaying
@@ -338,7 +339,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                                   : isRandom
                                     ? "bg-secondary text-on-secondary font-bold shadow-lg z-20"
                                     : isRoot
-                                      ? "bg-primary text-on-primary font-black border-t-4 border-primary shadow-md z-10"
+                                      ? "bg-primary hover:bg-primary text-on-primary font-black border-t-4 border-primary shadow-md z-10"
                                       : inChord
                                         ? "piano-chord-key bg-inverse-surface text-inverse-on-surface font-bold z-10"
                                         : inScale
@@ -349,7 +350,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                                               : "bg-white text-black hover:bg-white active:bg-white"
                                           : isAllNotesSelected
                                             ? "bg-white text-black hover:bg-white active:bg-white"
-                                            : `${hasChordSelection ? "piano-chord-inactive-key" : "piano-inactive-key"} bg-surface-container-highest text-on-surface-variant/40 hover:bg-surface-bright`
+                                            : `${hasChordSelection ? "piano-chord-inactive-key" : "piano-inactive-key"} bg-surface-container-highest text-on-surface-variant/40`
                           }`}
                         >
                           <span
@@ -423,6 +424,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                               }
                               return (
                                 <button
+                                  data-piano-key="true"
                                   data-chord-key={bInChord ? "true" : undefined}
                                   data-scale-key={
                                     bInScale &&
@@ -445,13 +447,13 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                                           : bIsRandom
                                             ? "bg-secondary text-on-secondary shadow-lg"
                                             : bIsRoot
-                                              ? "bg-primary text-on-primary font-bold shadow-lg ring-1 ring-primary"
+                                              ? "bg-primary hover:bg-primary hover:brightness-110 text-on-primary font-bold shadow-lg ring-1 ring-primary"
                                               : bInChord
-                                                ? "bg-black text-white shadow-[0_4px_8px_rgba(0,0,0,0.8)] border border-zinc-800"
+                                                ? "bg-black hover:bg-zinc-800 text-white shadow-[0_4px_8px_rgba(0,0,0,0.8)] border border-zinc-800"
                                                 : bInScale
-                                                  ? "bg-black text-white shadow-[0_4px_8px_rgba(0,0,0,0.8)] border border-zinc-800"
+                                                  ? "bg-black hover:bg-zinc-800 text-white shadow-[0_4px_8px_rgba(0,0,0,0.8)] border border-zinc-800"
                                                   : isAllNotesSelected
-                                                    ? "bg-black text-white shadow-[0_4px_8px_rgba(0,0,0,0.8)] border border-zinc-800"
+                                                    ? "bg-black hover:bg-zinc-800 text-white shadow-[0_4px_8px_rgba(0,0,0,0.8)] border border-zinc-800"
                                                     : "bg-surface-container-low text-on-surface-variant/20 shadow-none border border-transparent hover:bg-surface-container"
                                   }`}
                                 >
@@ -517,6 +519,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
               return (
                 <div className="relative">
                   <button
+                    data-piano-key="true"
                     data-chord-key={inChord ? "true" : undefined}
                     data-scale-key={
                       inScale &&
@@ -537,7 +540,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                             : isRandom
                               ? "bg-secondary text-on-secondary font-bold shadow-lg z-20"
                               : isRoot
-                                ? "bg-primary text-on-primary font-black border-t-4 border-primary shadow-md z-10"
+                                ? "bg-primary hover:bg-primary text-on-primary font-black border-t-4 border-primary shadow-md z-10"
                                 : inChord
                                   ? "piano-chord-key bg-inverse-surface text-inverse-on-surface font-bold z-10"
                                   : inScale

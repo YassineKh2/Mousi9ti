@@ -135,6 +135,15 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
   };
 
   const currSize = sizeMap[noteSize as keyof typeof sizeMap] || sizeMap.medium;
+  const bassNoteSizeMap = {
+    small: { noteBtn: "w-7 h-7 text-[10px]", openBtn: "w-7 h-7 text-[10px]" },
+    medium: { noteBtn: "w-8 h-8 text-xs", openBtn: "w-8 h-8 text-xs" },
+    large: { noteBtn: "w-10 h-10 text-sm", openBtn: "w-10 h-10 text-sm" },
+    xlarge: { noteBtn: "w-12 h-12 text-base", openBtn: "w-12 h-12 text-base" },
+  };
+  const bassCurrSize =
+    bassNoteSizeMap[noteSize as keyof typeof bassNoteSizeMap] ??
+    bassNoteSizeMap.medium;
 
   const isExtendedXlBoard = noteSize === "xlarge" && fretCount === 24;
   const minFretWidth = props.instrument === "bass"
@@ -160,7 +169,9 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
     isLegend: boolean = false,
     noteSemitone?: number,
   ) => {
-    let classes = `${isLegend ? currSize.openBtn : currSize.noteBtn} flex items-center justify-center font-mono font-bold transition-transform shadow-md `;
+    const noteButtonSize =
+      props.instrument === "bass" ? bassCurrSize : currSize;
+    let classes = `${isLegend ? noteButtonSize.openBtn : noteButtonSize.noteBtn} flex items-center justify-center font-mono font-bold transition-transform shadow-md `;
 
     // Shape is uniform across sizes, driven solely by the user's marker shape preference
     classes += (markerShape === "square" ? "rounded-md" : "rounded-full") + " ";
@@ -432,7 +443,7 @@ export const DynamicFretboard: React.FC<FretboardProps> = (props) => {
                         return (
                           <span
                             onClick={() => handleNoteClick(reversedIdx, 0)}
-                            className={`font-mono ${currSize.noteBtn.split(" ")[2]} ${theme === "high-contrast" ? "text-white" : "text-outline hover:text-on-surface-variant"} cursor-pointer opacity-50`}
+                            className={`font-mono ${(props.instrument === "bass" ? bassCurrSize : currSize).noteBtn.split(" ")[2]} ${theme === "high-contrast" ? "text-white" : "text-outline hover:text-on-surface-variant"} cursor-pointer opacity-50`}
                           >
                             {noteName}
                           </span>

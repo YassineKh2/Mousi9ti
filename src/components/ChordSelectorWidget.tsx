@@ -140,32 +140,35 @@ export const ChordSelectorWidget: React.FC<ChordSelectorWidgetProps> = ({
       ref={widgetRef}
       className="light-shadow-widget flex h-full flex-col rounded-2xl border border-outline-variant/30 bg-surface-container p-5 shadow-sm"
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-mono text-sm font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
           <Music2 size={16} className="shrink-0 text-primary" />
           Chord Selector
         </h3>
-      </div>
-
-      <div role="group" aria-label="Chord instruments" className="mb-4 flex flex-wrap gap-1">
-        {([...enabledInstruments, ...(enabledInstruments.length > 1 ? ["both" as const] : [])]).map((instrument) => {
-          const label = instrument === "both" ? combinedLabel : instrument === "piano" ? "Piano" : instrument === "bass" ? "Bass" : "Guitar";
-          const Icon = instrument === "both" ? Layers : instrument === "piano" ? Piano : instrument === "bass" ? BassIcon : Guitar;
-          return (
-            <button
-              key={instrument}
-              type="button"
-              title={label}
-              aria-label={instrument === "both" ? `${label} instruments` : label}
-              aria-pressed={view === instrument}
-              onClick={() => setSelectedView(instrument)}
-              className={`flex items-center gap-1.5 rounded px-2 py-1 font-mono text-xs ${view === instrument ? "bg-primary text-on-primary" : "text-on-surface-variant hover:text-on-surface"}`}
-            >
-              <Icon size={14} />
-              <span>{label}</span>
-            </button>
-          );
-        })}
+        <div role="group" aria-label="Chord instruments" className="flex w-fit shrink-0 items-center gap-1 rounded-lg border border-outline-variant/30 bg-surface-container-low p-1">
+          {([...enabledInstruments, ...(enabledInstruments.length > 1 ? ["both" as const] : [])]).map((instrument) => {
+            const label = instrument === "both" ? combinedLabel : instrument === "piano" ? "Piano" : instrument === "bass" ? "Bass" : "Guitar";
+            const Icon = instrument === "both" ? Layers : instrument === "piano" ? Piano : instrument === "bass" ? BassIcon : Guitar;
+            return (
+              <button
+                key={instrument}
+                type="button"
+                title={`${label} view`}
+                aria-label={instrument === "both" ? `${label} instruments` : label}
+                aria-pressed={view === instrument}
+                onClick={() => setSelectedView(instrument)}
+                className={`h-7 w-7 px-0 lg:w-auto lg:px-2 flex items-center justify-center gap-1.5 text-xs font-mono rounded transition-all cursor-pointer ${
+                  view === instrument
+                    ? "bg-primary text-on-primary font-bold shadow"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <Icon size={14} />
+                <span className="hidden lg:inline">{label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div

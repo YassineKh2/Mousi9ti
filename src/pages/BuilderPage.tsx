@@ -28,8 +28,6 @@ import {
   Library,
   Power,
   Upload,
-  Piano,
-  Layers,
 } from "lucide-react";
 import {
   ALL_ROOT_NOTES,
@@ -55,17 +53,10 @@ import {
 import { SONG_PRESETS } from "../data/songPresets";
 import { ChordDiagram } from "../components/ChordDiagram";
 import { KeyboardChordDiagram } from "../components/KeyboardChordDiagram";
-import { BassIcon } from "../components/BassIcon";
 import { SavedProgressionsModal } from "../components/SavedProgressionsModal";
 import { audioEngine } from "../lib/audio";
 import { getBassVoicings, getVoicingPitches } from "../lib/bassChords";
-import {
-  getEnabledInstruments,
-  normalizeInstrumentDisplay,
-  getDisplayedInstruments,
-  getCombinedInstrumentLabel,
-} from "../lib/instrumentDisplay";
-import type { InstrumentDisplay } from "../lib/frettedInstrument";
+import { getEnabledInstruments } from "../lib/instrumentDisplay";
 
 function getPlaybackFamily(instrument: string): PracticeInstrument | undefined {
   if (instrument === "bass") return "bass";
@@ -1129,13 +1120,16 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
   const [selectedStyle, setSelectedStyle] = useState<string>("down");
   const [selectedRepeats, setSelectedRepeats] = useState<number>(1);
   const enabledInstruments = getEnabledInstruments(settings);
-  const [requestedInstrumentView, setInstrumentView] = useState<InstrumentDisplay>(settings.defaultInstrument);
-  const instrumentView = normalizeInstrumentDisplay(requestedInstrumentView, enabledInstruments);
-  const displayedInstruments = getDisplayedInstruments(instrumentView, enabledInstruments);
   const [requestedPlaybackInstrument, setSelectedInstrument] = useState<string>(
     getDefaultPlaybackInstrument(enabledInstruments.includes(settings.defaultInstrument) ? settings.defaultInstrument : enabledInstruments[0]),
   );
   const playbackFamily = getPlaybackFamily(requestedPlaybackInstrument);
+  const voicingInstrument = playbackFamily && enabledInstruments.includes(playbackFamily)
+    ? playbackFamily
+    : enabledInstruments.includes(settings.defaultInstrument)
+      ? settings.defaultInstrument
+      : enabledInstruments[0];
+  const displayedInstruments = [voicingInstrument];
   const selectedInstrument = playbackFamily && !enabledInstruments.includes(playbackFamily)
     ? getDefaultPlaybackInstrument(enabledInstruments[0])
     : requestedPlaybackInstrument;
@@ -1153,12 +1147,7 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
       getDefaultPlaybackInstrument(enabledInstruments.includes(settings.defaultInstrument) ? settings.defaultInstrument : enabledInstruments[0]),
     );
     setCustomSoundfontFile(null);
-    setInstrumentView(settings.defaultInstrument);
   }, [settings.defaultInstrument]);
-
-  useEffect(() => {
-    setInstrumentView(instrumentView);
-  }, [instrumentView]);
 
   useEffect(() => {
     if (selectedInstrument !== requestedPlaybackInstrument) {
@@ -2493,17 +2482,6 @@ export const BuilderPage: React.FC<BuilderPageProps> = ({ settings }) => {
 
             {/* Voicings List */}
             <div className="flex flex-col h-full">
-              <div role="group" aria-label="Voicing instrument view" className="flex flex-wrap gap-1 p-1 mb-3 bg-surface rounded-lg border border-outline-variant/30">
-                {([...enabledInstruments, ...(enabledInstruments.length > 1 ? ["both" as const] : [])]).map((view) => {
-                  const label = view === "both" ? getCombinedInstrumentLabel(enabledInstruments) : view === "piano" ? "Piano" : view === "bass" ? "Bass" : "Guitar";
-                  const Icon = view === "both" ? Layers : view === "piano" ? Piano : view === "bass" ? BassIcon : Guitar;
-                  return (
-                    <button key={view} type="button" aria-label={`${label} view`} aria-pressed={instrumentView === view} onClick={() => setInstrumentView(view)} className={`flex items-center justify-center gap-1.5 flex-1 px-2 py-1.5 rounded text-xs font-bold transition-colors ${instrumentView === view ? "bg-primary text-on-primary" : "text-on-surface-variant hover:bg-surface-container-highest"}`}>
-                      <Icon size={14} />{label}
-                    </button>
-                  );
-                })}
-              </div>
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-[10px] font-mono text-on-surface-variant uppercase tracking-wider">
                   Variations (Click to Add)

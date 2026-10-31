@@ -23,7 +23,8 @@ export type ActiveTab =
   | "exercises"
   | "routine"
   | "tools"
-  | "stats";
+  | "stats"
+  | "updates";
 
 export interface GlobalSearchResult {
   id: string;

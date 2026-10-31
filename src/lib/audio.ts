@@ -38,6 +38,7 @@ class AudioEngine {
   >();
   private builderSoundfontLoadPromise: Promise<void> | null = null;
   public isSoundfontLoading = false;
+  private soundfontLoadingListeners = new Set<(labels: string[]) => void>();
 
   // Metronome Scheduling State
   private isMetronomePlaying = false;
@@ -300,6 +301,32 @@ class AudioEngine {
     return this.currentInstrument;
   }
 
+  public onSoundfontLoadingChange(listener: (labels: string[]) => void) {
+    this.soundfontLoadingListeners.add(listener);
+    listener(this.getSoundfontLoadingLabels());
+    return () => {
+      this.soundfontLoadingListeners.delete(listener);
+    };
+  }
+
+  private getSoundfontLoadingLabels() {
+    const labels: string[] = [...this.defaultSoundfontLoadPromises.keys()];
+    if (this.builderSoundfontLoadPromise && this.builderSoundfontSource) {
+      const source = this.builderSoundfontSource;
+      labels.push(
+        typeof source === "string"
+          ? source.replace(/_/g, " ")
+          : source.name,
+      );
+    }
+    return labels;
+  }
+
+  private notifySoundfontLoadingListeners() {
+    const labels = this.getSoundfontLoadingLabels();
+    this.soundfontLoadingListeners.forEach((listener) => listener(labels));
+  }
+
   // Load High-Quality Soundfonts (Local or Remote)
   public async loadSoundfonts(
     guitarSource: string = "acoustic_guitar_nylon",
@@ -344,9 +371,11 @@ class AudioEngine {
         this.isSoundfontLoading =
           this.defaultSoundfontLoadPromises.size > 0 ||
           this.builderSoundfontLoadPromise !== null;
+        this.notifySoundfontLoadingListeners();
       }
     })();
     this.defaultSoundfontLoadPromises.set(instrument, loadPromise);
+    this.notifySoundfontLoadingListeners();
     await loadPromise;
   }
 
@@ -407,8 +436,10 @@ class AudioEngine {
         if (isUploadedFile) URL.revokeObjectURL(sourceUrl);
         this.builderSoundfontLoadPromise = null;
         this.isSoundfontLoading = this.defaultSoundfontLoadPromises.size > 0;
+        this.notifySoundfontLoadingListeners();
       }
     })();
+    this.notifySoundfontLoadingListeners();
 
     await this.builderSoundfontLoadPromise;
   }

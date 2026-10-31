@@ -63,7 +63,7 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
   // SVG Dimensions & Layout
   const svgWidth = 240;
   const svgHeight = 270;
-  const margin = { top: 48, left: 45, right: 35, bottom: 25 };
+  const margin = { top: 48, left: 28, right: 12, bottom: 25 };
   const width = svgWidth - margin.left - margin.right;
   const height = svgHeight - margin.top - margin.bottom;
 
@@ -140,8 +140,8 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
         compact
           ? "relative flex h-full w-full flex-col items-center justify-center p-2"
           : noBackground
-            ? "group flex cursor-pointer flex-col items-center p-0 shadow-none"
-            : "group flex cursor-pointer flex-col items-center rounded-xl border border-outline-variant/30 bg-surface-container-low p-4 shadow-lg transition-all hover:border-outline-variant/60 sm:p-6"
+            ? "group flex w-full cursor-pointer flex-col items-center p-0 shadow-none"
+            : "group flex w-full cursor-pointer flex-col items-center rounded-xl border border-outline-variant/30 bg-surface-container-low p-4 shadow-lg transition-all hover:border-outline-variant/60 sm:p-6"
       }
       onClick={compact ? undefined : handlePlayChord}
       role={compact ? "group" : undefined}
@@ -185,9 +185,7 @@ export const ChordDiagram: React.FC<ChordDiagramProps> = ({
       <svg
         aria-hidden="true"
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-        width={compact ? undefined : svgWidth}
-        height={compact ? undefined : svgHeight}
-        className={`overflow-visible select-none my-2 ${compact ? "h-full w-full max-h-full" : ""}`}
+        className={`overflow-visible select-none my-2 ${compact ? "h-full w-full max-h-full" : "h-auto w-full"}`}
       >
         {/* Base Fret Indicator on left if not open */}
         {!isNut && (

@@ -22,6 +22,7 @@ for (const theme of ["original", "ebony", "maple", "rosewood", "high-contrast"])
     assert.match(html, /bass-neck-string/);
     assert.match(html, /bass-neck-inlay/);
     assert.match(html, /min-width:54px/);
+    assert.match(html, /w-8 h-8[^"]*text-xs/);
     assert.match(html, /height:3px/);
     assert.match(html, /height:6\.3[0-9]*px/);
     assert.deepEqual([...html.matchAll(/data-open-pitch="([^"]+)"/g)].map(match => match[1]), ["G2", "D2", "A1", "E1"]);
@@ -41,6 +42,7 @@ it("keeps guitar defaults and bass position filtering separate", () => {
   );
   assert.equal((render(false).match(/data-string-index=/g) || []).length, 6);
   assert.match(render(false), /min-width:38px/);
+  assert.match(render(false), /w-6 h-6[^"]*text-\[9px\]/);
   assert.doesNotMatch(render(false), /min-width:54px/);
   assert.doesNotMatch(render(false), /bass-fretboard__identity|class="[^"]*bass-fretboard /);
   assert.equal((render(true).match(/data-string-index=/g) || []).length, 4);

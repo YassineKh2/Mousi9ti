@@ -358,7 +358,7 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
                         return (
                           <span
                             onClick={() => handleNoteClick(reversedIdx, 0)}
-                            className="font-mono text-[10px] text-outline hover:text-on-surface-variant cursor-pointer"
+                            className={`font-mono ${instrument === "bass" ? "text-xs" : "text-[10px]"} text-outline hover:text-on-surface-variant cursor-pointer`}
                           >
                             {noteName}
                           </span>
@@ -370,7 +370,7 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
                           type="button"
                           aria-label={`Play ${noteName}${tuning.octaves[reversedIdx]}, string ${tuning.strings.length - reversedIdx}, open`}
                           onClick={() => handleNoteClick(reversedIdx, 0)}
-                          className={`w-6 h-6 rounded flex items-center justify-center font-mono text-[10px] font-bold transition-all shadow-md ${
+                          className={`${instrument === "bass" ? "w-8 h-8 text-xs" : "w-6 h-6 text-[10px]"} rounded flex items-center justify-center font-mono font-bold transition-all shadow-md ${
                             isPlayingActive
                               ? "bg-secondary text-on-secondary font-black scale-125 z-40 shadow-2xl animate-pulse"
                               : isRandomActive
@@ -446,7 +446,7 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
                               onClick={() =>
                                 handleNoteClick(reversedIdx, fretNum)
                               }
-                              className={`w-6 h-6 rounded flex items-center justify-center font-mono text-[9px] font-bold transition-transform hover:scale-125 z-30 shadow-md ${
+                              className={`${instrument === "bass" ? "w-8 h-8 text-xs" : "w-6 h-6 text-[9px]"} rounded flex items-center justify-center font-mono font-bold transition-transform hover:scale-125 z-30 shadow-md ${
                                 isPlayingActive
                                   ? "bg-secondary text-on-secondary font-black scale-125 z-40 shadow-2xl animate-pulse"
                                   : isRandomActive
@@ -466,7 +466,7 @@ export const OriginalFretboard: React.FC<FretboardProps> = ({
                               className="w-full h-full cursor-pointer hover:bg-outline-variant/10 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
                             >
                               <span
-                                className={`w-6 h-6 rounded-full flex items-center justify-center font-mono text-[9px] font-bold shadow-md ${
+                                className={`${instrument === "bass" ? "w-8 h-8 text-xs" : "w-6 h-6 text-[9px]"} rounded-full flex items-center justify-center font-mono font-bold shadow-md ${
                                   isRoot
                                     ? "bg-primary text-on-primary"
                                     : "bg-inverse-surface text-inverse-on-surface"

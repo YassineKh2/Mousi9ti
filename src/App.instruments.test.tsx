@@ -25,6 +25,7 @@ const audioFixture = `
     running: false,
     isRunning() { return this.running; },
     onMetronomeStateChange(listener) { listeners.add(listener); return () => listeners.delete(listener); },
+    onSoundfontLoadingChange(listener) { listener([]); return () => {}; },
     startMetronome() { this.running = true; for (const listener of listeners) listener(true); },
     stopMetronome() { this.running = false; for (const listener of listeners) listener(false); },
     getMetronomeState() { return { bpm: 120, timeSignature: 4, subdivision: 1, soundType: 'click' }; },

@@ -367,18 +367,6 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
           />
         </div>
         <div className="flex w-full shrink-0 overflow-hidden rounded border border-outline-variant/30 bg-surface-container text-xs font-mono font-bold sm:w-auto">
-          {enabledInstruments.includes("bass") && (
-            <button
-              onClick={() => setInstrumentView("bass")}
-              aria-label="Bass view"
-              title="Four-string bass"
-              aria-pressed={instrumentView === "bass"}
-              className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 sm:flex-none ${instrumentView === "bass" ? "bg-primary text-on-primary" : "text-on-surface-variant"}`}
-            >
-              <BassIcon size={14} />
-              <span>Bass</span>
-            </button>
-          )}
           {enabledInstruments.includes("guitar") && (
             <button
               onClick={() => setInstrumentView("guitar")}
@@ -392,6 +380,18 @@ export const ChordsPage: React.FC<ChordsPageProps> = ({
             >
               <Guitar size={14} />
               <span className="hidden sm:inline">Guitar</span>
+            </button>
+          )}
+          {enabledInstruments.includes("bass") && (
+            <button
+              onClick={() => setInstrumentView("bass")}
+              aria-label="Bass view"
+              title="Four-string bass"
+              aria-pressed={instrumentView === "bass"}
+              className={`flex min-h-11 flex-1 items-center justify-center gap-2 px-3 py-2 sm:flex-none ${instrumentView === "bass" ? "bg-primary text-on-primary" : "text-on-surface-variant"}`}
+            >
+              <BassIcon size={14} />
+              <span className="hidden sm:inline">Bass</span>
             </button>
           )}
           {enabledInstruments.includes("piano") && (

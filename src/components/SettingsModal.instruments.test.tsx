@@ -19,6 +19,7 @@ const noop = () => {};
 const modalProps = {
   isOpen: true,
   onClose: noop,
+  onOpenUpdates: noop,
   onUpdateSettings: noop,
   onExportData: noop,
   onImportFullData: noop,
@@ -101,7 +102,7 @@ it("updates instrument combinations, preserves or adjusts the default, and resto
       const equal = (actual, expected, message) => check(JSON.stringify(actual) === JSON.stringify(expected), message + ': ' + JSON.stringify(actual));
       const noop = () => {};
       const props = {
-        isOpen: true, onClose: noop, onExportData: noop, onImportFullData: noop,
+        isOpen: true, onClose: noop, onOpenUpdates: noop, onExportData: noop, onImportFullData: noop,
         onImportSelectedData: noop, onClearData: noop, onClearStatsData: noop,
         onClearSavedChords: noop, onRestartTour: noop, completionBehavior: 'ask',
         onUpdateCompletionBehavior: noop, autoAdvanceTimedTasks: false,
