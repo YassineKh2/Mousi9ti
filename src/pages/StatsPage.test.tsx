@@ -11,6 +11,13 @@ import {
   getStatisticsStreak,
 } from "./StatsPage";
 import { SettingsContext } from "../contexts/SettingsContext";
+import { migrateInstrumentData } from "../lib/instruments";
+import {
+  getSavedPracticeActivities,
+  getSavedSessions,
+  getSavedTaskActivities,
+  getSavedTaskAttributions,
+} from "../lib/storage";
 import {
   AppSettings,
   PracticeTask,
@@ -20,6 +27,125 @@ import {
 } from "../types";
 
 const durationSeconds = 600;
+it("keeps legacy stats and shows their totals after instrument migration", () => {
+  const now = Date.now();
+  const date = new Date(now).toISOString().slice(0, 10);
+  const collections = {
+    Mousi9ti_sessions_v1: [
+      {
+        id: "legacy-session",
+        date,
+        startTime: now - 3_600_000,
+        endTime: now - 3_000_000,
+        durationSeconds: 600,
+        focus: "Legacy session",
+        bpmsUsed: [],
+        highestBpm: 0,
+        scalesPracticed: [],
+        exercisesOpened: [],
+        completed: true,
+      },
+    ],
+    Mousi9ti_task_activities_v1: [
+      {
+        id: "legacy-task-activity",
+        taskId: "legacy-task",
+        taskText: "Legacy scales",
+        date,
+        timestamp: now - 1_800_000,
+        kind: "completed",
+        durationSeconds: 300,
+        area: "Scales",
+      },
+    ],
+    Mousi9ti_practice_activities_v1: [
+      {
+        id: "legacy-practice-activity",
+        source: "metronome",
+        date,
+        startTime: now - 900_000,
+        endTime: now - 780_000,
+        durationSeconds: 120,
+        area: "Metronome",
+        tags: [],
+      },
+    ],
+    Mousi9ti_task_time_attributions_v1: [
+      {
+        id: "legacy-attribution",
+        sessionId: "legacy-session",
+        taskId: "legacy-task",
+        durationSeconds: 60,
+        startedAt: now - 3_600_000,
+        endedAt: now - 3_540_000,
+        source: "automatic",
+        createdAt: now,
+        updatedAt: now,
+      },
+    ],
+  };
+  const saved = new Map<string, string>([
+    ["Mousi9ti_settings_v1", JSON.stringify({ defaultInstrument: "piano" })],
+    ["mous9iti_tasks", JSON.stringify([{ id: "legacy-task", text: "Scales" }])],
+    ...Object.entries(collections).map(([key, records]) => [
+      key,
+      JSON.stringify(records),
+    ] as const),
+  ]);
+  const originalStorage = globalThis.localStorage;
+  globalThis.localStorage = {
+    getItem: (key: string) => saved.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      saved.set(key, value);
+    },
+  } as Storage;
+
+  try {
+    migrateInstrumentData();
+
+    const migrated = [
+      getSavedSessions(),
+      getSavedTaskActivities(),
+      getSavedPracticeActivities(),
+      getSavedTaskAttributions(),
+    ];
+    assert.deepEqual(
+      migrated.map((records) => records.length),
+      Object.values(collections).map((records) => records.length),
+      "migration must not drop any legacy statistics",
+    );
+    for (const records of migrated) {
+      assert.equal(records[0].instrument, "piano");
+      assert.equal(records[0].instrumentInferred, true);
+    }
+    assert.equal(getSavedSessions()[0].durationSeconds, 600);
+    assert.equal(getSavedTaskActivities()[0].durationSeconds, 300);
+    assert.equal(getSavedPracticeActivities()[0].durationSeconds, 120);
+    assert.equal(getSavedTaskAttributions()[0].durationSeconds, 60);
+
+    const html = renderToStaticMarkup(
+      <SettingsContext.Provider value={settings()}>
+        <StatsPage
+          sessions={getSavedSessions()}
+          streak={{
+            currentStreak: 1,
+            longestStreak: 1,
+            lastVisitDate: date,
+            graceDaysUsed: 0,
+            history: [],
+          }}
+        />
+      </SettingsContext.Provider>,
+    );
+    assert.match(html, /aria-label="Statistics instrument"/);
+    assert.match(html, /Total Practice<\/span>/);
+    assert.match(html, />17m</);
+    assert.match(html, /Legacy scales/);
+  } finally {
+    globalThis.localStorage = originalStorage;
+  }
+});
+
 it("keeps bass statistics distinct from guitar and piano", () => {
   const records = [{ instrument: "bass" }, { instrument: "guitar" }, { instrument: "piano" }];
   assert.deepEqual(filterStatisticsRecords(records, "bass"), [records[0]]);

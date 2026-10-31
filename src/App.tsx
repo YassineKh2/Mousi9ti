@@ -50,10 +50,12 @@ import { SettingsModal } from "./components/SettingsModal";
 import { ReleaseNotesModal } from "./components/ReleaseNotesModal";
 import { APP_VERSION } from "./lib/version";
 import {
-  getMajorMinorVersion,
-  isMajorOrMinorVersionAhead,
   RELEASES,
 } from "./data/releaseNotes";
+import {
+  getReleaseAnnouncementStatus,
+  markReleaseAnnouncementSeen,
+} from "./lib/releaseAnnouncement";
 const DashboardPage = lazy(() =>
   import("./pages/DashboardPage").then((module) => ({
     default: module.DashboardPage,
@@ -411,28 +413,25 @@ function PracticeApp() {
   const currentRelease = RELEASES.find(
     (release) => release.version === APP_VERSION,
   );
-  const [isReturningReleaseNotesUser] = useState(
-    () => localStorage.getItem("Mousi9ti_last_seen_major_version") !== null,
+  const [releaseAnnouncementStatus, setReleaseAnnouncementStatus] = useState(
+    () => getReleaseAnnouncementStatus(localStorage, APP_VERSION),
   );
-  const [hasSeenCurrentRelease, setHasSeenCurrentRelease] = useState(() => {
-    const lastSeenVersion = localStorage.getItem(
-      "Mousi9ti_last_seen_release_version",
+
+  useEffect(() => {
+    if (!currentRelease || !releaseAnnouncementStatus.canOpen) return;
+    if (!markReleaseAnnouncementSeen(localStorage, APP_VERSION)) return;
+
+    setReleaseAnnouncementStatus(
+      getReleaseAnnouncementStatus(localStorage, APP_VERSION),
     );
-    return (
-      lastSeenVersion !== null &&
-      !isMajorOrMinorVersionAhead(APP_VERSION, lastSeenVersion)
-    );
-  });
+    setIsReleaseNotesModalOpen(true);
+  }, [currentRelease, releaseAnnouncementStatus.canOpen]);
 
   const dismissReleaseNotesModal = useCallback(() => {
-    const majorMinorVersion = getMajorMinorVersion(APP_VERSION);
-    if (majorMinorVersion) {
-      localStorage.setItem(
-        "Mousi9ti_last_seen_release_version",
-        majorMinorVersion,
-      );
-    }
-    setHasSeenCurrentRelease(true);
+    markReleaseAnnouncementSeen(localStorage, APP_VERSION);
+    setReleaseAnnouncementStatus(
+      getReleaseAnnouncementStatus(localStorage, APP_VERSION),
+    );
     setIsReleaseNotesModalOpen(false);
   }, []);
 
@@ -2089,9 +2088,7 @@ function PracticeApp() {
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
           canOpenReleaseAnnouncement={
-            isReturningReleaseNotesUser &&
-            Boolean(currentRelease) &&
-            !hasSeenCurrentRelease
+            releaseAnnouncementStatus.canOpen && Boolean(currentRelease)
           }
           onOpenReleaseAnnouncement={openReleaseNotesManually}
           onOpenUpdates={() => {
