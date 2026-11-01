@@ -475,21 +475,25 @@ function PracticeApp() {
     ]);
   };
   const quickStartTasks = (
-    _instrument: PracticeInstrument,
+    instrument: PracticeInstrument,
     tasks: PracticeTask[],
   ) => {
+    setActiveInstrument(instrument);
+    const updatedSettings = { ...settings, defaultInstrument: instrument };
+    setSettings(updatedSettings);
+    saveSettings(updatedSettings);
     setPracticeTasks((current) => {
       const existingIds = new Set(current.map((task) => task.id));
       return [
         ...current,
         ...tasks
           .filter((task) => !existingIds.has(task.id))
-          .map((task) => ({ ...task, instrument: activeInstrument })),
+          .map((task) => ({ ...task, instrument })),
       ];
     });
   };
   const [quickStartInstrument, setQuickStartInstrument] = useState<
-    "guitar" | "piano" | "none" | null
+    PracticeInstrument | "none" | null
   >(null);
   const practiceTasksRef = useRef(practiceTasks);
   practiceTasksRef.current = practiceTasks;

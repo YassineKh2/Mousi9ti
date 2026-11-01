@@ -35,6 +35,7 @@ import {
   AppSettings,
   NoteName,
   PracticeTask,
+  PracticeInstrument,
   TaskActivity,
   UserTimerPreferences,
 } from "../types";
@@ -999,6 +1000,144 @@ const DEFAULT_PIANO_WEEKLY_SCHEDULE: DayBlueprint[] =
     };
   });
 
+const BASS_WEEKLY_PLAN: Record<
+  string,
+  {
+    focusTheme: string;
+    goalDurationMins: number;
+    defaultBpm: number;
+    modules: { title: string; durationMin: number }[];
+    tasks: string[];
+  }
+> = {
+  MON: {
+    focusTheme: "Technique, E Minor & Steady Notes",
+    goalDurationMins: 30,
+    defaultBpm: 80,
+    modules: [
+      { title: "Chromatic Finger Warm-up", durationMin: 5 },
+      { title: "E Minor Pentatonic Scale", durationMin: 10 },
+      { title: "Root-and-Fifth Groove", durationMin: 15 },
+    ],
+    tasks: [
+      "Warm up with a relaxed chromatic pattern, one finger per fret @time(5)",
+      "Practice the E minor pentatonic scale across the neck @scale(E minor pentatonic) @time(10)",
+      "Play a steady root-and-fifth groove with a metronome, keeping notes even @bpm(80) @time(15)",
+    ],
+  },
+  TUE: {
+    focusTheme: "Fretboard Notes & Clean Transitions",
+    goalDurationMins: 30,
+    defaultBpm: 75,
+    modules: [
+      { title: "Open-String Note Names", durationMin: 10 },
+      { title: "A Minor Scale", durationMin: 10 },
+      { title: "Two-Chord Bass Line", durationMin: 10 },
+    ],
+    tasks: [
+      "Name the notes on the E and A strings up to the fifth fret, then check them on your fretboard @time(10)",
+      "Practice the A natural minor scale slowly with alternating fingers @scale(A minor) @time(10)",
+      "Build a simple bass line between A minor and D minor using clear root notes @chord(A minor) @chord(D minor) @time(10)",
+    ],
+  },
+  WED: {
+    focusTheme: "Right-Hand Control & Muting",
+    goalDurationMins: 30,
+    defaultBpm: 70,
+    modules: [
+      { title: "Alternating-Finger Plucking", durationMin: 10 },
+      { title: "String-Crossing Drill", durationMin: 10 },
+      { title: "Muted Eighth-Note Groove", durationMin: 10 },
+    ],
+    tasks: [
+      "Practice alternating index and middle fingers on one string with an even volume @time(10)",
+      "Play a slow string-crossing exercise and keep unused strings quiet @exercise(Spider Drill) @time(10)",
+      "Play muted eighth notes with a metronome, staying relaxed and consistent @bpm(70) @time(10)",
+    ],
+  },
+  THU: {
+    focusTheme: "Major Scales & Chord Tones",
+    goalDurationMins: 30,
+    defaultBpm: 75,
+    modules: [
+      { title: "G Major Scale", durationMin: 10 },
+      { title: "Root-Third-Fifth Arpeggios", durationMin: 10 },
+      { title: "Chord-Tone Connection", durationMin: 10 },
+    ],
+    tasks: [
+      "Practice the G major scale in one comfortable position, ascending and descending @scale(G major) @time(10)",
+      "Play G major and C major arpeggios using root, third, and fifth @chord(G major) @chord(C major) @time(10)",
+      "Create a simple line that connects chord tones when moving from G to C @time(10)",
+    ],
+  },
+  FRI: {
+    focusTheme: "Timing, Dynamics & Groove",
+    goalDurationMins: 30,
+    defaultBpm: 85,
+    modules: [
+      { title: "Quarter-Note Pulse", durationMin: 10 },
+      { title: "Dynamic Control", durationMin: 10 },
+      { title: "Pocket Groove Practice", durationMin: 10 },
+    ],
+    tasks: [
+      "Play quarter notes with a metronome and make every note the same length @bpm(85) @time(10)",
+      "Repeat a short bass phrase softly and loudly without changing its tempo @time(10)",
+      "Practice a simple groove with a drum loop and listen for a steady pocket @time(10)",
+    ],
+  },
+  SAT: {
+    focusTheme: "Song Repertoire & Listening",
+    goalDurationMins: 35,
+    defaultBpm: 80,
+    modules: [
+      { title: "Learn a Song Section", durationMin: 15 },
+      { title: "Slow Repetition", durationMin: 10 },
+      { title: "Play Along & Review", durationMin: 10 },
+    ],
+    tasks: [
+      "Learn a short bass part from a song, focusing first on the rhythm and root notes @time(15)",
+      "Practice the trickiest transition slowly until the notes ring cleanly @time(10)",
+      "Play along with the recording and note one part to revisit next time @time(10)",
+    ],
+  },
+  SUN: {
+    focusTheme: "Light Review & Enjoyment",
+    goalDurationMins: 25,
+    defaultBpm: 70,
+    modules: [
+      { title: "Review a Familiar Scale", durationMin: 5 },
+      { title: "Revisit a Favorite Groove", durationMin: 10 },
+      { title: "Free Play & Reflection", durationMin: 10 },
+    ],
+    tasks: [
+      "Review a familiar scale slowly and check that each note sounds clean @scale(E minor pentatonic) @time(5)",
+      "Play a favorite groove at a comfortable tempo, keeping a relaxed feel @time(10)",
+      "Finish with free playing and choose one small focus for next week @time(10)",
+    ],
+  },
+};
+
+const DEFAULT_BASS_WEEKLY_SCHEDULE: DayBlueprint[] =
+  DEFAULT_WEEKLY_SCHEDULE.map((day) => {
+    const bassPlan = BASS_WEEKLY_PLAN[day.day];
+    return {
+      ...day,
+      focusTheme: bassPlan.focusTheme,
+      goalDurationMins: bassPlan.goalDurationMins,
+      defaultBpm: bassPlan.defaultBpm,
+      modules: bassPlan.modules.map((module, index) => ({
+        ...module,
+        id: `bass-${day.day.toLowerCase()}-module-${index + 1}`,
+        completed: false,
+      })),
+      tasks: bassPlan.tasks.map((text, index) => ({
+        id: `bass-${day.day.toLowerCase()}-task-${index + 1}`,
+        text,
+        completed: false,
+      })),
+    };
+  });
+
 const isUnmodifiedDefaultSchedule = (
   schedule: DayBlueprint[],
   defaults: DayBlueprint[],
@@ -1151,14 +1290,14 @@ interface RoutinePageProps {
     preferences: Partial<UserTimerPreferences>,
   ) => void;
   onQuickStartTasks?: (
-    instrument: "guitar" | "piano" | "bass",
+    instrument: PracticeInstrument,
     tasks: PracticeTask[],
   ) => void;
   timer?: ReturnType<typeof useTimer>;
   streak?: StreakData;
   practiceTasks?: PracticeTask[];
   onPracticeTasksChange?: (tasks: PracticeTask[]) => void;
-  quickStartInstrument?: "guitar" | "piano" | "none" | null;
+  quickStartInstrument?: PracticeInstrument | "none" | null;
   onQuickStartSetupHandled?: () => void;
   activeSessionDuration?: number;
   isSessionActive?: boolean;
@@ -1284,14 +1423,22 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
   const [weeklySchedule, setWeeklySchedule] = useState<DayBlueprint[]>(() => {
     const saved = localStorage.getItem("mous9iti_weekly_schedule");
     const templateInstrument =
-      quickStartInstrument === "guitar" || quickStartInstrument === "piano"
+      quickStartInstrument === "guitar" ||
+      quickStartInstrument === "piano" ||
+      quickStartInstrument === "bass"
         ? quickStartInstrument
         : activeInstrument;
     let schedule =
       templateInstrument === "piano"
         ? DEFAULT_PIANO_WEEKLY_SCHEDULE
-        : DEFAULT_WEEKLY_SCHEDULE;
-    if (quickStartInstrument !== "guitar" && quickStartInstrument !== "piano") {
+        : templateInstrument === "bass"
+          ? DEFAULT_BASS_WEEKLY_SCHEDULE
+          : DEFAULT_WEEKLY_SCHEDULE;
+    if (
+      quickStartInstrument !== "guitar" &&
+      quickStartInstrument !== "piano" &&
+      quickStartInstrument !== "bass"
+    ) {
       schedule = schedule.map((day) => ({ ...day, tasks: [] }));
     }
     if (saved) {
@@ -1305,12 +1452,16 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
 
     if (
       saved &&
-      (quickStartInstrument === "guitar" || quickStartInstrument === "piano")
+      (quickStartInstrument === "guitar" ||
+        quickStartInstrument === "piano" ||
+        quickStartInstrument === "bass")
     ) {
       const template =
         templateInstrument === "piano"
           ? DEFAULT_PIANO_WEEKLY_SCHEDULE
-          : DEFAULT_WEEKLY_SCHEDULE;
+          : templateInstrument === "bass"
+            ? DEFAULT_BASS_WEEKLY_SCHEDULE
+            : DEFAULT_WEEKLY_SCHEDULE;
       schedule = schedule.map((day) => ({
         ...day,
         tasks: mergeRoutineTasks(
@@ -2192,14 +2343,16 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
               onDismissTour={() =>
                 window.dispatchEvent(new Event("mousi9ti-task-setup-start"))
               }
-              onQuickStartTasks={(_instrument, tasks) => {
+              onQuickStartTasks={(instrument, tasks) => {
                 const schedule =
-                  activeInstrument === "piano"
+                  instrument === "piano"
                     ? DEFAULT_PIANO_WEEKLY_SCHEDULE
-                    : DEFAULT_WEEKLY_SCHEDULE;
+                    : instrument === "bass"
+                      ? DEFAULT_BASS_WEEKLY_SCHEDULE
+                      : DEFAULT_WEEKLY_SCHEDULE;
                 const currentTasks = tasks.map((task) => ({
                   ...task,
-                  instrument: activeInstrument,
+                  instrument,
                   instrumentInferred: false,
                 }));
                 setWeeklySchedule((previous) =>
@@ -2212,7 +2365,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                         ? currentTasks
                         : (template?.tasks ?? []).map((task) => ({
                             ...task,
-                            instrument: activeInstrument,
+                            instrument,
                             instrumentInferred: false,
                           }));
                     return {
@@ -2221,7 +2374,7 @@ export const RoutinePage: React.FC<RoutinePageProps> = ({
                     };
                   }),
                 );
-                onQuickStartTasks?.(activeInstrument, currentTasks);
+                onQuickStartTasks?.(instrument, currentTasks);
               }}
               onFinishDailyTasksOnboarding={() => {
                 window.dispatchEvent(new Event("mousi9ti-task-setup-ready"));

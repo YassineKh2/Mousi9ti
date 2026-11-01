@@ -209,7 +209,7 @@ interface DashboardPageProps {
   onOpenRoutine: () => void;
   onDismissTour?: () => void;
   onFinishDailyTasksOnboarding: (
-    quickStartInstrument: "guitar" | "piano" | null,
+    quickStartInstrument: "guitar" | "piano" | "bass" | null,
   ) => void;
   onQuickStartTasks: (
     instrument: "guitar" | "piano" | "bass",

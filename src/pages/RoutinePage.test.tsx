@@ -119,12 +119,12 @@ for (const duration of ["week", "month", "year"] as const) {
 }
 
 function renderRoutine(
-  instrument: "guitar" | "piano",
-  quickStartInstrument?: "guitar" | "piano" | "none",
+  instrument: "guitar" | "piano" | "bass",
+  quickStartInstrument?: "guitar" | "piano" | "bass" | "none",
   tasks: PracticeTask[] = [],
   savedSchedule?: string,
   timerPreferences?: UserTimerPreferences,
-  selectedInstrument: "guitar" | "piano" = instrument,
+  selectedInstrument: "guitar" | "piano" | "bass" = instrument,
 ) {
   const originalStorage = globalThis.localStorage;
   const saved = new Map<string, string>();
@@ -170,13 +170,29 @@ it("keeps the full routine visible with task setup in the goals section", () => 
   assert.doesNotMatch(html, /placeholder="e.g. Practice/);
 });
 
-for (const instrument of ["guitar", "piano"] as const) {
+for (const instrument of ["guitar", "piano", "bass"] as const) {
   it(`does not seed ${instrument} tasks without an explicit quick-start choice`, () => {
     const empty = renderRoutine(instrument, "none");
     assert.equal(renderRoutine(instrument), empty);
     assert.notEqual(renderRoutine(instrument, instrument), empty);
   });
 }
+
+it("seeds a bass-specific weekly practice program on bass quick-start", () => {
+  const html = renderRoutine("bass", "bass");
+  assert.ok(
+    [
+      "Technique, E Minor &amp; Steady Notes",
+      "Fretboard Notes &amp; Clean Transitions",
+      "Right-Hand Control &amp; Muting",
+      "Major Scales &amp; Chord Tones",
+      "Timing, Dynamics &amp; Groove",
+      "Song Repertoire &amp; Listening",
+      "Light Review &amp; Enjoyment",
+    ].some((focusTheme) => html.includes(focusTheme)),
+  );
+  assert.ok(!html.includes("Scale Mastery &amp; Pentatonic Flows"));
+});
 
 it("keeps custom tasks without adding a default routine", () => {
   const html = renderRoutine("guitar", undefined, [

@@ -28,6 +28,7 @@ import {
   Guitar,
   Piano,
 } from "lucide-react";
+import { BassIcon } from "./BassIcon";
 import { ALL_ROOT_NOTES, GUITAR_TUNINGS } from "../data/musicTheory";
 import { CHORD_TYPES_CATALOG } from "../data/chordsData";
 import { SCALES_DATABASE } from "../data/musicTheory";
@@ -52,6 +53,7 @@ import {
 import {
   AppSettings,
   PracticeTask,
+  PracticeInstrument,
   TaskCompletionBehavior,
   UserTimerPreferences,
 } from "../types";
@@ -867,10 +869,10 @@ interface PracticeTasksWidgetProps {
   onOpenRoutine?: () => void;
   onDismissTour?: () => void;
   onFinishDailyTasksOnboarding?: (
-    quickStartInstrument: "guitar" | "piano" | null,
+    quickStartInstrument: PracticeInstrument | null,
   ) => void;
   onQuickStartTasks: (
-    instrument: "guitar" | "piano",
+    instrument: PracticeInstrument,
     tasks: PracticeTask[],
   ) => void;
   tasks?: PracticeTask[];
@@ -1223,7 +1225,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
     tasks.length === 0 ? 0 : Math.round((completedCount / tasks.length) * 100);
 
   const finishOnboarding = (
-    quickStartInstrument: "guitar" | "piano" | null = null,
+    quickStartInstrument: PracticeInstrument | null = null,
     notifyParentOnFinish = true,
   ) => {
     onUpdateTimerPreferences?.({
@@ -1313,9 +1315,9 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
       {
         title: "Quick start your practice",
         description:
-          "Would you like a few ready-made tasks? Choose piano or guitar to set it as your default instrument and add matching practice goals. The suggested times are flexible; adjust or remove any task to fit your level. Choose “No thanks” to keep your current defaults and start without adding any tasks.",
+          "Would you like a few ready-made tasks? Choose guitar, piano, or bass to set it as your default instrument and add matching practice goals. The suggested times are flexible; adjust or remove any task to fit your level. Choose “No thanks” to keep your current defaults and start without adding any tasks.",
         icon: <Target size={20} />,
-        gifPlaceholder: "Choosing a piano or guitar practice plan",
+        gifPlaceholder: "Choosing a guitar, piano, or bass practice plan",
         control: "quick-start",
       },
     ];
@@ -1325,23 +1327,29 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
         ? TASK_ONBOARDING_VIDEO_PATHS[settings.theme][onboardingStep]
         : undefined;
 
-    const quickStart = (instrument: "guitar" | "piano") => {
-      const taskTexts =
-        instrument === "piano"
-          ? [
-              "Warm up with a relaxed five-finger pattern, hands separately, aiming for even tone @time(5)",
-              "Practice the C major scale one octave, hands separately then together if comfortable @scale(C major) @time(10)",
-              "Practice a short passage from your current piece slowly; focus on accurate notes and steady rhythm @time(15)",
-            ]
-          : [
-              "Warm up with the Spider Drill @exercise(Spider Drill) @time(5)",
-              "Practice the A minor pentatonic scale @scale(A minor pentatonic) @time(10)",
-              "Practice smooth G major to C major chord changes @chord(G major) @chord(C major) @time(10)",
-            ];
+    const quickStart = (instrument: PracticeInstrument) => {
+      const taskTexts: Record<PracticeInstrument, string[]> = {
+        guitar: [
+          "Warm up with the Spider Drill @exercise(Spider Drill) @time(5)",
+          "Practice the A minor pentatonic scale @scale(A minor pentatonic) @time(10)",
+          "Practice smooth G major to C major chord changes @chord(G major) @chord(C major) @time(10)",
+        ],
+        piano: [
+          "Warm up with a relaxed five-finger pattern, hands separately, aiming for even tone @time(5)",
+          "Practice the C major scale one octave, hands separately then together if comfortable @scale(C major) @time(10)",
+          "Practice a short passage from your current piece slowly; focus on accurate notes and steady rhythm @time(15)",
+        ],
+        bass: [
+          "Warm up with a relaxed chromatic pattern, one finger per fret @time(5)",
+          "Practice the E minor pentatonic scale across the neck @scale(E minor pentatonic) @time(10)",
+          "Play a steady root-and-fifth groove with a metronome, keeping notes even @bpm(80) @time(10)",
+        ],
+      };
+      const tasks = taskTexts[instrument];
       const createdAt = Date.now();
       onQuickStartTasks(
         instrument,
-        taskTexts.map((text, index) => ({
+        tasks.map((text, index) => ({
           id: `${createdAt}-${index}`,
           createdAt,
           text,
@@ -1592,7 +1600,7 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                     </button>
                   )}
                   {currentStep.control === "quick-start" && (
-                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                    <div className="mt-6 grid gap-3 sm:grid-cols-3">
                       <button
                         type="button"
                         onClick={() => quickStart("guitar")}
@@ -1608,6 +1616,14 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                       >
                         <Piano size={18} className="text-primary" />
                         Start with piano
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => quickStart("bass")}
+                        className="flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container px-4 py-4 text-sm font-semibold text-on-surface transition-colors hover:border-primary hover:bg-primary/10"
+                      >
+                        <BassIcon size={18} className="text-primary" />
+                        Start with bass
                       </button>
                     </div>
                   )}
