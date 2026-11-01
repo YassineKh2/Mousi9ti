@@ -15,5 +15,5 @@
 }
 
 :root.light .bg-primary.text-on-primary:hover {
-  background-color: var(--color-on-primary-container);
+  background-color: var(--color-primary-container);
 }
