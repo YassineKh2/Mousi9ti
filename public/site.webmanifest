@@ -1,7 +1,7 @@
 {
-  "name": "Mousi9ti | Guitar & Piano Practice Studio",
+  "name": "Mousi9ti | Guitar, Bass & Piano Practice Studio",
   "short_name": "Mousi9ti",
-  "description": "Practice guitar and piano with Mousi9ti: explore chords and scales, use a precision metronome, build routines, and track your progress.",
+  "description": "Practice guitar, bass and piano with Mousi9ti: explore chords and scales, use a precision metronome, build routines, and track your progress.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f0f0f",

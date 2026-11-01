@@ -79,6 +79,26 @@ export type { PracticeTask } from "../types";
 
 const MENTION_REGEX =
   /(@(custom|tuning|key|technique|bpm|exercise|metronome|scale|chord|timer|time|random)(?:\(([^)]*)\))?)/gi;
+const TASK_ONBOARDING_VIDEO_PATHS = {
+  dark: [
+    "/videos/tasks/dark/Step 1.webm",
+    "/videos/tasks/dark/step 2.webm",
+    "/videos/tasks/dark/step 3.webm",
+    "/videos/tasks/dark/step 4.webm",
+    "/videos/tasks/dark/step 5.webm",
+    "/videos/tasks/dark/step 6.webm",
+    "/videos/tasks/dark/step 7.webm",
+  ],
+  light: [
+    "/videos/tasks/light/step 1 light.webm",
+    "/videos/tasks/light/step 2 light.webm",
+    "/videos/tasks/light/step 3 light.webm",
+    "/videos/tasks/light/step 4 light.webm",
+    "/videos/tasks/light/step 5 light.webm",
+    "/videos/tasks/light/step 6 light.webm",
+    "/videos/tasks/light/step 7 light.webm",
+  ],
+} as const;
 const TASK_TAG_COLOR_CLASSES: Record<string, string> = {
   scale:
     "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20",
@@ -1300,6 +1320,10 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
       },
     ];
     const currentStep = steps[onboardingStep ?? -1];
+    const onboardingVideoSrc =
+      onboardingStep !== null && onboardingStep < 7
+        ? TASK_ONBOARDING_VIDEO_PATHS[settings.theme][onboardingStep]
+        : undefined;
 
     const quickStart = (instrument: "guitar" | "piano") => {
       const taskTexts =
@@ -1463,21 +1487,35 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
 
                   {currentStep.control !== "quick-start" && (
                     <div className="mt-6 rounded-xl border border-dashed border-outline-variant/40 bg-surface-container-low p-2">
-                      <div
-                        role="img"
-                        aria-label={`GIF placeholder: ${currentStep.gifPlaceholder}`}
-                        className="flex min-h-[220px] flex-col items-center justify-center rounded-lg border border-outline-variant/20 bg-surface-container px-6 text-center"
-                      >
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
-                          <ImageIcon size={25} strokeWidth={1.7} />
+                      {onboardingVideoSrc ? (
+                        <video
+                          className="block w-full aspect-video rounded-lg object-cover"
+                          src={onboardingVideoSrc}
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                          preload="none"
+                          title={`Daily task onboarding: ${currentStep.title}`}
+                          aria-label={`Onboarding demo: ${currentStep.gifPlaceholder}`}
+                        />
+                      ) : (
+                        <div
+                          role="img"
+                          aria-label={`GIF placeholder: ${currentStep.gifPlaceholder}`}
+                          className="flex min-h-[220px] flex-col items-center justify-center rounded-lg border border-outline-variant/20 bg-surface-container px-6 text-center"
+                        >
+                          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
+                            <ImageIcon size={25} strokeWidth={1.7} />
+                          </div>
+                          <span className="mt-4 rounded-md border border-outline-variant/30 bg-surface-container-low px-2.5 py-1 text-[11px] font-medium uppercase text-on-surface-variant">
+                            GIF
+                          </span>
+                          <p className="mt-3 text-sm text-on-surface-variant">
+                            {currentStep.gifPlaceholder}
+                          </p>
                         </div>
-                        <span className="mt-4 rounded-md border border-outline-variant/30 bg-surface-container-low px-2.5 py-1 text-[11px] font-medium uppercase text-on-surface-variant">
-                          GIF
-                        </span>
-                        <p className="mt-3 text-sm text-on-surface-variant">
-                          {currentStep.gifPlaceholder}
-                        </p>
-                      </div>
+                      )}
                     </div>
                   )}
 
