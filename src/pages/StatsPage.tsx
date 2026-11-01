@@ -11,6 +11,7 @@ import {
   getSavedSettings,
   getSavedTaskActivities,
   getSavedTaskAttributions,
+  getTodayDateString,
 } from "../lib/storage";
 import { getSavedCustomTags } from "../lib/customTaskTags";
 import {
@@ -135,6 +136,23 @@ export function getStatisticsPracticeDates(
       );
     })
     .sort();
+}
+
+// Mirrors recordPracticeDay: sessions, task starts/completions, and completed practice activities earn the streak.
+export function getStatisticsStreakDates(
+  sessions: { date: string }[],
+  taskActivities: { date: string }[],
+  practiceActivities: { date: string; status?: string }[],
+  storedHistory: { date: string; practiced: boolean }[] = [],
+): string[] {
+  return [
+    ...sessions.map((session) => session.date),
+    ...taskActivities.map((activity) => activity.date),
+    ...practiceActivities
+      .filter((activity) => activity.status === "completed")
+      .map((activity) => activity.date),
+    ...storedHistory.filter((day) => day.practiced).map((day) => day.date),
+  ];
 }
 
 export function getStatisticsStreak(dates: string[], today: string) {
@@ -334,6 +352,7 @@ export function countStatisticsActivities(
 
 export const StatsPage: React.FC<StatsPageProps> = ({
   sessions: savedSessions,
+  streak,
 }) => {
   const settings = useSettingsContext();
   const [scope, setScope] = useState<StatisticsScope>(() =>
@@ -541,7 +560,7 @@ export const StatsPage: React.FC<StatsPageProps> = ({
   const metronomeSeconds = activities
     .filter((a) => a.source === "Metronome")
     .reduce((sum, a) => sum + a.countedDurationSeconds, 0);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayDateString();
   const tasksByWeekday = new Map<string, PracticeTask[]>();
   try {
     const schedule: unknown = JSON.parse(
@@ -593,12 +612,12 @@ export const StatsPage: React.FC<StatsPageProps> = ({
     today,
   ).length;
   const scopedStreak = getStatisticsStreak(
-    getStatisticsPracticeDates(
-      allActivities,
+    getStatisticsStreakDates(
+      sessions,
       taskActivities,
-      todayTasks,
-      tasksByWeekday,
-      today,
+      genericActivities,
+      // Stored streak history has no instrument, so it only applies to the combined view.
+      scope === "all" ? streak?.history : [],
     ),
     today,
   );

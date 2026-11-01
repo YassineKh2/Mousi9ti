@@ -9,6 +9,7 @@ import {
   getDefaultStatisticsScope,
   getStatisticsPracticeDates,
   getStatisticsStreak,
+  getStatisticsStreakDates,
 } from "./StatsPage";
 import { SettingsContext } from "../contexts/SettingsContext";
 import { migrateInstrumentData } from "../lib/instruments";
@@ -685,6 +686,25 @@ it("recomputes combined streaks from distinct calendar dates with two missed day
   assert.deepEqual(getStatisticsStreak(piano, "2026-11-02"), {
     currentStreak: 0,
     longestStreak: 3,
+  });
+});
+
+it("credits task starts, sessions, completed activities, and stored history toward the streak", () => {
+  const dates = getStatisticsStreakDates(
+    [{ date: "2026-10-27" }],
+    [{ date: "2026-10-28" }],
+    [
+      { date: "2026-10-29", status: "completed" },
+      { date: "2026-10-31", status: "abandoned" },
+    ],
+    [
+      { date: "2026-10-25", practiced: true },
+      { date: "2026-10-26", practiced: false },
+    ],
+  );
+  assert.deepEqual(getStatisticsStreak(dates, "2026-10-30"), {
+    currentStreak: 4,
+    longestStreak: 4,
   });
 });
 

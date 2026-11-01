@@ -36,6 +36,17 @@ it("does not offer the popup to a new user", () => {
   });
 });
 
+it("offers the popup to existing users who predate release markers", () => {
+  const storage = new MemoryStorage({
+    "Mousi9ti_sessions_v1": '[{"id":"practice-session"}]',
+  });
+
+  assert.deepEqual(getReleaseAnnouncementStatus(storage, "1.3.0"), {
+    isReturningUser: true,
+    canOpen: true,
+  });
+});
+
 it("offers an unseen major or minor release to a returning user", () => {
   const storage = new MemoryStorage({
     [LEGACY_MAJOR_VERSION_STORAGE_KEY]: "2",

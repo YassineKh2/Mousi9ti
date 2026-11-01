@@ -418,6 +418,11 @@ function PracticeApp() {
   );
 
   useEffect(() => {
+    // New users start on the current release so future updates are announced to them.
+    if (!releaseAnnouncementStatus.isReturningUser) {
+      markReleaseAnnouncementSeen(localStorage, APP_VERSION);
+      return;
+    }
     if (!currentRelease || !releaseAnnouncementStatus.canOpen) return;
     if (!markReleaseAnnouncementSeen(localStorage, APP_VERSION)) return;
 
@@ -425,7 +430,11 @@ function PracticeApp() {
       getReleaseAnnouncementStatus(localStorage, APP_VERSION),
     );
     setIsReleaseNotesModalOpen(true);
-  }, [currentRelease, releaseAnnouncementStatus.canOpen]);
+  }, [
+    currentRelease,
+    releaseAnnouncementStatus.canOpen,
+    releaseAnnouncementStatus.isReturningUser,
+  ]);
 
   const dismissReleaseNotesModal = useCallback(() => {
     markReleaseAnnouncementSeen(localStorage, APP_VERSION);
