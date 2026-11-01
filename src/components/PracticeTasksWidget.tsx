@@ -27,6 +27,7 @@ import {
   Pause,
   Guitar,
   Piano,
+  LoaderCircle,
 } from "lucide-react";
 import { BassIcon } from "./BassIcon";
 import { ALL_ROOT_NOTES, GUITAR_TUNINGS } from "../data/musicTheory";
@@ -894,6 +895,47 @@ interface PracticeTasksWidgetProps {
   onSetTaskManualDuration?: (taskId: string, minutes: number) => void;
 }
 
+const TaskOnboardingVideo: React.FC<{
+  src: string;
+  title: string;
+  description: string;
+}> = ({ src, title, description }) => {
+  const [isLoading, setIsLoading] = useState(true);
+
+  return (
+    <div className="relative">
+      <video
+        className="block w-full aspect-video rounded-lg object-cover"
+        src={src}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="none"
+        title={title}
+        aria-label={description}
+        onWaiting={() => setIsLoading(true)}
+        onCanPlay={() => setIsLoading(false)}
+        onError={() => setIsLoading(false)}
+      />
+      {isLoading && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-black/20"
+        >
+          <LoaderCircle
+            size={18}
+            className="animate-spin text-white"
+            aria-hidden="true"
+          />
+          <span className="sr-only">Loading task video…</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const getSavedPracticeTasks = (): PracticeTask[] => {
   const saved = localStorage.getItem("mous9iti_tasks");
   if (!saved) return [];
@@ -1496,16 +1538,11 @@ export const PracticeTasksWidget: React.FC<PracticeTasksWidgetProps> = ({
                   {currentStep.control !== "quick-start" && (
                     <div className="mt-6 rounded-xl border border-dashed border-outline-variant/40 bg-surface-container-low p-2">
                       {onboardingVideoSrc ? (
-                        <video
-                          className="block w-full aspect-video rounded-lg object-cover"
+                        <TaskOnboardingVideo
+                          key={onboardingVideoSrc}
                           src={onboardingVideoSrc}
-                          autoPlay
-                          muted
-                          loop
-                          playsInline
-                          preload="none"
                           title={`Daily task onboarding: ${currentStep.title}`}
-                          aria-label={`Onboarding demo: ${currentStep.gifPlaceholder}`}
+                          description={`Onboarding demo: ${currentStep.gifPlaceholder}`}
                         />
                       ) : (
                         <div
