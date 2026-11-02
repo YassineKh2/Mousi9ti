@@ -16,6 +16,27 @@ export interface ReleaseNotes {
 
 export const RELEASES: ReleaseNotes[] = [
   {
+    version: "1.3.1",
+    changes: [
+      {
+        id: "timer-practice-sync",
+        category: "new",
+        title: "Sync the timer with your practice tracker",
+        description:
+          "Optionally start and pause the practice tracker with the timer. This setting is off by default and does not interfere with task-driven timers.",
+        href: "/",
+      },
+      {
+        id: "task-video-loading",
+        category: "improved",
+        title: "Clearer task video loading",
+        description:
+          "A loading spinner now appears while daily-task onboarding videos are loading.",
+        href: "/routine/",
+      },
+    ],
+  },
+  {
     version: "1.3.0",
     changes: [
       {

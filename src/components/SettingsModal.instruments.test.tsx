@@ -45,7 +45,7 @@ const baseSettings: AppSettings = {
   fretboardNoteSize: "medium", fretboardColorMode: "default", fretboardNotesColored: false,
   fretboardMarkerShape: "round", fretboardMinimalDetails: false, taskTagsColored: false,
   autoSaveSession: true, timerPresets: [3, 5, 10, 30], stopMetronomeOnTimerEnd: false,
-  timerNotificationsEnabled: true,
+  timerNotificationsEnabled: true, syncPracticeTimerWithTimer: false,
 };
 const instruments: PracticeInstrument[] = ["guitar", "bass", "piano"];
 const combinations: PracticeInstrument[][] = [

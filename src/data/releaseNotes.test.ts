@@ -24,10 +24,10 @@ it("ignores malformed version values when comparing releases", () => {
   assert.equal(isMajorOrMinorVersionAhead("2.2.0", "next"), false);
 });
 
-it("lists all four releases in descending version order", () => {
+it("lists all five releases in descending version order", () => {
   assert.deepEqual(
     RELEASES.map((release) => release.version),
-    ["1.3.0", "1.2.0", "1.1.0", "1.0.0"],
+    ["1.3.1", "1.3.0", "1.2.0", "1.1.0", "1.0.0"],
   );
 });
 
@@ -40,6 +40,12 @@ it("documents the headline changes in their requested releases", () => {
   );
 
   assert.ok(releaseTitles["1.3.0"].some((title) => title.includes("Bass")));
+  assert.ok(
+    releaseTitles["1.3.1"].some((title) => title.includes("Sync the timer")),
+  );
+  assert.ok(
+    releaseTitles["1.3.1"].some((title) => title.includes("task video")),
+  );
   assert.ok(releaseTitles["1.2.0"].some((title) => title.includes("light mode")));
   assert.ok(releaseTitles["1.1.0"].some((title) => title.includes("Shareable")));
   assert.ok(releaseTitles["1.0.0"].some((title) => title.includes("dashboard")));
@@ -70,13 +76,13 @@ it("documents the headline changes in their requested releases", () => {
   );
 });
 
-it("uses the requested highlights in the latest release", () => {
-  const latestRelease = RELEASES[0];
-  const latestTitles = latestRelease.changes.map((change) => change.title);
+it("preserves the requested highlights in release 1.3.0", () => {
+  const release = RELEASES.find((item) => item.version === "1.3.0");
+  const titles = release?.changes.map((change) => change.title) ?? [];
 
-  assert.ok(latestTitles.includes("A more refined light mode"));
-  assert.ok(latestTitles.includes("Shareable chord and scale pages"));
-  assert.ok(!latestTitles.includes("Consistent instrument experience"));
+  assert.ok(titles.includes("A more refined light mode"));
+  assert.ok(titles.includes("Shareable chord and scale pages"));
+  assert.ok(!titles.includes("Consistent instrument experience"));
 });
 
 it("links each release note to a valid app page", () => {

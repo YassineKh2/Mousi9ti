@@ -69,6 +69,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   timerPresets: [3, 5, 10, 30],
   stopMetronomeOnTimerEnd: false,
   timerNotificationsEnabled: true,
+  syncPracticeTimerWithTimer: false,
 };
 
 const DEFAULT_DASHBOARD_LAYOUT: DashboardLayoutData = {

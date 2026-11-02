@@ -900,7 +900,30 @@ const TaskOnboardingVideo: React.FC<{
   title: string;
   description: string;
 }> = ({ src, title, description }) => {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const loadingTimeoutRef = useRef<number | null>(null);
+
+  const clearLoadingTimeout = () => {
+    if (loadingTimeoutRef.current !== null) {
+      window.clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+  };
+
+  useEffect(() => clearLoadingTimeout, []);
+
+  const handleWaiting = () => {
+    clearLoadingTimeout();
+    loadingTimeoutRef.current = window.setTimeout(() => {
+      setIsLoading(true);
+      loadingTimeoutRef.current = null;
+    }, 300);
+  };
+
+  const handleReady = () => {
+    clearLoadingTimeout();
+    setIsLoading(false);
+  };
 
   return (
     <div className="relative">
@@ -914,9 +937,9 @@ const TaskOnboardingVideo: React.FC<{
         preload="none"
         title={title}
         aria-label={description}
-        onWaiting={() => setIsLoading(true)}
-        onCanPlay={() => setIsLoading(false)}
-        onError={() => setIsLoading(false)}
+        onWaiting={handleWaiting}
+        onCanPlay={handleReady}
+        onError={handleReady}
       />
       {isLoading && (
         <div

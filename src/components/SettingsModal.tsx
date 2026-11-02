@@ -1127,6 +1127,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="flex items-center justify-between gap-4">
               <div>
                 <span className="font-mono text-xs font-semibold text-on-surface block">
+                  Sync Practice Timer
+                </span>
+                <span className="text-[11px] text-on-surface-variant">
+                  Start the practice tracker with the timer, and pause it when
+                  the timer is paused, stopped, or finished.
+                </span>
+              </div>
+              <ToggleSwitch
+                checked={settings.syncPracticeTimerWithTimer}
+                label="Sync practice tracker with timer"
+                onChange={(checked) =>
+                  onUpdateSettings({ syncPracticeTimerWithTimer: checked })
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-4">
+              <div>
+                <span className="font-mono text-xs font-semibold text-on-surface block">
                   Stop Metronome When Timer Ends
                 </span>
                 <span className="text-[11px] text-on-surface-variant">

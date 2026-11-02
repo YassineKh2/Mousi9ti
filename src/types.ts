@@ -320,6 +320,7 @@ export interface AppSettings {
   timerPresets: number[]; // in minutes
   stopMetronomeOnTimerEnd: boolean;
   timerNotificationsEnabled: boolean;
+  syncPracticeTimerWithTimer: boolean;
 }
 
 export type DashboardWidgetId =

@@ -42,6 +42,10 @@ import {
 import { audioEngine } from "./lib/audio";
 import { useTimer } from "./lib/useTimer";
 import {
+  decideTimerSessionSync,
+  TimerSessionSyncState,
+} from "./lib/timerSessionSync";
+import {
   Navigation,
   ActiveTab,
   GlobalSearchResult,
@@ -1216,6 +1220,42 @@ function PracticeApp() {
     if (isSessionActive) handlePauseSession();
     else handleResumeSession();
   };
+
+  const timerSyncStateRef = useRef<TimerSessionSyncState | null>(null);
+  const taskManagedTimerRef = useRef(false);
+
+  useEffect(() => {
+    const previousState = timerSyncStateRef.current;
+    const taskSystemActive =
+      practiceTasks.some((task) => task.id === activeTaskId) ||
+      isDailyRoutineActive;
+    const currentState: TimerSessionSyncState = {
+      status: timer.status,
+      enabled: settings.syncPracticeTimerWithTimer,
+      taskSystemActive,
+    };
+    const decision = decideTimerSessionSync({
+      current: currentState,
+      previous: previousState,
+      taskManagedTimer: taskManagedTimerRef.current,
+    });
+    timerSyncStateRef.current = currentState;
+    taskManagedTimerRef.current = decision.taskManagedTimer;
+
+    if (decision.action === "resume") {
+      handleResumeSession();
+    } else if (decision.action === "pause") {
+      handlePauseSession();
+    }
+  }, [
+    timer.status,
+    settings.syncPracticeTimerWithTimer,
+    activeTaskId,
+    isDailyRoutineActive,
+    practiceTasks,
+    handlePauseSession,
+    handleResumeSession,
+  ]);
 
   // Pausing the daily routine also pauses the practice timer and stops the metronome,
   // remembering its state so resuming brings both back exactly as they were.
