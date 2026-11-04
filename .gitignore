@@ -30,3 +30,5 @@ yarn.lock
 package-lock.json
 bun.lockb
 .env
+.env.*
+!.env.example

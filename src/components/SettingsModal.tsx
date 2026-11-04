@@ -410,11 +410,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onChange={(event) =>
                   onUpdateSettings({
                     taskDefaultDuration: event.target.value as
-                      | "forever"
-                      | "week"
-                      | "month"
-                      | "year"
-                      | "custom",
+                      "forever" | "week" | "month" | "year" | "custom",
                   })
                 }
                 aria-label="Default duration for new tasks"
@@ -468,9 +464,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onChange={(event) =>
                     onUpdateSettings({
                       taskDefaultCustomUnit: event.target.value as
-                        | "weeks"
-                        | "months"
-                        | "years",
+                        "weeks" | "months" | "years",
                     })
                   }
                   aria-label="Custom task duration unit"
