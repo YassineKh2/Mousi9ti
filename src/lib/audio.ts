@@ -51,6 +51,7 @@ class AudioEngine {
   private beatUnit = 4;
   private subdivision: MetronomeSubdivision = "quarter";
   private soundType: MetronomeSound = "click";
+  private metronomeAccentEnabled = true;
   private volume = 0.8;
   private onBeatCallback: BeatCallback | null = null;
   private metronomeStateListeners: Set<(isPlaying: boolean) => void> =
@@ -96,6 +97,10 @@ class AudioEngine {
     this.onBeatCallback = onBeat;
   }
 
+  public setMetronomeAccentEnabled(enabled: boolean) {
+    this.metronomeAccentEnabled = enabled;
+  }
+
   public getMetronomeState() {
     return {
       isPlaying: this.isMetronomePlaying,
@@ -103,6 +108,7 @@ class AudioEngine {
       timeSignature: `${this.beatsPerBar}/${this.beatUnit}`,
       subdivision: this.subdivision,
       soundType: this.soundType,
+      accentEnabled: this.metronomeAccentEnabled,
       currentBeat: this.currentBeat,
       isMuted: this.isMuted,
     };
@@ -1047,7 +1053,8 @@ class AudioEngine {
 
     while (this.nextNoteTime < ctx.currentTime + lookaheadSec) {
       const isBeatStart = this.currentSubdivisionIndex === 0;
-      const isAccent = isBeatStart && this.currentBeat === 0;
+      const isAccent =
+        this.metronomeAccentEnabled && isBeatStart && this.currentBeat === 0;
       const isSub = !isBeatStart;
 
       if (

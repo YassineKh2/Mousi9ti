@@ -309,6 +309,7 @@ export interface AppSettings {
   fretCount: number; // 12, 15, 21, 22, 24
   soundVolume: number; // 0-1
   metronomeSound: MetronomeSound;
+  metronomeAccentEnabled: boolean;
   fretboardTheme: FretboardTheme;
   fretboardNoteSize: "small" | "medium" | "large" | "xlarge";
   fretboardColorMode: "default" | "colorblind" | "monochrome";

@@ -8,6 +8,7 @@ import {
   VolumeX,
   Repeat2,
   Hand,
+  AudioLines,
 } from "lucide-react";
 import {
   MetronomeSound,
@@ -44,6 +45,7 @@ interface MetronomeProps {
   onBpmChange: (newBpm: number) => void;
   onLogBpmToSession?: (bpm: number) => void;
   settings: AppSettings;
+  onAccentEnabledChange?: (enabled: boolean) => void;
   showTempoPresets?: boolean;
   showTapTempoIcon?: boolean;
   isPlaying?: boolean;
@@ -111,6 +113,7 @@ export const Metronome: React.FC<MetronomeProps> = ({
   onBpmChange,
   onLogBpmToSession,
   settings,
+  onAccentEnabledChange,
   showTempoPresets = true,
   showTapTempoIcon = true,
   isPlaying: controlledIsPlaying,
@@ -243,6 +246,10 @@ export const Metronome: React.FC<MetronomeProps> = ({
       setSoundType(settings.metronomeSound);
     }
   }, [settings.metronomeSound]);
+
+  useEffect(() => {
+    audioEngine.setMetronomeAccentEnabled(settings.metronomeAccentEnabled);
+  }, [settings.metronomeAccentEnabled]);
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
@@ -800,7 +807,11 @@ export const Metronome: React.FC<MetronomeProps> = ({
                     key={index}
                     className={`precision-metro__beat${
                       isCurrent ? " is-current" : ""
-                    }${isCurrent && index === 0 ? " is-accent" : ""}${
+                    }${
+                      isCurrent && isAccentBeat && index === 0
+                        ? " is-accent"
+                        : ""
+                    }${
                       isSilentBar ? " is-muted" : ""
                     }`}
                   >
@@ -995,6 +1006,19 @@ export const Metronome: React.FC<MetronomeProps> = ({
               >
                 <Repeat2 size={17} />
                 Mute 1 bar
+              </button>
+              <button
+                className={`precision-metro__tool${
+                  settings.metronomeAccentEnabled ? " is-pressed" : ""
+                } precision-metro__tool--accent`}
+                aria-pressed={settings.metronomeAccentEnabled}
+                title="Accent the first beat of each bar"
+                onClick={() =>
+                  onAccentEnabledChange?.(!settings.metronomeAccentEnabled)
+                }
+              >
+                <AudioLines size={17} />
+                First-beat accent
               </button>
             </div>
           </div>

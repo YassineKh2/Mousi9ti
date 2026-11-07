@@ -58,6 +58,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   fretCount: 15,
   soundVolume: 1,
   metronomeSound: "click",
+  metronomeAccentEnabled: true,
   fretboardTheme: "original",
   fretboardNoteSize: "medium",
   fretboardColorMode: "default",

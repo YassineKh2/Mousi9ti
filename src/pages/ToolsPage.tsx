@@ -364,6 +364,9 @@ export const ToolsPage: React.FC<ToolsPageProps> = ({
             onBpmChange={onBpmChange}
             onLogBpmToSession={onLogBpm}
             settings={settings}
+            onAccentEnabledChange={(enabled) =>
+              onUpdateSettings({ metronomeAccentEnabled: enabled })
+            }
             isPlaying={metronomeIsPlaying}
             onIsPlayingChange={onMetronomePlayingChange}
             barCycleMode={metronomeBarCycleMode}

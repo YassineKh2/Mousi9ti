@@ -1116,6 +1116,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
+          <div
+            className={
+              activeTab === "general"
+                ? "flex items-center justify-between gap-4 border-t border-outline-variant/20 pt-4"
+                : "hidden"
+            }
+          >
+            <div>
+              <span className="font-mono text-xs font-semibold text-on-surface block">
+                First-beat accent
+              </span>
+              <span className="text-[11px] text-on-surface-variant">
+                Accent the first beat of each metronome bar.
+              </span>
+            </div>
+            <ToggleSwitch
+              checked={settings.metronomeAccentEnabled}
+              label="First-beat accent"
+              onChange={(checked) =>
+                onUpdateSettings({ metronomeAccentEnabled: checked })
+              }
+            />
+          </div>
+
           <section
             className={
               activeTab === "general"
