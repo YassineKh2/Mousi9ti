@@ -94,6 +94,14 @@ Mousi9ti is a browser-based music practice studio for guitar, bass, and piano pl
 
 The app runs as a client-side web application. Practice data is stored in the browser you use, so switching browsers or clearing site data will not carry sessions, tasks, or settings over automatically.
 
+### Optional Google account
+
+Google-only accounts use Convex Auth and are disabled by default. No account,
+environment variables, or running backend is needed for local use. Signing in or
+out never synchronizes, migrates, clears, or assigns existing local practice data.
+See [Google authentication setup](docs/google-auth.md) for manual configuration
+and [persistence inventory and phased design](docs/optional-convex-sync.md).
+
 ### Instrument-specific practice
 
 Settings > Instrument > **Default Instrument** controls both Tasks and Practice.
